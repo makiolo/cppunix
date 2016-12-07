@@ -6,5 +6,9 @@ include("${CMAKE_CURRENT_SOURCE_DIR}/cmaki/cmaki.cmake")
 cmaki_setup()
 
 cmaki_find_package(boost-coroutine2)
-cmaki2_gtest(pipeline tests/test_pipeline.cpp PTHREADS)
+cmaki_find_package(boost-filesystem)
+cmaki_find_package(boost-regex)
+cmaki2_gtest(coroutine tests/test_coroutine.cpp PTHREADS)
+cmaki2_gtest(shell tests/test_shell.cpp PTHREADS)
+cmaki2_gtest(channel tests/test_channel.cpp PTHREADS)
 
