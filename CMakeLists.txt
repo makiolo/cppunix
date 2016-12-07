@@ -5,5 +5,6 @@ set(CMAKI_REPOSITORY "http://artifacts.myftp.biz:8080")
 include("${CMAKE_CURRENT_SOURCE_DIR}/cmaki/cmaki.cmake")
 cmaki_setup()
 
-# add_subdirectory(tests)
+cmaki_find_package(boost-coroutine2)
+cmaki2_gtest(pipeline tests/test_pipeline.cpp PTHREADS)
 
