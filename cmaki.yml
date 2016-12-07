@@ -7,7 +7,9 @@
         - boost-coroutine2
         - boost-filesystem
         - boost-regex
+        - teelogging
     post_install:
         - ./*.h include/cppunix/
     mode: dr
     source: https://github.com/makiolo/cppunix
+
