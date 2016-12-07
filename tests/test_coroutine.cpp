@@ -1,6 +1,5 @@
 #include <iostream>
 #include <gtest/gtest.h>
-#include <teelogging/teelogging.h>
 #include "../pipeline.h"
 #include "../channel.h"
 
@@ -81,7 +80,7 @@ TEST(PipelineTest, Test_recursive_n4134)
 	};
 
 	for (auto v : range(1, 10))
-		LOGI("%d", v);
+		printf("%d", v);
 }
 
 TEST(PipelineTest, Test3)
@@ -91,7 +90,7 @@ TEST(PipelineTest, Test3)
 			[&](cu::pull_type<int>& source) {
 				for (auto& s : source)
 				{
-					LOGI("<fib(%d)> received: %s", n, s);
+					printf("<fib(%d)> received: %d", n, s);
 				}
 			}
 		);
