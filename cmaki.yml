@@ -1,4 +1,4 @@
-- fast-event-system:
+- cppunix:
     <<: *thirdparty_defaults
     version: 0.0.0.0
     version_manager: git
@@ -6,14 +6,8 @@
     depends:
         - boost-coroutine2
         - boost-filesystem
+        - boost-regex
     post_install:
-        - ./*.h include/fast-event-system/
-        - ./concurrentqueue/*.h include/fast-event-system/concurrentqueue/
-        - ./metacommon/*.h include/fast-event-system/metacommon/
+        - ./*.h include/cppunix/
     mode: dr
-    source: https://github.com/makiolo/fast-event-system.git
-    targets:
-        - fes:
-            info:
-                <<: *library_dynamic_exact
-
+    source: https://github.com/makiolo/cppunix
