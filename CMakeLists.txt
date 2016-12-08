@@ -8,9 +8,8 @@ cmaki_setup()
 cmaki_find_package(boost-coroutine2)
 cmaki_find_package(boost-filesystem)
 cmaki_find_package(boost-regex)
-# cmaki_find_package(github://makiolo/teelogging)
 cmaki_find_package(teelogging)
+
 cmaki2_gtest(coroutine tests/test_coroutine.cpp PTHREADS)
 cmaki2_gtest(shell tests/test_shell.cpp PTHREADS)
 cmaki2_gtest(channel tests/test_channel.cpp PTHREADS)
-
