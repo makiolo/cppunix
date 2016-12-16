@@ -7,6 +7,8 @@
 
 namespace cu {
 
+template <typename T> class channel;
+	
 template <typename T, typename Function>
 channel<T>::link link(Function&& func)
 {
