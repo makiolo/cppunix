@@ -16,8 +16,7 @@ typename channel<T>::link link_template(Function&& func)
 	{
 		for (auto& s : source)
 		{
-			func(s);
-			yield(s);
+			yield(func(s));
 		}
 	};
 }
