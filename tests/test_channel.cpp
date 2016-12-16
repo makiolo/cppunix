@@ -55,20 +55,6 @@ cmd::link link3()
 	};
 }
 
-cmd::link receiver(cu::push_type<int>& r)
-{
-	return [&](cmd::in& source, cmd::out& yield)
-	{
-		for (auto& s : source)
-		{
-			// send to receiver
-			r(s);
-			// continue chaining
-			yield(s);
-		}
-	};
-}
-
 int filter(int s)
 {
 	std::cout << "I am filter and push " << s << std::endl;
