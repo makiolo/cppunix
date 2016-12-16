@@ -69,34 +69,29 @@ cmd::link receiver(cu::push_type<int>& r)
 	};
 }
 
+int filter(int s)
+{
+	std::cout << "I am filter and push " << s << std::endl;
+	return s*2;
+}
+
 TEST(ChannelTest, goroutines_or_something_like_that)
 {
 	// pipeline
 	cmd(generator(), link1(), link2(), link3());
-
-	// lambda to register
-	auto l1 = [](int s) {
+	
+	auto handler = [](int s) {
 		std::cout << "<fib> received: " << s << std::endl;
+		return s;
 	};
-	auto r = cu::push_type<int>(
-		[&](cu::pull_type<int>& source) {
-			for (auto& s : source)
-			{
-				l1(s);
-			}
-		}
-	);
 
 	// channel
 	cu::channel<int> go;
-	go.connect(link1());
-	go.connect(link2());
-	go.connect(link3());
-	go.connect(receiver(r));
+	go.connect(filter);
+	go.connect(handler);
 	go(1);
 	go(3);
 	go(5);
 	go(7);
 	go(9);
 }
-
