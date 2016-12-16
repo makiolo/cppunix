@@ -10,9 +10,9 @@ namespace cu {
 template <typename T> class channel;
 	
 template <typename T, typename Function>
-channel<T>::link link(Function&& func)
+typename channel<T>::link link(Function&& func)
 {
-	return [](channel<T>::in& source, channel<T>::out& yield)
+	return [](typename channel<T>::in& source, typename channel<T>::out& yield)
 	{
 		for (auto& s : source)
 		{
