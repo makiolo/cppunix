@@ -67,14 +67,14 @@ protected:
 	template <typename Function>
 	void _add(Function&& f)
 	{
-		_coros.emplace_front(cu::make_iterator<T>(boost::bind(link(f), _1, boost::ref(*_coros.front().get()))));
+		_coros.emplace_front(cu::make_iterator<T>(boost::bind(link<T, Function>(f), _1, boost::ref(*_coros.front().get()))));
 	}
 
 	template <typename Function, typename ... Functions>
 	void _add(Function&& f, Functions&& ... fs)
 	{
 		_add(std::forward<Functions>(fs)...);
-		_coros.emplace_front(cu::make_iterator<T>(boost::bind(link(f), _1, boost::ref(*_coros.front().get()))));
+		_coros.emplace_front(cu::make_iterator<T>(boost::bind<T, Function>(link(f), _1, boost::ref(*_coros.front().get()))));
 	}
 protected:
 	std::deque<push_type_ptr<T> > _coros;
