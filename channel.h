@@ -7,6 +7,19 @@
 
 namespace cu {
 
+template <typename T, typename Function>
+channel<T>::link link(Function&& func)
+{
+	return [](channel<T>::in& source, channel<T>::out& yield)
+	{
+		for (auto& s : source)
+		{
+			func(s);
+			yield(s);
+		}
+	};
+}
+	
 template <typename T>
 class channel
 {
@@ -54,14 +67,14 @@ protected:
 	template <typename Function>
 	void _add(Function&& f)
 	{
-		_coros.emplace_front(cu::make_iterator<T>(boost::bind(f, _1, boost::ref(*_coros.front().get()))));
+		_coros.emplace_front(cu::make_iterator<T>(boost::bind(link(f), _1, boost::ref(*_coros.front().get()))));
 	}
 
 	template <typename Function, typename ... Functions>
 	void _add(Function&& f, Functions&& ... fs)
 	{
 		_add(std::forward<Functions>(fs)...);
-		_coros.emplace_front(cu::make_iterator<T>(boost::bind(f, _1, boost::ref(*_coros.front().get()))));
+		_coros.emplace_front(cu::make_iterator<T>(boost::bind(link(f), _1, boost::ref(*_coros.front().get()))));
 	}
 protected:
 	std::deque<push_type_ptr<T> > _coros;
