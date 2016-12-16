@@ -57,14 +57,14 @@ cmd::link link3()
 
 int filter(int s)
 {
-	std::cout << "I am filter and push " << s << std::endl;
+	std::cout << "I am filter and push " << s*2 << std::endl;
 	return s*2;
 }
 
 TEST(ChannelTest, goroutines_or_something_like_that)
 {
 	// pipeline
-	cmd(generator(), link1(), link2(), link3());
+	// cmd(generator(), link1(), link2(), link3());
 	
 	auto handler = [](int s) {
 		std::cout << "<fib> received: " << s << std::endl;
@@ -75,9 +75,6 @@ TEST(ChannelTest, goroutines_or_something_like_that)
 	cu::channel<int> go;
 	go.connect(filter);
 	go.connect(handler);
-	go(1);
-	go(3);
-	go(5);
-	go(7);
-	go(9);
+	go(100);
+	go(200);
 }
