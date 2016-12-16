@@ -12,7 +12,7 @@ template <typename T> class channel;
 template <typename T, typename Function>
 typename channel<T>::link link_template(Function&& func)
 {
-	return [](typename channel<T>::in& source, typename channel<T>::out& yield)
+	return [&func](typename channel<T>::in& source, typename channel<T>::out& yield)
 	{
 		for (auto& s : source)
 		{
