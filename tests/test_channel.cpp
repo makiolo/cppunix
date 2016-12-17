@@ -61,20 +61,26 @@ int filter(int s)
 	return s*2;
 }
 
+void filter2(int s)
+{
+	std::cout << "I am filter received " << s << " but not push" << std::endl;
+}
+
 TEST(ChannelTest, goroutines_or_something_like_that)
 {
 	// pipeline
-	// cmd(generator(), link1(), link2(), link3());
-	
+	cmd(generator(), link1(), link2(), link3());
+
 	auto handler = [](int s) {
 		std::cout << "<fib> received: " << s << std::endl;
-		return s;
 	};
 
 	// channel
-	cu::channel<int> go;
-	go.connect(filter);
-	go.connect(handler);
-	go(100);
-	go(200);
+	cu::channel<int> go(filter, filter2, handler);
+	go << 100;
+	go << 200;
+
+	int recv;
+	go >> recv;
 }
+

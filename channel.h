@@ -8,9 +8,9 @@
 namespace cu {
 
 template <typename T> class channel;
-	
+
 template <typename T, typename Function>
-typename channel<T>::link link_template(Function&& func)
+typename channel<T>::link link_template(typename std::enable_if<(!std::is_void<typename std::result_of<Function(T)>::type>::value), Function>::type&& func)
 {
 	return [&func](typename channel<T>::in& source, typename channel<T>::out& yield)
 	{
@@ -20,7 +20,22 @@ typename channel<T>::link link_template(Function&& func)
 		}
 	};
 }
-	
+
+template <typename T, typename Function	>
+typename channel<T>::link link_template(typename std::enable_if<(std::is_void<typename std::result_of<Function(T)>::type>::value), Function>::type&& func)
+{
+	return [&func](typename channel<T>::in& source, typename channel<T>::out& yield)
+	{
+		for (auto& s : source)
+		{
+			func(s);
+			yield(s);
+		}
+	};
+}
+
+
+
 template <typename T>
 class channel
 {
@@ -57,6 +72,21 @@ public:
 	void operator()(const T& data)
 	{
 		(*_coros.front())(data);
+	}
+
+	T& operator>>(T& data)
+	{
+		// _add([&data](const T& d)
+		// {
+		// 	;
+		// });
+		return data;
+	}
+
+	channel<T>& operator<<(const T& data)
+	{
+		operator()(data);
+		return *this;
 	}
 
 protected:
