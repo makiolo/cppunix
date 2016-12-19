@@ -84,7 +84,6 @@ public:
 	void operator()(const T& data)
 	{
 		(*_coros.front())(data);
-		_sem.notify();
 	}
 
 	T& operator>>(T& data)
@@ -94,6 +93,7 @@ public:
 				for (auto& s : source)
 				{
 					data = s;
+					_sem.notify();
 				}
 			}
 		);
