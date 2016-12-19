@@ -64,7 +64,7 @@ int filter(int s)
 
 void filter2(int s)
 {
-	std::cout << "I am filter received " << s << " but not push" << std::endl;
+	std::cout << "I am filter received " << s << " but not modified" << std::endl;
 }
 
 TEST(ChannelTest, goroutines_or_something_like_that)
@@ -73,7 +73,7 @@ TEST(ChannelTest, goroutines_or_something_like_that)
 	cmd(generator(), link1(), link2(), link3());
 
 	auto handler = [](int s) {
-		std::cout << "<fib> received: " << s << std::endl;
+		std::cout << "<fib> received: " << s << " but not modified" << std::endl;
 	};
 
 	// channel
@@ -86,9 +86,9 @@ TEST(ChannelTest, goroutines_or_something_like_that)
 	});
 	int recv1;
 	go >> recv1;
-	std::cout << "data is " << recv1 << std::endl;
+	std::cout << "recv1 is " << recv1 << std::endl;
 	int recv2;
 	go >> recv2;
-	std::cout << "data is " << recv2 << std::endl;
+	std::cout << "recv2 is " << recv2 << std::endl;
 }
 
