@@ -82,5 +82,6 @@ TEST(ChannelTest, goroutines_or_something_like_that)
 
 	int recv;
 	go >> recv;
+	std::cout << "data is " << recv << std::endl;
 }
 
