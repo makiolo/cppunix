@@ -36,7 +36,7 @@ typename channel<T>::link link_template(typename std::enable_if<(std::is_void<ty
 }
 
 template <typename T>
-typename channel<T>::link receiver_template(cu::push_type<T>& receiver)
+typename channel<T>::link receiver_template(push_type_ptr<T>& receiver)
 {
 	return [&](typename channel<T>::in& source, typename channel<T>::out& yield)
 	{
@@ -75,33 +75,27 @@ public:
 		_add(std::forward<Function>(f), std::forward<Functions>(fs)...);
 	}
 
-	template <typename Function>
-	void connect(Function&& f)
-	{
-		_add(std::forward<Function>(f));
-	}
-
 	void operator()(const T& data)
 	{
+		_all_pull.wait();
+		auto r = cu::make_iterator<T>(
+			[&data](auto& source) {
+				for (auto& s : source)
+				{
+					std::cout << "RRRRRRRRRRREceived = " << s << std::endl;
+				}
+			}
+		);
+		_coros.emplace_front(cu::make_iterator<T>(boost::bind(receiver_template<T>(r), _1, boost::ref(*_coros.front().get()))));
 		(*_coros.front())(data);
+		_any_push.notify();
 	}
 
 	T& operator>>(T& data)
 	{
-		auto r = cu::push_type<T>(
-			[&data](cu::pull_type<T>& source) {
-				for (auto& s : source)
-				{
-					data = s;
-					_sem.notify();
-				}
-			}
-		);
-		// seccion critica
-		_coros.emplace_front(cu::make_iterator<T>(boost::bind(receiver_template<T>(r), _1, boost::ref(*_coros.front().get()))));
-		_sem.wait();
+		_any_push.wait();
 		_coros.pop_front();
-		// end seccion critica
+		_all_pull.notify();
 		return data;
 	}
 
@@ -115,6 +109,8 @@ protected:
 	void _set_tail()
 	{
 		_coros.emplace_front(cu::make_iterator<T>([](auto& source) { for(auto& v: source) { ; }; }));
+		// init all_pull is notified
+		_all_pull.notify();
 	}
 
 	template <typename Function>
@@ -131,7 +127,8 @@ protected:
 	}
 protected:
 	std::deque<push_type_ptr<T> > _coros;
-	fes::semaphore _sem;
+	fes::semaphore _any_push;
+	fes::semaphore _all_pull;
 };
 
 }
