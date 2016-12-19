@@ -2,7 +2,7 @@
 #include <gtest/gtest.h>
 #include "../pipeline.h"
 #include "../channel.h"
-#include <asyncply/run.h>
+#include <thread>
 
 class ChannelTest : testing::Test { };
 
@@ -78,10 +78,10 @@ TEST(ChannelTest, goroutines_or_something_like_that)
 
 	// channel
 	cu::channel<int> go(filter, filter2, handler);
-	asyncply::async([&](){
+	std::thread t1([&](){
 		go << 100;
 	});
-	asyncply::async([&](){
+	std::thread t2([&](){
 		go << 200;
 	});
 	int recv1;
@@ -90,5 +90,7 @@ TEST(ChannelTest, goroutines_or_something_like_that)
 	int recv2;
 	go >> recv2;
 	std::cout << "recv2 is " << recv2 << std::endl;
+	t1.join();
+	t2.join();
 }
 
