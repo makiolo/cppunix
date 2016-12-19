@@ -10,6 +10,7 @@ cmaki_find_package(boost-filesystem)
 cmaki_find_package(boost-regex)
 cmaki_find_package(teelogging)
 cmaki_find_package(fast-event-system)
+cmaki_find_package(asyncply)
 
 cmaki2_gtest(coroutine tests/test_coroutine.cpp PTHREADS)
 cmaki2_gtest(shell tests/test_shell.cpp PTHREADS)
