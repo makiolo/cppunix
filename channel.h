@@ -42,7 +42,7 @@ typename channel<T>::link receiver_template(push_type_ptr<T>& receiver)
 	{
 		for (auto& s : source)
 		{
-			receiver(s);
+			(*receiver)(s);
 			yield(s);
 		}
 	};
