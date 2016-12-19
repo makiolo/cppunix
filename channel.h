@@ -91,7 +91,8 @@ public:
 			}
 		);
 		_coros.pop_back();
-		_coros.emplace_back(cu::make_iterator<T>(boost::bind(receiver_template<T>(r), _1, boost::ref(*_coros.back().get()))));
+		//_coros.emplace_back(cu::make_iterator<T>(boost::bind(receiver_template<T>(r), _1, boost::ref(*_coros.back().get()))));
+		_coros.emplace_back(cu::make_iterator<T>(boost::bind(receiver_template<T>(r), boost::ref(*_coros.back().get()), _1)));
 		(*_coros.front())(data);
 		_any_push.notify();
 	}
