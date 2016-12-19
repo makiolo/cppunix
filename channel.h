@@ -36,7 +36,7 @@ typename channel<T>::link link_template(typename std::enable_if<(std::is_void<ty
 }
 
 template <typename T>
-typename channel<T>::link receiver_template(cu::push_type<int>& receiver)
+typename channel<T>::link receiver_template(cu::push_type<T>& receiver)
 {
 	return [&](typename channel<T>::in& source, typename channel<T>::out& yield)
 	{
@@ -89,17 +89,19 @@ public:
 
 	T& operator>>(T& data)
 	{
-		auto r = cu::push_type<int>(
-			[&](cu::pull_type<int>& source) {
+		auto r = cu::push_type<T>(
+			[&data](cu::pull_type<T>& source) {
 				for (auto& s : source)
 				{
 					data = s;
 				}
 			}
 		);
-		_add( receiver_template(r) );
+		// seccion critica
+		_coros.emplace_front(cu::make_iterator<T>(boost::bind(receiver_template<T>(r), _1, boost::ref(*_coros.front().get()))));
 		_sem.wait();
 		_coros.pop_front();
+		// end seccion critica
 		return data;
 	}
 
