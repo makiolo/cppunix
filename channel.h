@@ -4,6 +4,7 @@
 #include <deque>
 #include <boost/bind.hpp>
 #include "coroutine.h"
+#include <fast-event-system/sem.h>
 
 namespace cu {
 
@@ -21,7 +22,7 @@ typename channel<T>::link link_template(typename std::enable_if<(!std::is_void<t
 	};
 }
 
-template <typename T, typename Function	>
+template <typename T, typename Function>
 typename channel<T>::link link_template(typename std::enable_if<(std::is_void<typename std::result_of<Function(T)>::type>::value), Function>::type&& func)
 {
 	return [&func](typename channel<T>::in& source, typename channel<T>::out& yield)
@@ -34,7 +35,18 @@ typename channel<T>::link link_template(typename std::enable_if<(std::is_void<ty
 	};
 }
 
-
+template <typename T>
+typename channel<T>::link receiver_template(cu::push_type<int>& receiver)
+{
+	return [&](typename channel<T>::in& source, typename channel<T>::out& yield)
+	{
+		for (auto& s : source)
+		{
+			receiver(s);
+			yield(s);
+		}
+	};
+}
 
 template <typename T>
 class channel
@@ -72,14 +84,22 @@ public:
 	void operator()(const T& data)
 	{
 		(*_coros.front())(data);
+		_sem.notify();
 	}
 
 	T& operator>>(T& data)
 	{
-		// _add([&data](const T& d)
-		// {
-		// 	;
-		// });
+		auto r = cu::push_type<int>(
+			[&](cu::pull_type<int>& source) {
+				for (auto& s : source)
+				{
+					data = s;
+				}
+			}
+		);
+		_add( receiver_template(r) );
+		_sem.wait();
+		_coros.pop_front();
 		return data;
 	}
 
@@ -109,6 +129,7 @@ protected:
 	}
 protected:
 	std::deque<push_type_ptr<T> > _coros;
+	fes::semaphore _sem;
 };
 
 }
