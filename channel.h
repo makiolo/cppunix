@@ -87,11 +87,11 @@ public:
 				for (auto& s : source)
 				{
 					std::cout << "RRRRRRRRRRREceived = " << s << std::endl;
+					_buf = s;
 				}
 			}
 		);
-		_coros.pop_back();
-		_coros.emplace_back(cu::make_iterator<T>(boost::bind(receiver_template<T>(r), _1, boost::ref(*_coros.back().get()))));
+		_coros.emplace_front(cu::make_iterator<T>(boost::bind(receiver_template<T>(r), _1, boost::ref(*_coros.front().get()))));		
 		(*_coros.front())(data);
 		_any_push.notify();
 	}
@@ -99,8 +99,8 @@ public:
 	T& operator>>(T& data)
 	{
 		_any_push.wait();
-		_coros.pop_back();
-		_coros.emplace_back(cu::make_iterator<T>([](auto& source) { for(auto& v: source) { ; }; }));
+		_coros.pop_front();
+		data = _buf;
 		_all_pull.notify();
 		return data;
 	}
@@ -135,6 +135,7 @@ protected:
 	std::deque<push_type_ptr<T> > _coros;
 	fes::semaphore _any_push;
 	fes::semaphore _all_pull;
+	T _buf;
 };
 
 }
