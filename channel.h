@@ -80,6 +80,10 @@ public:
 		_all_pull.wait();
 		auto r = cu::make_iterator<T>(
 			[&data](auto& source) {
+				if(source)
+				{
+					std::cout << "source is ready" << std::endl;
+				}
 				for (auto& s : source)
 				{
 					std::cout << "RRRRRRRRRRREceived = " << s << std::endl;
