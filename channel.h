@@ -79,7 +79,7 @@ public:
 	{
 		_all_pull.wait();
 		auto r = cu::make_iterator<T>(
-			[&data](auto& source) {
+			[&data, &_buf](auto& source) {
 				if(source)
 				{
 					std::cout << "source is ready" << std::endl;
