@@ -38,12 +38,11 @@ typename channel<T>::link link_template(typename std::enable_if<(std::is_void<ty
 template <typename T>
 typename channel<T>::link receiver_template(push_type_ptr<T>& receiver)
 {
-	return [&](typename channel<T>::in& source, typename channel<T>::out& yield)
+	return [&](typename channel<T>::in& source)
 	{
 		for (auto& s : source)
 		{
 			(*receiver)(s);
-			yield(s);
 		}
 	};
 }
@@ -78,21 +77,6 @@ public:
 	void operator()(const T& data)
 	{
 		_all_pull.wait();
-		auto r = cu::make_iterator<T>(
-			[&data, this](auto& source) {
-				if(source)
-				{
-					std::cout << "source is ready" << std::endl;
-				}
-				for (auto& s : source)
-				{
-					std::cout << "RRRRRRRRRRREceived = " << s << std::endl;
-					this->_buf = s;
-				}
-			}
-		);
-		_coros.pop_back();
-		_coros.emplace_back(cu::make_iterator<T>(boost::bind(receiver_template<T>(r), _1, boost::ref(*_coros.back().get()))));		
 		(*_coros.front())(data);
 		_any_push.notify();
 	}
@@ -100,8 +84,6 @@ public:
 	T& operator>>(T& data)
 	{
 		_any_push.wait();
-		_coros.pop_back();
-		_coros.emplace_back(cu::make_iterator<T>([](auto& source) { for(auto& v: source) { ; }; }));
 		data = _buf;
 		_all_pull.notify();
 		return data;
@@ -116,7 +98,21 @@ public:
 protected:
 	void _set_tail()
 	{
-		_coros.emplace_front(cu::make_iterator<T>([](auto& source) { for(auto& v: source) { ; }; }));
+		auto r = cu::make_iterator<T>(
+			[&data, this](auto& source) {
+				if(source)
+				{
+					std::cout << "source is ready" << std::endl;
+				}
+				for (auto& s : source)
+				{
+					std::cout << "received = " << s << std::endl;
+					this->_buf = s;
+				}
+			}
+		);
+		_coros.emplace_front( cu::make_iterator<T>( receiver_template<T>(r) ) );
+		
 		// init all_pull is notified
 		_all_pull.notify();
 	}
