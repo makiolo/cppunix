@@ -36,7 +36,7 @@ typename channel<T>::link link_template(typename std::enable_if<(std::is_void<ty
 }
 
 template <typename T>
-typename channel<T>::link receiver_template(push_type_ptr<T>& receiver)
+typename channel<T>::link term_receiver(push_type_ptr<T>& receiver)
 {
 	return [&](typename channel<T>::in& source)
 	{
@@ -111,7 +111,7 @@ protected:
 				}
 			}
 		);
-		_coros.emplace_front( cu::make_iterator<T>( boost::bind(receiver_template<T>(r), _1) ) );
+		_coros.emplace_front( cu::make_iterator<T>( boost::bind(term_receiver<T>(r), _1) ) );
 		
 		// init all_pull is notified
 		_all_pull.notify();
