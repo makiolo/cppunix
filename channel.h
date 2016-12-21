@@ -91,7 +91,8 @@ public:
 				}
 			}
 		);
-		_coros.emplace_front(cu::make_iterator<T>(boost::bind(receiver_template<T>(r), _1, boost::ref(*_coros.front().get()))));		
+		_coros.pop_back();
+		_coros.emplace_back(cu::make_iterator<T>(boost::bind(receiver_template<T>(r), _1, boost::ref(*_coros.back().get()))));		
 		(*_coros.front())(data);
 		_any_push.notify();
 	}
@@ -99,7 +100,8 @@ public:
 	T& operator>>(T& data)
 	{
 		_any_push.wait();
-		_coros.pop_front();
+		_coros.pop_back();
+		_coros.emplace_back(cu::make_iterator<T>([](auto& source) { for(auto& v: source) { ; }; }));
 		data = _buf;
 		_all_pull.notify();
 		return data;
