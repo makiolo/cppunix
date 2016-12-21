@@ -111,7 +111,7 @@ protected:
 				}
 			}
 		);
-		_coros.emplace_front( cu::make_iterator<T>( receiver_template<T>(r) ) );
+		_coros.emplace_front( cu::make_iterator<T>( boost::bind(receiver_template<T>(r), _1) ) );
 		
 		// init all_pull is notified
 		_all_pull.notify();
