@@ -99,7 +99,7 @@ protected:
 	void _set_tail()
 	{
 		auto r = cu::make_iterator<T>(
-			[&data, this](auto& source) {
+			[this](auto& source) {
 				if(source)
 				{
 					std::cout << "source is ready" << std::endl;
