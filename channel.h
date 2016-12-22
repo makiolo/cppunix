@@ -2,6 +2,7 @@
 #define _CU_CHANNEL_H_
 
 #include <deque>
+#include <stack>
 #include <boost/bind.hpp>
 #include "coroutine.h"
 #include <fast-event-system/sem.h>
@@ -77,14 +78,15 @@ public:
 	void operator()(const T& data)
 	{
 		_empty.wait();
-		(*_coros.front())(data);
+		(*_coros.top())(data);
 		_full.notify();
 	}
 
 	T& operator>>(T& data)
 	{
 		_full.wait();
-		data = _buf;
+		data = _buf.top();
+		_buf.pop();
 		_empty.notify();
 		return data;
 	}
@@ -107,18 +109,13 @@ protected:
 	{
 		auto r = cu::make_iterator<T>(
 			[this](auto& source) {
-				if(source)
-				{
-					std::cout << "source is ready" << std::endl;
-				}
 				for (auto& s : source)
 				{
-					std::cout << "received = " << s << std::endl;
-					this->_buf = s;
+					this->_buf.push(s);
 				}
 			}
 		);
-		_coros.emplace_front( cu::make_iterator<T>( term_receiver<T>(r) ) );
+		_coros.push( cu::make_iterator<T>( term_receiver<T>(r) ) );
 		
 		// EACH notify increase buffer, 1 = notify, buffer 1
 		_empty.notify();
@@ -127,20 +124,20 @@ protected:
 	template <typename Function>
 	void _add(Function&& f)
 	{
-		_coros.emplace_front(cu::make_iterator<T>(boost::bind(link_template<T, Function>(f), _1, boost::ref(*_coros.front().get()))));
+		_coros.push(cu::make_iterator<T>(boost::bind(link_template<T, Function>(f), _1, boost::ref(*_coros.front().get()))));
 	}
 
 	template <typename Function, typename ... Functions>
 	void _add(Function&& f, Functions&& ... fs)
 	{
 		_add(std::forward<Functions>(fs)...);
-		_coros.emplace_front(cu::make_iterator<T>(boost::bind(link_template<T, Function>(f), _1, boost::ref(*_coros.front().get()))));
+		_coros.push(cu::make_iterator<T>(boost::bind(link_template<T, Function>(f), _1, boost::ref(*_coros.front().get()))));
 	}
 protected:
-	std::deque<push_type_ptr<T> > _coros; // use std::stack<T>
+	std::stack<push_type_ptr<T> > _coros;
+	std::stack<T> _buf;
 	fes::semaphore _full;
 	fes::semaphore _empty;
-	T _buf; // use std::array<T, N>
 };
 
 }
