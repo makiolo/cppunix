@@ -79,14 +79,20 @@ TEST(ChannelTest, goroutines_or_something_like_that)
 	// channel
 	cu::channel<int> go(filter2, handler);
 	go.connect(filter1);
-	std::thread t1([&](){
-		go << 100;
-	});
-	std::thread t2([&](){
-		go << 200;
-	});
-	std::cout << "4. recv1 is " << go.get() << std::endl;
-	std::cout << "4. recv2 is " << go.get() << std::endl;
-	t1.join();
-	t2.join();
+	for(int i=0; i<100; ++i)
+	{
+		std::thread t1([&](){
+			go << i;
+		});
+		std::thread t2([&](){
+			go << i*i;
+		});
+		t1.join();
+		t2.join();
+	}
+	
+	for(int i=0; i<200; ++i)
+	{
+		std::cout << "recv: " << go.get() << std::endl;
+	}
 }
