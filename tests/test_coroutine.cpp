@@ -50,26 +50,22 @@ TEST(PipelineTest, Test_fibonacci_n4134)
 
 auto range(int stop)
 {
-	return [=]() {
-		return cu::pull_type<int>(
-			[&](auto& yield) {
-				for(int i=0;i<stop;++i)
-					yield(i);
-			}
-		);
-	};
+	return cu::pull_type<int>(
+		[&](auto& yield) {
+			for(int i=0;i<stop;++i)
+				yield(i);
+		}
+	);
 }
 
 auto range(int start, int stop, int step=1)
 {
-	return [=]() {
-		return cu::pull_type<int>(
-			[&](auto& yield) {
-				for(int i=start;i<stop;stop+=step)
-					yield(i);
-			}
-		);
-	};
+	return cu::pull_type<int>(
+		[&](auto& yield) {
+			for(int i=start;i<stop;stop+=step)
+				yield(i);
+		}
+	);
 }
 
 TEST(PipelineTest, Test_range_simple)
