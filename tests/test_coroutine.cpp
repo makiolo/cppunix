@@ -48,11 +48,44 @@ TEST(PipelineTest, Test_fibonacci_n4134)
 	}
 }
 
+auto range(int stop)
+{
+	return [=]() {
+		return cu::pull_type<int>(
+			[&](auto& yield) {
+				for(int i=0;i<stop;++i)
+					yield(i);
+			}
+		);
+	};
+}
+
+auto range(int start, int stop, int step=1)
+{
+	return [=]() {
+		return cu::pull_type<int>(
+			[&](auto& yield) {
+				for(int i=start;i<stop;stop+=step)
+					yield(i);
+			}
+		);
+	};
+}
+
+TEST(PipelineTest, Test_range_simple)
+{
+	LOGI("range simple");
+	for (auto v : range(100))
+		LOGI("%d", v);
+	for (auto v : range(10, 100, 2))
+		LOGI("%d", v);
+}
+
 TEST(PipelineTest, Test_recursive_n4134)
 {
-	std::function<cu::pull_type<int>(int,int)> range = [&range](int a_, int b_) -> cu::pull_type<int> {
+	std::function<cu::pull_type<int>(int,int)> range_rec = [&range](int a_, int b_) -> cu::pull_type<int> {
 		return cu::pull_type<int>(
-			[&](cu::push_type<int>& yield) {
+			[&](auto& yield) {
 				int a = a_;
 				int b = b_;
 				/////////////////////
@@ -71,16 +104,17 @@ TEST(PipelineTest, Test_recursive_n4134)
 				//     yield range(a, mid)
 				//     yield range(mid, b)
 
-				for (auto i : range(a, mid))
+				for (auto i : range_rec(a, mid))
 					yield (i);
-				for (auto i : range(mid, b))
+				for (auto i : range_rec(mid, b))
 					yield (i);
 				///////////////////////
 			}
 		);
 	};
 
-	for (auto v : range(1, 10))
+	LOGI("range recursive");
+	for (auto v : range_rec(1, 10))
 		LOGI("%d", v);
 }
 
