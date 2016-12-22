@@ -8,7 +8,7 @@
 
 namespace cu {
 
-template <typename T, size_t N = 1> class channel;
+template <typename T> class channel;
 
 template <typename T, typename Function>
 typename channel<T>::link link_template(typename std::enable_if<(!std::is_void<typename std::result_of<Function(T)>::type>::value), Function>::type&& func)
@@ -47,7 +47,7 @@ auto term_receiver(push_type_ptr<T>& receiver)
 	};
 }
 
-template <typename T, size_t N = 1>
+template <typename T>
 class channel
 {
 public:
@@ -130,10 +130,10 @@ protected:
 		_coros.emplace_front(cu::make_iterator<T>(boost::bind(link_template<T, Function>(f), _1, boost::ref(*_coros.front().get()))));
 	}
 protected:
-	std::deque<push_type_ptr<T> > _coros; // use std::stack
+	std::deque<push_type_ptr<T> > _coros; // use std::stack<T>
 	fes::semaphore _full;
 	fes::semaphore _empty;
-	T _buf; // use std::array
+	T _buf; // use std::array<T, N>
 };
 
 }
