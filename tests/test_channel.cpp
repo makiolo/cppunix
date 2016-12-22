@@ -56,15 +56,15 @@ cmd::link link3()
 	};
 }
 
-int filter(int s)
+void filter1(int s)
 {
-	std::cout << "I am filter and push " << s*2 << std::endl;
-	return s*2;
+	std::cout << "1. I am filter received " << s << " but not modified" << std::endl;
 }
 
-void filter2(int s)
+int filter2(int s)
 {
-	std::cout << "I am filter received " << s << " but not modified" << std::endl;
+	std::cout << "2. I am filter and push " << s*2 << std::endl;
+	return s*2;
 }
 
 TEST(ChannelTest, goroutines_or_something_like_that)
@@ -73,20 +73,20 @@ TEST(ChannelTest, goroutines_or_something_like_that)
 	// cmd(generator(), link1(), link2(), link3());
 
 	auto handler = [](int s) {
-		std::cout << "<fib> received: " << s << " but not modified" << std::endl;
+		std::cout << "3. received: " << s << " but not modified" << std::endl;
 	};
 
 	// channel
-	cu::channel<int> go(filter, filter2, handler);
+	cu::channel<int> go(filter2, handler);
+	go.connect(filter1);
 	std::thread t1([&](){
 		go << 100;
 	});
 	std::thread t2([&](){
 		go << 200;
 	});
-	std::cout << "recv1 is " << go.get() << std::endl;
-	std::cout << "recv2 is " << go.get() << std::endl;
+	std::cout << "4. recv1 is " << go.get() << std::endl;
+	std::cout << "4. recv2 is " << go.get() << std::endl;
 	t1.join();
 	t2.join();
 }
-
