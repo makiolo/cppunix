@@ -81,7 +81,7 @@ TEST(PipelineTest, Test_range_simple)
 
 TEST(PipelineTest, Test_recursive_n4134)
 {
-	std::function<cu::pull_type<int>(int,int)> range_rec = [&range](int a_, int b_) -> cu::pull_type<int> {
+	std::function<cu::pull_type<int>(int,int)> range_rec = [&range_rec](int a_, int b_) -> cu::pull_type<int> {
 		return cu::pull_type<int>(
 			[&](auto& yield) {
 				int a = a_;
