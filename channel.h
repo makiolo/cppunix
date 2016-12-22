@@ -47,7 +47,7 @@ auto term_receiver(push_type_ptr<T>& receiver)
 	};
 }
 
-template <typename T>
+template <typename T, size_t N = 1>
 class channel
 {
 public:
@@ -76,16 +76,16 @@ public:
 
 	void operator()(const T& data)
 	{
-		_all_pull.wait();
+		_empty.wait();
 		(*_coros.front())(data);
-		_any_push.notify();
+		_full.notify();
 	}
 
 	T& operator>>(T& data)
 	{
-		_any_push.wait();
+		_full.wait();
 		data = _buf;
-		_all_pull.notify();
+		_empty.notify();
 		return data;
 	}
 
@@ -113,8 +113,8 @@ protected:
 		);
 		_coros.emplace_front( cu::make_iterator<T>( term_receiver<T>(r) ) );
 		
-		// init all_pull is notified
-		_all_pull.notify();
+		// EACH notify increase buffer, 1 = notify, buffer 1
+		_empty.notify();
 	}
 
 	template <typename Function>
@@ -130,10 +130,10 @@ protected:
 		_coros.emplace_front(cu::make_iterator<T>(boost::bind(link_template<T, Function>(f), _1, boost::ref(*_coros.front().get()))));
 	}
 protected:
-	std::deque<push_type_ptr<T> > _coros;
-	fes::semaphore _any_push;
-	fes::semaphore _all_pull;
-	T _buf;
+	std::deque<push_type_ptr<T> > _coros; // use std::stack
+	fes::semaphore _full;
+	fes::semaphore _empty;
+	T _buf; // use std::array
 };
 
 }
