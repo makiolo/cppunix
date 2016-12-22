@@ -8,7 +8,7 @@
 
 namespace cu {
 
-template <typename T> class channel;
+template <typename T, size_t N = 1> class channel;
 
 template <typename T, typename Function>
 typename channel<T>::link link_template(typename std::enable_if<(!std::is_void<typename std::result_of<Function(T)>::type>::value), Function>::type&& func)
