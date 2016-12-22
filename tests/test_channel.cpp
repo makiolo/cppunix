@@ -91,6 +91,7 @@ TEST(ChannelTest, goroutines_or_something_like_that)
 	t1.join();
 }
 
+/*
 TEST(ChannelTest, scheduler_basic)
 {
  	std::vector<cu::pull_type_ptr<int> > coros;
@@ -131,3 +132,4 @@ TEST(ChannelTest, scheduler_basic)
  		}
  	}
 }
+*/
