@@ -74,6 +74,17 @@ public:
 		_set_tail();
 		_add(std::forward<Function>(f), std::forward<Functions>(fs)...);
 	}
+	
+	template <typename Function>
+	void connect(Function&& f)
+	{
+		_add(std::forward<Function>(f));
+	}
+	
+	void pop()
+	{
+		_coros.pop();
+	}
 
 	void operator()(const T& data)
 	{
@@ -124,14 +135,14 @@ protected:
 	template <typename Function>
 	void _add(Function&& f)
 	{
-		_coros.push(cu::make_iterator<T>(boost::bind(link_template<T, Function>(f), _1, boost::ref(*_coros.front().get()))));
+		_coros.push(cu::make_iterator<T>(boost::bind(link_template<T, Function>(f), _1, boost::ref(*_coros.top().get()))));
 	}
 
 	template <typename Function, typename ... Functions>
 	void _add(Function&& f, Functions&& ... fs)
 	{
 		_add(std::forward<Functions>(fs)...);
-		_coros.push(cu::make_iterator<T>(boost::bind(link_template<T, Function>(f), _1, boost::ref(*_coros.front().get()))));
+		_coros.push(cu::make_iterator<T>(boost::bind(link_template<T, Function>(f), _1, boost::ref(*_coros.top().get()))));
 	}
 protected:
 	std::stack<push_type_ptr<T> > _coros;
