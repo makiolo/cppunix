@@ -36,9 +36,9 @@ typename channel<T>::link link_template(typename std::enable_if<(std::is_void<ty
 }
 
 template <typename T>
-auto term_receiver(push_type_ptr<T>& receiver)
+auto term_receiver(const push_type_ptr<T>& receiver)
 {
-	return [&](typename channel<T>::in& source)
+	return [=](typename channel<T>::in& source)
 	{
 		for (auto& s : source)
 		{
