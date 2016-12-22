@@ -70,7 +70,7 @@ void filter2(int s)
 TEST(ChannelTest, goroutines_or_something_like_that)
 {
 	// pipeline
-	cmd(generator(), link1(), link2(), link3());
+	// cmd(generator(), link1(), link2(), link3());
 
 	auto handler = [](int s) {
 		std::cout << "<fib> received: " << s << " but not modified" << std::endl;
@@ -84,12 +84,8 @@ TEST(ChannelTest, goroutines_or_something_like_that)
 	std::thread t2([&](){
 		go << 200;
 	});
-	int recv1;
-	go >> recv1;
-	std::cout << "recv1 is " << recv1 << std::endl;
-	int recv2;
-	go >> recv2;
-	std::cout << "recv2 is " << recv2 << std::endl;
+	std::cout << "recv1 is " << go.get() << std::endl;
+	std::cout << "recv2 is " << go.get() << std::endl;
 	t1.join();
 	t2.join();
 }
