@@ -88,6 +88,13 @@ public:
 		_empty.notify();
 		return data;
 	}
+	
+	T get()
+	{
+		T data;
+		operator>>(data);
+		return data;
+	}
 
 	channel<T>& operator<<(const T& data)
 	{
