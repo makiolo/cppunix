@@ -84,14 +84,10 @@ TEST(ChannelTest, goroutines_or_something_like_that)
 		std::thread t1([&](){
 			go << i;
 		});
-		std::thread t2([&](){
-			go << i*i;
-		});
 		t1.join();
-		t2.join();
 	}
 	
-	for(int i=0; i<200; ++i)
+	for(int i=0; i<100; ++i)
 	{
 		std::cout << "recv: " << go.get() << std::endl;
 	}
