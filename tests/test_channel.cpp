@@ -85,6 +85,13 @@ TEST(ChannelTest, goroutines_consumer)
 		}
 		go.close();
 	});
+	for(auto& d : go)
+	{
+		std::cout << "recv: " << d << std::endl;
+	}
+	t1.join();
+	
+	/*
 	for(;;)
 	{
 		auto data = go.get();
@@ -98,7 +105,7 @@ TEST(ChannelTest, goroutines_consumer)
 			std::cout << "recv: " << data.get() << std::endl;
 		}
 	}
-	t1.join();
+	*/
 }
 
 /*
