@@ -220,7 +220,11 @@ public:
 	T& operator>>(T& data)
 	{
 		_full.wait();
-		data = _buf.top().get();
+		_closed = _buf.top().is_closed();
+		if(!_closed)
+		{
+			data = _buf.top().get();
+		}
 		_buf.pop();
 		_empty.notify();
 		return data;
@@ -231,7 +235,10 @@ public:
 		operator()(true);
 	}
 	
-	bool is_closed() const {return _closed;}
+	bool is_closed() const
+	{
+		return _closed;
+	}
 	
 protected:
 	void _set_tail()
@@ -240,10 +247,7 @@ protected:
 			[this](auto& source) {
 				for (auto& s : source)
 				{
-					if(!s.is_closed())
-						this->_buf.push(s);
-					else
-						this->_closed = true;
+					this->_buf.push(s);
 				}
 			}
 		);
