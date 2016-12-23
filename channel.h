@@ -12,7 +12,7 @@ namespace cu {
 template <typename T>
 struct channel_data
 {
-	channel_data(const T& data) : _data(data) { ; }
+	explicit channel_data(const T& data) : _data(data) { ; }
 	
 	const T& get() const
 	{
@@ -31,7 +31,7 @@ typename channel<T>::link link_template(typename std::enable_if<(!std::is_void<t
 	{
 		for (auto& s : source)
 		{
-			yield(func(s));
+			yield(channel_data<T>(func(s.get())));
 		}
 	};
 }
@@ -43,9 +43,7 @@ typename channel<T>::link link_template(typename std::enable_if<(std::is_void<ty
 	{
 		for (auto& s : source)
 		{
-			// unpack tuple
-			// func(std::get<N>(s)...);
-			func(s);
+			func(s.get());
 			yield(s);
 		}
 	};
@@ -143,7 +141,7 @@ protected:
 		);
 		_coros.push( cu::make_iterator<T>( term_receiver<T>(r) ) );
 		
-		// EACH notify increase buffer, 1 = notify, buffer 1
+		// EACH notify increase buffer
 		_empty.notify();
 	}
 
@@ -160,7 +158,7 @@ protected:
 		_coros.push(cu::make_iterator<T>(boost::bind(link_template<T, Function>(f), _1, boost::ref(*_coros.top().get()))));
 	}
 protected:
-	std::stack<push_type_ptr< channel_data<T> > > _coros;
+	std::stack< push_type_ptr< channel_data<T> > > _coros;
 	std::stack< channel_data<T> > _buf;
 	fes::semaphore _full;
 	fes::semaphore _empty;
