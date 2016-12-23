@@ -9,6 +9,19 @@
 
 namespace cu {
 
+template <typename T>
+struct channel_data
+{
+	channel_data(const T& data) : _data(data) { ; }
+	
+	const T& get() const
+	{
+		return _data;
+	}
+	
+	T _data;
+};
+	
 template <typename T> class channel;
 
 template <typename T, typename Function>
@@ -30,6 +43,8 @@ typename channel<T>::link link_template(typename std::enable_if<(std::is_void<ty
 	{
 		for (auto& s : source)
 		{
+			// unpack tuple
+			// func(std::get<N>(s)...);
 			func(s);
 			yield(s);
 		}
@@ -52,9 +67,9 @@ template <typename T>
 class channel
 {
 public:
-	using in = cu::pull_type<T>;
-	using out = cu::push_type<T>;
-	using link = cu::link<T>;
+	using in = cu::pull_type< channel_data<T> >;
+	using out = cu::push_type< channel_data<T> >;
+	using link = cu::link< channel_data<T> >;
 
 	channel()
 	{
@@ -89,17 +104,14 @@ public:
 	void operator()(const T& data)
 	{
 		_empty.wait();
-		(*_coros.top())(data);
+		(*_coros.top())( channel_data<T>(data) );
 		_full.notify();
 	}
-
-	T& operator>>(T& data)
+	
+	channel<T>& operator<<(const T& data)
 	{
-		_full.wait();
-		data = _buf.top();
-		_buf.pop();
-		_empty.notify();
-		return data;
+		operator()(data);
+		return *this;
 	}
 	
 	T get()
@@ -108,11 +120,14 @@ public:
 		operator>>(data);
 		return data;
 	}
-
-	channel<T>& operator<<(const T& data)
+	
+	T& operator>>(T& data)
 	{
-		operator()(data);
-		return *this;
+		_full.wait();
+		data = _buf.top().get();
+		_buf.pop();
+		_empty.notify();
+		return data;
 	}
 
 protected:
@@ -145,8 +160,8 @@ protected:
 		_coros.push(cu::make_iterator<T>(boost::bind(link_template<T, Function>(f), _1, boost::ref(*_coros.top().get()))));
 	}
 protected:
-	std::stack<push_type_ptr<T> > _coros;
-	std::stack<T> _buf;
+	std::stack<push_type_ptr< channel_data<T> > > _coros;
+	std::stack< channel_data<T> > _buf;
 	fes::semaphore _full;
 	fes::semaphore _empty;
 };
