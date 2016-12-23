@@ -229,7 +229,7 @@ protected:
 				}
 			}
 		);
-		_coros.push( cu::make_iterator<T>( term_receiver<T>(r) ) );
+		_coros.push( cu::make_iterator< channel_data<T> >( term_receiver<T>(r) ) );
 		
 		// EACH notify increase buffer
 		_empty.notify();
