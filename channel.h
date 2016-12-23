@@ -243,7 +243,7 @@ protected:
 					if(!s.is_closed())
 						this->_buf.push(s);
 					else
-						this->close();
+						this->_closed = true;
 				}
 			}
 		);
