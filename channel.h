@@ -101,6 +101,7 @@ protected:
 template <typename T>
 struct channel_data
 {
+	explicit channel_data() : _data(), _close(false) { ; }
 	explicit channel_data(const T& data) : _data(data), _close(false) { ; }
 	explicit channel_data(bool close) : _data(), _close(close) { ; }
 	
@@ -219,17 +220,12 @@ public:
 		return *this;
 	}
 	
-	/*
-	channel_data<T> read()
+	channel_data<T> get()
 	{
 		channel_data<T> data;
-		_full.wait();
-		data = _buf.top();
-		_buf.pop();
-		_empty.notify();
+		operator>>(data);
 		return data;
 	}
-	*/
 	
 	channel_data<T>& operator>>(channel_data<T>& data)
 	{
