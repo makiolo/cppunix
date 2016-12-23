@@ -29,9 +29,10 @@ public:
 		// }
 	}
 protected:
+	// std::vector<cpproutine> _starting;
 	std::vector<cpproutine> _running;
-	std::vector<cpproutine> _ready;
 	std::vector<cpproutine> _blocked;
+	// std::vector<cpproutine> _ending;
 };
 	
 class semaphore
