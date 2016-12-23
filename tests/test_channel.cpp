@@ -67,7 +67,7 @@ int filter2(int s)
 	return s*2;
 }
 
-TEST(ChannelTest, goroutines_or_something_like_that)
+TEST(ChannelTest, goroutines_consumer)
 {
 	// pipeline
 	// cmd(generator(), link1(), link2(), link3());
@@ -85,9 +85,18 @@ TEST(ChannelTest, goroutines_or_something_like_that)
 		}
 		go.close();
 	});
-	while(!go.is_closed())
+	for(;;)
 	{
-		std::cout << "recv: " << go.get() << std::endl;
+		auto data = go.read()
+		if(data.is_closed())
+		{
+			std::cout << "channel closed" << std::endl;
+			break;
+		}
+		else
+		{
+			std::cout << "recv: " << data.get() << std::endl;
+		}
 	}
 	t1.join();
 }
