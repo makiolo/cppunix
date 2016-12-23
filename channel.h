@@ -50,7 +50,7 @@ typename channel<T>::link link_template(typename std::enable_if<(std::is_void<ty
 }
 
 template <typename T>
-auto term_receiver(const push_type_ptr<T>& receiver)
+auto term_receiver(const typename channel<T>::coroutine& receiver)
 {
 	return [=](typename channel<T>::in& source)
 	{
@@ -68,6 +68,7 @@ public:
 	using in = cu::pull_type< channel_data<T> >;
 	using out = cu::push_type< channel_data<T> >;
 	using link = cu::link< channel_data<T> >;
+	using coroutine = push_type_ptr< channel_data<T> >;
 
 	channel()
 	{
@@ -158,7 +159,7 @@ protected:
 		_coros.push(cu::make_iterator<T>(boost::bind(link_template<T, Function>(f), _1, boost::ref(*_coros.top().get()))));
 	}
 protected:
-	std::stack< push_type_ptr< channel_data<T> > > _coros;
+	std::stack< coroutine > _coros;
 	std::stack< channel_data<T> > _buf;
 	fes::semaphore _full;
 	fes::semaphore _empty;
