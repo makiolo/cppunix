@@ -101,14 +101,18 @@ protected:
 template <typename T>
 struct channel_data
 {
-	explicit channel_data(const T& data) : _data(data) { ; }
+	explicit channel_data(const T& data) : _data(data), _close(false) { ; }
+	explicit channel_data(bool close) : _data(), _close(close) { ; }
 	
 	const T& get() const
 	{
 		return _data;
 	}
 	
+	bool is_closed() const {return _close;}
+
 	T _data;
+	bool _close;
 };
 	
 template <typename T> class channel;
@@ -160,12 +164,14 @@ public:
 	using coroutine = push_type_ptr< channel_data<T> >;
 
 	channel()
+		: _closed(false)
 	{
 		_set_tail();
 	}
 
 	template <typename Function>
 	channel(Function&& f)
+		: _closed(false)
 	{
 		_set_tail();
 		_add(std::forward<Function>(f));
@@ -173,6 +179,7 @@ public:
 
 	template <typename Function, typename ... Functions>
 	channel(Function&& f, Functions&& ... fs)
+		: _closed(false)
 	{
 		_set_tail();
 		_add(std::forward<Function>(f), std::forward<Functions>(fs)...);
@@ -189,7 +196,8 @@ public:
 		_coros.pop();
 	}
 
-	void operator()(const T& data)
+	template <typename R>
+	void operator()(const R& data)
 	{
 		_empty.wait();
 		(*_coros.top())( channel_data<T>(data) );
@@ -218,6 +226,11 @@ public:
 		return data;
 	}
 
+	void close()
+	{
+		operator()(true);
+	}
+	
 protected:
 	void _set_tail()
 	{
@@ -225,7 +238,10 @@ protected:
 			[this](auto& source) {
 				for (auto& s : source)
 				{
-					this->_buf.push(s);
+					if(!s.is_closed())
+						this->_buf.push(s);
+					else
+						this->close();
 				}
 			}
 		);
@@ -252,6 +268,7 @@ protected:
 	std::stack< channel_data<T> > _buf;
 	fes::semaphore _full;
 	fes::semaphore _empty;
+	bool _closed;
 };
 
 }
