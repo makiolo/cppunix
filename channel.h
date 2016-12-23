@@ -9,7 +9,7 @@
 #include <assert.h>
 
 namespace cu {
-
+/*
 class cpproutine
 {
 public:
@@ -96,6 +96,7 @@ protected:
 	int _count;
 	int _count_max;
 }
+*/
 	
 template <typename T>
 struct channel_data
