@@ -87,8 +87,7 @@ TEST(ChannelTest, goroutines_consumer)
 	});
 	for(;;)
 	{
-		channel_data<int> data;
-		go >> data;
+		auto data = go.get();
 		if(data.is_closed())
 		{
 			std::cout << "channel closed" << std::endl;
