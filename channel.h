@@ -15,9 +15,20 @@ class cpproutine
 public:
 };
 	
+class semaphore;
+	
 class scheduler
 {
 public:
+	void lock(const semaphore& sem)
+	{
+		// cid id = whoiam_cpproutine()
+		// if(is.is_running())
+		// {
+		//	move id to blocked
+		// }
+	}
+protected:
 	std::vector<cpproutine> _running;
 	std::vector<cpproutine> _ready;
 	std::vector<cpproutine> _blocked;
@@ -26,7 +37,10 @@ public:
 class semaphore
 {
 public:
-	explicit semaphore(int count = 0, int count_max = 1) : _count(count), _count_max(count_max)
+	explicit semaphore(scheduler& sche, int count = 0, int count_max = 1)
+		: _sche(sche)
+		, _count(count)
+		, _count_max(count_max)
 	{
 		assert((1 <= count_max) || (0 <= count));
 		assert(count <= count_max);
@@ -53,8 +67,7 @@ public:
 		}
 		else
 		{
-			// lock me !
-			// _scheduler.lock();
+			_sche.lock(*this);
 		}
 	}
 	///
@@ -78,6 +91,7 @@ public:
 		}
 	}
 protected:
+	scheduler& _sche;
 	int _count;
 	int _count_max;
 }
