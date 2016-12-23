@@ -124,7 +124,16 @@ typename channel<T>::link link_template(typename std::enable_if<(!std::is_void<t
 	{
 		for (auto& s : source)
 		{
-			yield(channel_data<T>(func(s.get())));
+			if(!s.is_closed())
+			{
+				yield(channel_data<T>(func(s.get())));
+			}
+			else
+			{
+				// propagate close
+				func(s.get());
+				yield(channel_data<T>(true));
+			}
 		}
 	};
 }
@@ -206,7 +215,7 @@ public:
 	
 	channel<T>& operator<<(const T& data)
 	{
-		operator()(data);
+		operator()<T>(data);
 		return *this;
 	}
 	
@@ -232,7 +241,7 @@ public:
 
 	void close()
 	{
-		operator()(true);
+		operator()<bool>(true);
 	}
 	
 	bool is_closed() const
