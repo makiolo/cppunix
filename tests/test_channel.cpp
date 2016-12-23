@@ -83,8 +83,9 @@ TEST(ChannelTest, goroutines_or_something_like_that)
 		{
 			go << i;
 		}
+		go.close();
 	});
-	for(int i=0; i<1000; ++i)
+	while(!go.is_closed())
 	{
 		std::cout << "recv: " << go.get() << std::endl;
 	}
