@@ -219,6 +219,7 @@ public:
 		return *this;
 	}
 	
+	/*
 	channel_data<T> read()
 	{
 		channel_data<T> data;
@@ -228,21 +229,16 @@ public:
 		_empty.notify();
 		return data;
 	}
+	*/
 	
-	/*
-	T& operator>>(T& data)
+	channel_data<T>& operator>>(channel_data<T>& data)
 	{
 		_full.wait();
-		_closed = _buf.top().is_closed();
-		if(!_closed)
-		{
-			data = _buf.top().get();
-		}
+		data = _buf.top();
 		_buf.pop();
 		_empty.notify();
 		return data;
 	}
-	*/
 
 	void close()
 	{
