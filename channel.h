@@ -231,6 +231,8 @@ public:
 		operator()(true);
 	}
 	
+	bool is_closed() const {return _closed;}
+	
 protected:
 	void _set_tail()
 	{
