@@ -1,14 +1,87 @@
 #ifndef _CU_CHANNEL_H_
 #define _CU_CHANNEL_H_
 
-#include <deque>
+#include <vector>
 #include <stack>
 #include <boost/bind.hpp>
 #include "coroutine.h"
 #include <fast-event-system/sem.h>
+#include <assert.h>
 
 namespace cu {
 
+class cpproutine
+{
+public:
+};
+	
+class scheduler
+{
+public:
+	std::vector<cpproutine> _running;
+	std::vector<cpproutine> _ready;
+	std::vector<cpproutine> _blocked;
+};
+	
+class semaphore
+{
+public:
+	explicit semaphore(int count = 0, int count_max = 1) : _count(count), _count_max(count_max)
+	{
+		assert((1 <= count_max) || (0 <= count));
+		assert(count <= count_max);
+	}
+	
+	///
+	/// Reduce el valor del semaforo. Bloquea la regi�n critica. Esta operaci�n tiene m�ltiples
+	/// nombres.
+	///  * wait (s)
+	///	 * {
+	///		  if s > 0
+	///				s--
+	///		  else // s == 0
+	///				bloqueo
+	///		}
+	///
+	///		esperar / wait / lock / down / sleep / P
+	///
+	inline void lock()
+	{
+		if(_count > 0)
+		{
+			--_count;
+		}
+		else
+		{
+			// lock me !
+			// _scheduler.lock();
+		}
+	}
+	///
+	/// Aumenta el semaforo. Libera la region critica.
+	///    signal(s)
+	///    {
+	///        if s == 0
+	///            s++
+	///        else // s > 0
+	///            if s < MAX
+	///                s++
+	///    }
+	///
+	///	avisar / signal / unlock / up / wakeup / release / V
+	///
+	inline void unlock()
+	{
+		if((_count == 0) || (_count < count_max))
+		{
+			++_count;
+		}
+	}
+protected:
+	int _count;
+	int _count_max;
+}
+	
 template <typename T>
 struct channel_data
 {
