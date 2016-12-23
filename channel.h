@@ -147,13 +147,13 @@ struct channel_iterator
 	}
 	
 	template <typename Any>
-	bool operator==(const Any& a)
+	bool operator==(const Any&)
 	{
 		return _data.is_closed();
 	}
 	
 	template <typename Any>
-	bool operator!=(const Any& a, const Other& b)
+	bool operator!=(const Any&)
 	{
 		return !_data.is_closed();
 	}
