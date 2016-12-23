@@ -138,7 +138,7 @@ struct channel_iterator
 	
 	channel_iterator& operator++()
 	{
-		_data = channel.get();
+		_data = _channel.get();
 	}
 	
 	T operator*() const
@@ -146,16 +146,16 @@ struct channel_iterator
 		return _data.get();
 	}
 	
-	template <typename Other>
-	friend bool operator==(const channel_iterator& a, const Other& b)
+	template <typename Any>
+	bool operator==(const Any& a)
 	{
-		return a.is_closed();
+		return _data.is_closed();
 	}
 	
-	template <typename Other>
-	friend bool operator!=(const channel_iterator& a, const Other& b)
+	template <typename Any>
+	bool operator!=(const Any& a, const Other& b)
 	{
-		return !a.is_closed();
+		return !_data.is_closed();
 	}
 protected:
 	channel<T>& _channel;
