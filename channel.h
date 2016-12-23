@@ -287,12 +287,12 @@ public:
 	
 	auto begin()
 	{
-		return channel_iterator(*this);
+		return channel_iterator<T>(*this);
 	}
 	
 	auto end()
 	{
-		return channel_iterator_dummy();
+		return channel_iterator_dummy<T>();
 	}
 	
 protected:
