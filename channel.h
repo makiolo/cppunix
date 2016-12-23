@@ -97,7 +97,7 @@ protected:
 	int _count_max;
 }
 */
-	
+
 template <typename T>
 struct channel_data
 {
@@ -118,6 +118,50 @@ struct channel_data
 	
 template <typename T> class channel;
 
+template <typename T>
+struct channel_iterator_dummy { ; };
+
+template <typename T>
+struct channel_iterator
+{
+	channel_iterator(channel<T>& channel)
+		: _channel(channel)
+		, _data(channel.get())
+	{
+		;
+	}
+	
+	channel_iterator& operator=(const channel_iterator&)
+	{
+		return *this;
+	}
+	
+	channel_iterator& operator++()
+	{
+		_data = channel.get();
+	}
+	
+	T operator*() const
+	{
+		return _data.get();
+	}
+	
+	template <typename Other>
+	friend bool operator==(const channel_iterator& a, const Other& b)
+	{
+		return a.is_closed();
+	}
+	
+	template <typename Other>
+	friend bool operator!=(const channel_iterator& a, const Other& b)
+	{
+		return !a.is_closed();
+	}
+protected:
+	channel<T>& _channel;
+	channel_data<T> _data;
+};
+	
 template <typename T, typename Function>
 typename channel<T>::link link_template(typename std::enable_if<(!std::is_void<typename std::result_of<Function(T)>::type>::value), Function>::type&& func)
 {
@@ -239,6 +283,16 @@ public:
 	void close()
 	{
 		operator()<bool>(true);
+	}
+	
+	auto begin()
+	{
+		return channel_iterator(*this);
+	}
+	
+	auto end()
+	{
+		return channel_iterator_dummy();
 	}
 	
 protected:
