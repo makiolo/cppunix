@@ -132,7 +132,7 @@ public:
 protected:
 	void _set_tail()
 	{
-		auto r = cu::make_iterator<T>(
+		auto r = cu::make_iterator< channel_data<T> >(
 			[this](auto& source) {
 				for (auto& s : source)
 				{
