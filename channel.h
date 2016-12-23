@@ -219,13 +219,17 @@ public:
 		return *this;
 	}
 	
-	T get()
+	channel_data<T> read()
 	{
-		T data;
-		operator>>(data);
+		channel_data<T> data;
+		_full.wait();
+		data = _buf.top();
+		_buf.pop();
+		_empty.notify();
 		return data;
 	}
 	
+	/*
 	T& operator>>(T& data)
 	{
 		_full.wait();
@@ -238,15 +242,11 @@ public:
 		_empty.notify();
 		return data;
 	}
+	*/
 
 	void close()
 	{
 		operator()<bool>(true);
-	}
-	
-	bool is_closed() const
-	{
-		return _closed;
 	}
 	
 protected:
