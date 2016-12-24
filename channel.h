@@ -14,9 +14,9 @@ class cpproutine
 {
 public:
 };
-	
+
 class semaphore;
-	
+
 class scheduler
 {
 public:
@@ -34,7 +34,7 @@ protected:
 	std::vector<cpproutine> _blocked;
 	// std::vector<cpproutine> _ending;
 };
-	
+
 class semaphore
 {
 public:
@@ -46,7 +46,7 @@ public:
 		assert((1 <= count_max) || (0 <= count));
 		assert(count <= count_max);
 	}
-	
+
 	///
 	/// Reduce el valor del semaforo. Bloquea la regi�n critica. Esta operaci�n tiene m�ltiples
 	/// nombres.
@@ -104,22 +104,19 @@ struct channel_data
 	explicit channel_data() : _data(), _close(false) { ; }
 	explicit channel_data(const T& data) : _data(data), _close(false) { ; }
 	explicit channel_data(bool close) : _data(), _close(close) { ; }
-	
+
 	const T& get() const
 	{
 		return _data;
 	}
-	
+
 	bool is_closed() const {return _close;}
 
 	T _data;
 	bool _close;
 };
-	
-template <typename T> class channel;
 
-template <typename T>
-struct channel_iterator_dummy { ; };
+template <typename T> class channel;
 
 template <typename T>
 struct channel_iterator
@@ -130,28 +127,28 @@ struct channel_iterator
 	{
 		;
 	}
-	
+
 	channel_iterator& operator=(const channel_iterator&)
 	{
 		return *this;
 	}
-	
+
 	channel_iterator& operator++()
 	{
 		_data = _channel.get();
 	}
-	
-	T operator*() const
+
+	const T& operator*() const
 	{
 		return _data.get();
 	}
-	
+
 	template <typename Any>
 	bool operator==(const Any&)
 	{
 		return _data.is_closed();
 	}
-	
+
 	template <typename Any>
 	bool operator!=(const Any&)
 	{
@@ -161,7 +158,7 @@ protected:
 	channel<T>& _channel;
 	channel_data<T> _data;
 };
-	
+
 template <typename T, typename Function>
 typename channel<T>::link link_template(typename std::enable_if<(!std::is_void<typename std::result_of<Function(T)>::type>::value), Function>::type&& func)
 {
@@ -238,13 +235,13 @@ public:
 		_set_tail();
 		_add(std::forward<Function>(f), std::forward<Functions>(fs)...);
 	}
-	
+
 	template <typename Function>
 	void connect(Function&& f)
 	{
 		_add(std::forward<Function>(f));
 	}
-	
+
 	void pop()
 	{
 		_coros.pop();
@@ -257,20 +254,20 @@ public:
 		(*_coros.top())( channel_data<T>(data) );
 		_full.notify();
 	}
-	
+
 	channel<T>& operator<<(const T& data)
 	{
 		operator()<T>(data);
 		return *this;
 	}
-	
+
 	channel_data<T> get()
 	{
 		channel_data<T> data;
 		operator>>(data);
 		return data;
 	}
-	
+
 	channel_data<T>& operator>>(channel_data<T>& data)
 	{
 		_full.wait();
@@ -284,17 +281,17 @@ public:
 	{
 		operator()<bool>(true);
 	}
-	
+
 	auto begin()
 	{
 		return channel_iterator<T>(*this);
 	}
-	
+
 	auto end()
 	{
-		return channel_iterator_dummy<T>();
+		return channel_iterator<T>(*this);
 	}
-	
+
 protected:
 	void _set_tail()
 	{
@@ -307,7 +304,7 @@ protected:
 			}
 		);
 		_coros.push( cu::make_iterator< channel_data<T> >( term_receiver<T>(r) ) );
-		
+
 		// EACH notify increase buffer
 		_empty.notify();
 	}

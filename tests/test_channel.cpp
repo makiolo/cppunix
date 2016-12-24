@@ -90,7 +90,7 @@ TEST(ChannelTest, goroutines_consumer)
 		std::cout << "recv: " << d << std::endl;
 	}
 	t1.join();
-	
+
 	/*
 	for(;;)
 	{
