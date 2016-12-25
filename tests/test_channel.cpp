@@ -3,6 +3,7 @@
 #include "../pipeline.h"
 #include "../channel.h"
 #include <thread>
+#include <asyncply/run.h>
 
 class ChannelTest : testing::Test { };
 
@@ -56,56 +57,76 @@ cmd::link link3()
 	};
 }
 
-void filter1(int s)
+TEST(ChannelTest, pipeline)
 {
-	std::cout << "1. I am filter received " << s << " but not modified" << std::endl;
-}
-
-int filter2(int s)
-{
-	std::cout << "2. I am filter and push " << s*2 << std::endl;
-	return s*2;
+	cmd(generator(), link1(), link2(), link3());
 }
 
 TEST(ChannelTest, goroutines_consumer)
 {
-	// pipeline
-	// cmd(generator(), link1(), link2(), link3());
-
-	auto handler = [](int s) {
-		std::cout << "3. received: " << s << " but not modified" << std::endl;
-	};
-
 	// channel
-	cu::channel<int> go(filter1, filter2, handler);
-	std::thread t1([&](){
-		for(int i=0; i<1000; ++i)
+	cu::channel<int> go(100);
+
+	auto handler = [](auto data) {
+		return data*2;
+	};
+	go.connect(handler);
+
+	auto task = asyncply::async([&](){
+		for(int i=0; i<100; ++i)
 		{
 			go << i;
 		}
 		go.close();
 	});
-	for(auto& d : go)
+	for(auto d : go)
 	{
 		std::cout << "recv: " << d << std::endl;
 	}
-	t1.join();
+	task.get();
+}
 
-	/*
+TEST(ChannelTest, goroutines_consumer2)
+{
+	// channel
+	cu::channel<int> go(100);
+	auto task = asyncply::async([&](){
+		for(int i=0; i<100; ++i)
+		{
+			go << i;
+		}
+		go.close();
+	});
 	for(;;)
 	{
 		auto data = go.get();
-		if(data.is_closed())
+		if(!data)
 		{
 			std::cout << "channel closed" << std::endl;
 			break;
 		}
 		else
 		{
-			std::cout << "recv: " << data.get() << std::endl;
+			std::cout << "recv: " << *data << std::endl;
 		}
 	}
-	*/
+	task.get();
+}
+
+TEST(ChannelTest, goroutines_consumer3)
+{
+	cu::channel<int> go;
+	std::cout << "produce in channel" << std::endl;
+	go << 100;
+	auto data = go.get();
+	if(data)
+	{
+		std::cout << "data = " << *data << std::endl;
+	}
+	else
+	{
+		std::cout << "channel closed" << std::endl;
+	}
 }
 
 /*

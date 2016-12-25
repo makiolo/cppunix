@@ -6,7 +6,9 @@
 #include <boost/bind.hpp>
 #include "coroutine.h"
 #include <fast-event-system/sem.h>
+#include <fast-event-system/async_fast.h>
 #include <assert.h>
+#include <mutex>
 
 namespace cu {
 /*
@@ -98,22 +100,28 @@ protected:
 }
 */
 
+//
+// rename optional<T>
+//
 template <typename T>
-struct channel_data
+struct optional
 {
-	explicit channel_data() : _data(), _close(false) { ; }
-	explicit channel_data(const T& data) : _data(data), _close(false) { ; }
-	explicit channel_data(bool close) : _data(), _close(close) { ; }
+	explicit optional() : _data(), _invalid(false) { ; }
+	explicit optional(bool close) : _data(), _invalid(close) { ; }
+	optional(const T& data) : _data(data), _invalid(false) { ; }
 
-	const T& get() const
+	const T& operator*() const
 	{
 		return _data;
 	}
 
-	bool is_closed() const {return _close;}
+	operator bool() const
+	{
+		return !_invalid;
+	}
 
 	T _data;
-	bool _close;
+	bool _invalid;
 };
 
 template <typename T> class channel;
@@ -121,11 +129,14 @@ template <typename T> class channel;
 template <typename T>
 struct channel_iterator
 {
-	channel_iterator(channel<T>& channel)
+	channel_iterator(channel<T>& channel, bool is_begin=false)
 		: _channel(channel)
-		, _data(channel.get())
+		, _sentinel()
 	{
-		;
+		if(is_begin)
+		{
+			operator++();
+		}
 	}
 
 	channel_iterator& operator=(const channel_iterator&)
@@ -135,28 +146,28 @@ struct channel_iterator
 
 	channel_iterator& operator++()
 	{
-		_data = _channel.get();
+		_sentinel = _channel.get();
 	}
 
-	const T& operator*() const
+	T operator*() const
 	{
-		return _data.get();
+		return *_sentinel;
 	}
 
 	template <typename Any>
 	bool operator==(const Any&)
 	{
-		return _data.is_closed();
+		return !_sentinel;
 	}
 
 	template <typename Any>
 	bool operator!=(const Any&)
 	{
-		return !_data.is_closed();
+		return _sentinel;
 	}
 protected:
 	channel<T>& _channel;
-	channel_data<T> _data;
+	optional<T> _sentinel;
 };
 
 template <typename T, typename Function>
@@ -166,15 +177,14 @@ typename channel<T>::link link_template(typename std::enable_if<(!std::is_void<t
 	{
 		for (auto& s : source)
 		{
-			if(!s.is_closed())
+			if(s)
 			{
-				yield(channel_data<T>(func(s.get())));
+				yield(optional<T>(func(*s)));
 			}
 			else
 			{
-				// propagate close
-				func(s.get());
-				yield(channel_data<T>(true));
+				// skip func
+				yield(s);
 			}
 		}
 	};
@@ -187,7 +197,10 @@ typename channel<T>::link link_template(typename std::enable_if<(std::is_void<ty
 	{
 		for (auto& s : source)
 		{
-			func(s.get());
+			if(s)
+			{
+				func(*s);
+			}
 			yield(s);
 		}
 	};
@@ -209,30 +222,30 @@ template <typename T>
 class channel
 {
 public:
-	using in = cu::pull_type< channel_data<T> >;
-	using out = cu::push_type< channel_data<T> >;
-	using link = cu::link< channel_data<T> >;
-	using coroutine = push_type_ptr< channel_data<T> >;
+	using in = cu::pull_type< optional<T> >;
+	using out = cu::push_type< optional<T> >;
+	using link = cu::link< optional<T> >;
+	using coroutine = push_type_ptr< optional<T> >;
 
-	channel()
+	channel(size_t buffer = 1)
 		: _closed(false)
 	{
-		_set_tail();
+		_set_tail(buffer);
 	}
 
 	template <typename Function>
-	channel(Function&& f)
+	channel(size_t buffer, Function&& f)
 		: _closed(false)
 	{
-		_set_tail();
+		_set_tail(buffer);
 		_add(std::forward<Function>(f));
 	}
 
 	template <typename Function, typename ... Functions>
-	channel(Function&& f, Functions&& ... fs)
+	channel(size_t buffer, Function&& f, Functions&& ... fs)
 		: _closed(false)
 	{
-		_set_tail();
+		_set_tail(buffer);
 		_add(std::forward<Function>(f), std::forward<Functions>(fs)...);
 	}
 
@@ -240,6 +253,12 @@ public:
 	void connect(Function&& f)
 	{
 		_add(std::forward<Function>(f));
+	}
+
+	template <typename Function, typename ... Functions>
+	void connect(Function&& f, Functions&& ... fs)
+	{
+		_add(std::forward<Function>(f), std::forward<Functions>(fs)...);
 	}
 
 	void pop()
@@ -250,9 +269,13 @@ public:
 	template <typename R>
 	void operator()(const R& data)
 	{
-		_empty.wait();
-		(*_coros.top())( channel_data<T>(data) );
-		_full.notify();
+		if(!_closed)
+		{
+			std::unique_lock<std::mutex> lock(_w_coros);
+			_empty.wait();
+			(*_coros.top())( optional<T>(data) );
+			_full.notify();
+		}
 	}
 
 	channel<T>& operator<<(const T& data)
@@ -261,18 +284,17 @@ public:
 		return *this;
 	}
 
-	channel_data<T> get()
+	optional<T> get()
 	{
-		channel_data<T> data;
+		optional<T> data;
 		operator>>(data);
 		return data;
 	}
 
-	channel_data<T>& operator>>(channel_data<T>& data)
+	optional<T>& operator>>(optional<T>& data)
 	{
 		_full.wait();
-		data = _buf.top();
-		_buf.pop();
+		data = std::get<0>( _buf.get() );
 		_empty.notify();
 		return data;
 	}
@@ -284,7 +306,7 @@ public:
 
 	auto begin()
 	{
-		return channel_iterator<T>(*this);
+		return channel_iterator<T>(*this, true);
 	}
 
 	auto end()
@@ -293,42 +315,48 @@ public:
 	}
 
 protected:
-	void _set_tail()
+	void _set_tail(size_t buffer)
 	{
-		auto r = cu::make_iterator< channel_data<T> >(
+		std::unique_lock<std::mutex> lock(_w_coros);
+		assert(buffer > 0);
+		auto r = cu::make_iterator< optional<T> >(
 			[this](auto& source) {
 				for (auto& s : source)
 				{
-					this->_buf.push(s);
+					this->_buf(s);
 				}
 			}
 		);
-		_coros.push( cu::make_iterator< channel_data<T> >( term_receiver<T>(r) ) );
+		_coros.push( cu::make_iterator< optional<T> >( term_receiver<T>(r) ) );
 
-		// EACH notify increase buffer
-		_empty.notify();
+		for(size_t i = 0;i < buffer; ++i)
+			_empty.notify();
 	}
 
 	template <typename Function>
 	void _add(Function&& f)
 	{
-		_coros.push(cu::make_iterator< channel_data<T> >(boost::bind(link_template<T, Function>(f), _1, boost::ref(*_coros.top().get()))));
+		std::unique_lock<std::mutex> lock(_w_coros);
+		_coros.push(cu::make_iterator< optional<T> >(boost::bind(link_template<T, Function>(f), _1, boost::ref(*_coros.top().get()))));
 	}
 
 	template <typename Function, typename ... Functions>
 	void _add(Function&& f, Functions&& ... fs)
 	{
+		std::unique_lock<std::mutex> lock(_w_coros);
 		_add(std::forward<Functions>(fs)...);
-		_coros.push(cu::make_iterator< channel_data<T> >(boost::bind(link_template<T, Function>(f), _1, boost::ref(*_coros.top().get()))));
+		_coros.push(cu::make_iterator< optional<T> >(boost::bind(link_template<T, Function>(f), _1, boost::ref(*_coros.top().get()))));
 	}
 protected:
 	std::stack< coroutine > _coros;
-	std::stack< channel_data<T> > _buf;
+	fes::async_fast< optional<T> > _buf;
 	fes::semaphore _full;
 	fes::semaphore _empty;
+	std::mutex _w_coros;
 	bool _closed;
 };
 
 }
 
 #endif
+
