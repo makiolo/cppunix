@@ -66,11 +66,13 @@ TEST(ChannelTest, goroutines_consumer)
 {
 	// channel
 	cu::channel<int> go(100);
-
+	
+	/*
 	auto handler = [](auto data) {
 		return data*2;
 	};
 	go.connect(handler);
+	*/
 
 	auto task = asyncply::async([&](){
 		for(int i=0; i<100; ++i)
