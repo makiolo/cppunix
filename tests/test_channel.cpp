@@ -62,17 +62,10 @@ TEST(ChannelTest, pipeline)
 	cmd(generator(), link1(), link2(), link3());
 }
 
-TEST(ChannelTest, goroutines_consumer)
+TEST(ChannelTest, DISABLED_goroutines_consumer)
 {
 	// channel
 	cu::channel<int> go(100);
-	
-	/*
-	auto handler = [](auto data) {
-		return data*2;
-	};
-	go.connect(handler);
-	*/
 
 	auto task = asyncply::async([&](){
 		for(int i=0; i<100; ++i)
@@ -85,7 +78,7 @@ TEST(ChannelTest, goroutines_consumer)
 	{
 		std::cout << "recv: " << d << std::endl;
 	}
-	task.get();
+	task->get();
 }
 
 TEST(ChannelTest, goroutines_consumer2)
@@ -112,7 +105,7 @@ TEST(ChannelTest, goroutines_consumer2)
 			std::cout << "recv: " << *data << std::endl;
 		}
 	}
-	task.get();
+	task->get();
 }
 
 TEST(ChannelTest, goroutines_consumer3)
