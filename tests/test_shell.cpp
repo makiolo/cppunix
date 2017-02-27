@@ -1,5 +1,6 @@
 #include <atomic>
 #include "../shell.h"
+#include "../coroutine.h"
 #include <gtest/gtest.h>
 
 class CoroTest : testing::Test { };
@@ -28,43 +29,42 @@ TEST(CoroTest, Test2)
 		out());
 }
 
-// TEST(CoroTest, Test3)
-// {
-// 	std::vector<asyncply::coroutine<void> > coros;
-// 	for(int i=1; i<10; ++i)
-// 	{
-// 		coros.emplace_back(asyncply::make_coroutine<void>(
-// 			[=](asyncply::yield_type<void>& yield)
-// 			{
-// 				std::cout << "create " << i << std::endl;
-// 				yield();
-// 				std::cout << "download " << i << std::endl;
-// 				yield();
-// 				std::cout << "patching " << i << std::endl;
-// 				yield();
-// 				std::cout << "compile " << i << std::endl;
-// 				yield();
-// 				std::cout << "tests " << i << std::endl;
-// 				yield();
-// 				std::cout << "packing " << i << std::endl;
-// 				yield();
-// 				std::cout << "destroy " << i << std::endl;
-// 			}
-// 		));
-// 	}
-//
-// 	bool any_updated = true;
-// 	while(any_updated)
-// 	{
-// 		any_updated = false;
-// 		for(auto& c : coros)
-// 		{
-// 			if(*c)
-// 			{
-// 				(*c)();
-// 				any_updated = true;
-// 			}
-// 		}
-// 	}
-// }
-//
+TEST(CoroTest, Test3)
+{
+	std::vector<cu::pull_type_ptr<void> > coros;
+	for(int i=1; i<10; ++i)
+	{
+		coros.emplace_back(cu::make_generator<void>(
+			[=](auto& yield)
+			{
+				std::cout << "create " << i << std::endl;
+				yield();
+				std::cout << "download " << i << std::endl;
+				yield();
+				std::cout << "patching " << i << std::endl;
+				yield();
+				std::cout << "compile " << i << std::endl;
+				yield();
+				std::cout << "tests " << i << std::endl;
+				yield();
+				std::cout << "packing " << i << std::endl;
+				yield();
+				std::cout << "destroy " << i << std::endl;
+			}
+		));
+	}
+	
+	bool any_updated = true;
+	while(any_updated)
+	{
+		any_updated = false;
+		for(auto& c : coros)
+		{
+			if(*c)
+			{
+				(*c)();
+				any_updated = true;
+			}
+		}
+	}
+}
