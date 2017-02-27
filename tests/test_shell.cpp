@@ -122,7 +122,7 @@ TEST(CoroTest, Test3)
 	cu::scheduler sch;
 	for(int i=0; i<N; ++i)
 	{
-		sch.spawn([&](auto& yield) {
+		sch.spawn([&sch, i](auto& yield) {
 			std::cout << "create " << i << " - pid: " << sch.getpid() << std::endl;
 			yield();
 			std::cout << "download " << i << " - pid: " << sch.getpid() << std::endl;
