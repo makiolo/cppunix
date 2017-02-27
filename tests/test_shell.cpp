@@ -92,6 +92,10 @@ public:
 	
 	int getpid() const {return _pid;}
 	
+	// auto create_semaphore();
+	
+	// each semaphore have 2 channels and ret code
+	
 protected:
 	// normal running
 	std::vector<cu::pull_type_ptr<control_type> > _running;
@@ -107,8 +111,9 @@ private:
 
 TEST(CoroTest, Test3)
 {
+	const int N = 16;
 	cu::scheduler sch;
-	for(int i=1; i<10; ++i)
+	for(int i=0; i<N; ++i)
 	{
 		sch.spawn([&](auto& yield) {
 			std::cout << "create " << i << " - pid: " << sch.getpid() << std::endl;
