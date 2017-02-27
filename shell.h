@@ -412,8 +412,7 @@ cmd::link run(const std::string& cmd)
 	char buff[BUFSIZ];
 	return [cmd, &buff](cmd::in&, cmd::out& yield)
 	{
-		// redirect stderr to /dev/null
-		file_redirect silence_err(stderr);
+		file_redirect silence_err(stderr, stdout);
 		
 		FILE *in;
 		if(!(in = popen(cmd.c_str(), "r")))
