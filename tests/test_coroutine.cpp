@@ -72,7 +72,7 @@ TEST(PipelineTest, Test_range_simple)
 {
 	LOGI("range simple");
 	for (auto v : range(100))
-		LOGI(-> "%d", v);
+		LOGI("-> %d", v);
 	for (auto v : range(10, 100, 2))
 		LOGI("-> %d", v);
 }
