@@ -48,7 +48,6 @@ TEST(PipelineTest, Test_fibonacci_n4134)
 	}
 }
 
-/*
 auto range(int stop)
 {
 	return cu::pull_type<int>(
@@ -73,11 +72,10 @@ TEST(PipelineTest, Test_range_simple)
 {
 	LOGI("range simple");
 	for (auto v : range(100))
-		LOGI("%d", v);
+		LOGI(-> "%d", v);
 	for (auto v : range(10, 100, 2))
-		LOGI("%d", v);
+		LOGI("-> %d", v);
 }
-*/
 
 TEST(PipelineTest, Test_recursive_n4134)
 {
