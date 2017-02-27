@@ -48,7 +48,7 @@ public:
 	{
 		bool any_updated = false;
 		_pid = 0;
-		for(auto& c : coros)
+		for(auto& c : _running)
 		{
 			if(*c)
 			{
