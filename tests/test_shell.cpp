@@ -102,23 +102,21 @@ TEST(CoroTest, Test3)
 	cu::scheduler sch;
 	for(int i=1; i<10; ++i)
 	{
-		sch.spawn(
-			[=](auto& yield) {
-				std::cout << "create " << i << std::endl;
-				yield();
-				std::cout << "download " << i << std::endl;
-				yield();
-				std::cout << "patching " << i << std::endl;
-				yield();
-				std::cout << "compile " << i << std::endl;
-				yield();
-				std::cout << "tests " << i << std::endl;
-				yield();
-				std::cout << "packing " << i << std::endl;
-				yield();
-				std::cout << "destroy " << i << std::endl;
-			}
-		);
+		sch.spawn([&](auto& yield) {
+			std::cout << "create " << i << " - pid: " << sch.getpid() << std::endl;
+			yield();
+			std::cout << "download " << i << " - pid: " << sch.getpid() << std::endl;
+			yield();
+			std::cout << "patching " << i << " - pid: " << sch.getpid() << std::endl;
+			yield();
+			std::cout << "compile " << i << " - pid: " << sch.getpid() << std::endl;
+			yield();
+			std::cout << "tests " << i << " - pid: " << sch.getpid() << std::endl;
+			yield();
+			std::cout << "packing " << i << " - pid: " << sch.getpid() << std::endl;
+			yield();
+			std::cout << "destroy " << i << " - pid: " << sch.getpid() << std::endl;
+		});
 	}
 	sch.run_until_complete();
 }
