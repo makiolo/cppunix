@@ -32,9 +32,7 @@ TEST(CoroTest, Test2)
 
 TEST(CoroTest, TestRun)
 {
-	cmd(run("ls"), out());
-	std::cout << "---------" << std::endl;
-	cmd(run("ls dasjkdaskjd.txt"), out());
+	cmd(run("find ../.. -name '*.cpp' -o -name '*.h'"), out());
 }
 
 namespace cu {
