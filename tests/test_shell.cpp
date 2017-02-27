@@ -53,8 +53,10 @@ public:
 	{
 		bool any_updated = false;
 		_pid = 0;
+		std::cout << "total = " << _running.size() << std::endl;
 		for(auto& c : _running)
 		{
+			std::cout << "ticking = " << getpid() << std::endl;
 			if(*c)
 			{
 				(*c)();
