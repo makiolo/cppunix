@@ -30,6 +30,13 @@ TEST(CoroTest, Test2)
 		out());
 }
 
+TEST(CoroTest, TestRun)
+{
+	cmd(run("ls"), out());
+	std::cout << "---------" << std::endl;
+	cmd(run("ls dasjkdaskjd.txt"), out());
+}
+
 namespace cu {
 
 class scheduler {
