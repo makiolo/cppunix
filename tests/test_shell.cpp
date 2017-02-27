@@ -38,7 +38,12 @@ public:
 	template <typename Function>
 	void spawn(Function&& func)
 	{
-		_running.emplace_back(cu::make_generator<control_type>(std::forward<Function>(func)));
+		_running.emplace_back(cu::make_generator<control_type>(
+			[&func](auto& yield) {
+				yield();
+				(std::forward<Function>(func))(yield);
+			}
+		));
 	}
 		
 	/*
