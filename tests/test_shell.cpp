@@ -29,14 +29,81 @@ TEST(CoroTest, Test2)
 		out());
 }
 
+namespace cu {
+
+class scheduler {
+public:
+	using control_type = void;
+	
+	template <typename Function>
+	void spawn(Function&& func)
+	{
+		_running.emplace_back(cu::make_generator<control_type>(std::forward<Function>(func)));
+	}
+		
+	/*
+	return true if any is updated
+	*/
+	bool run()
+	{
+		bool any_updated = false;
+		_pid = 0;
+		for(auto& c : coros)
+		{
+			if(*c)
+			{
+				(*c)();
+				any_updated = true;
+			}
+			++_pid;
+		}
+		return any_updated;
+	}
+	
+	/*
+	return true if have pending work
+	*/
+	// run_forever()
+	// run_until_complete()
+	void run_until_complete()
+	{
+		bool any_updated = true;
+		while(any_updated)
+		{
+			any_updated = run();
+		}
+	}
+	
+	void run_forever()
+	{
+		while(true)
+		{
+			run();
+		}
+	}
+	
+	int getpid() const {return _pid;}
+	
+protected:
+	// normal running
+	std::vector<cu::pull_type_ptr<control_type> > _running;
+	// locked
+	// std::vector<cu::pull_type_ptr<control_type> > _blocked;
+	// unlocked and prepared for return
+	// std::vector<cu::pull_type_ptr<control_type> > _ready;
+private:
+	int _pid;
+};
+	
+}
+
 TEST(CoroTest, Test3)
 {
-	std::vector<cu::pull_type_ptr<void> > coros;
+	cu::scheduler sch;
 	for(int i=1; i<10; ++i)
 	{
-		coros.emplace_back(cu::make_generator<void>(
-			[=](auto& yield)
-			{
+		sch.spawn(
+			[=](auto& yield) {
 				std::cout << "create " << i << std::endl;
 				yield();
 				std::cout << "download " << i << std::endl;
@@ -51,20 +118,7 @@ TEST(CoroTest, Test3)
 				yield();
 				std::cout << "destroy " << i << std::endl;
 			}
-		));
+		);
 	}
-	
-	bool any_updated = true;
-	while(any_updated)
-	{
-		any_updated = false;
-		for(auto& c : coros)
-		{
-			if(*c)
-			{
-				(*c)();
-				any_updated = true;
-			}
-		}
-	}
+	sch.run_until_complete();
 }
