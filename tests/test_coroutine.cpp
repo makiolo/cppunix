@@ -62,7 +62,7 @@ auto range(int start, int stop, int step=1)
 {
 	return cu::pull_type<int>(
 		[&](auto& yield) {
-			for(int i=start;i<stop;stop+=step)
+			for(int i=start;i<stop;i+=step)
 				yield(i);
 		}
 	);
