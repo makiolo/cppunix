@@ -14,6 +14,44 @@
 #include <boost/regex.hpp>
 #include <boost/algorithm/string.hpp>
 
+////
+#include <cstdio>
+#include <cstdlib>
+#include <fcntl.h>
+
+#ifdef LINUX
+#include <sys/types.h>
+#include <sys/stat.h>
+#endif
+
+#ifdef WIN32
+
+#include <io.h>
+
+#ifndef DEVNUL
+#define DEVNUL "NUL"
+#endif
+
+#ifndef dup
+#define dup _dup
+#endif
+
+#ifndef dup2
+#define dup2 _dup2
+#endif
+
+#else
+
+#ifndef DEVNUL
+#define DEVNUL "/dev/null"
+#endif
+
+// pipe() and close()
+#include <unistd.h>
+
+#endif
+////
+
 #include "pipeline.h"
 
 namespace cu {
@@ -309,12 +347,74 @@ cmd::link split(const char* delim = " ", bool keep_empty=true)
 		}
 	};
 }
+	
+class file_redirect
+{
+public:
+	explicit file_redirect(FILE* original = stdout, FILE* destiny = nullptr);
+	~file_redirect();
 
+private:
+	FILE* _original;
+	FILE* _destiny;
+	bool _to_null;
+	int _backup;
+};
+
+file_redirect::file_redirect(FILE* original, FILE* destiny)
+	: _original(original)
+	, _destiny(destiny)
+	, _to_null(destiny == nullptr)
+{
+	if(_to_null)
+	{
+		_destiny = fopen(DEVNUL, "a");
+	}
+
+	// backup original pipes
+	_backup = dup(fileno(_original));
+	if (_backup == -1)
+	{
+		std::abort();
+	}
+
+	fflush(_original);
+	
+	// overwrite original with destiny (dup2 is not thread safe)
+	int res = dup2(fileno(_destiny), fileno(_original));
+	if (res == -1)
+	{
+		std::abort();
+	}
+}
+
+file_redirect::~file_redirect()
+{
+	fflush(_original);
+
+	// recover original (dup2 is not thread safe)
+	int res = dup2(_backup, fileno(_original));
+	if (res == -1)
+	{
+		std::abort();
+	}
+
+	// closes
+	close(_backup);
+	if(_to_null)
+	{
+		fclose(_destiny);
+	}
+}
+	
 cmd::link run(const std::string& cmd)
 {
 	char buff[BUFSIZ];
 	return [cmd, &buff](cmd::in&, cmd::out& yield)
 	{
+		// redirect stderr to /dev/null
+		file_redirect silence_err(stderr);
+		
 		FILE *in;
 		if(!(in = popen(cmd.c_str(), "r")))
 		{
@@ -335,4 +435,3 @@ cmd::link run(const std::string& cmd)
 }
 
 #endif
-
