@@ -1,6 +1,7 @@
 #include <atomic>
 #include "../shell.h"
 #include "../coroutine.h"
+#include <teelogging/teelogging.h>
 #include <gtest/gtest.h>
 
 class CoroTest : testing::Test { };
@@ -53,10 +54,10 @@ public:
 	{
 		bool any_updated = false;
 		_pid = 0;
-		std::cout << "total = " << _running.size() << std::endl;
+		LOGD("total = %d", _running.size());
 		for(auto& c : _running)
 		{
-			std::cout << "ticking = " << getpid() << std::endl;
+			LOGD("ticking = %d", getpid());
 			if(*c)
 			{
 				(*c)();
