@@ -30,9 +30,12 @@ TEST(CoroTest, Test2)
 		out());
 }
 
-TEST(CoroTest, TestRun)
+TEST(CoroTest, TestFind)
 {
+	std::cout << "using unix find" << std::endl;
 	cmd(run("find ../.. -name '*.cpp' -o -name '*.h'"), out());
+	std::cout << "using cppunix find" << std::endl;
+	cmd(find("../.."), grep(".*\\.cpp$|.*\\.h$"), out());
 }
 
 namespace cu {
