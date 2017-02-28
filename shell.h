@@ -478,7 +478,7 @@ cmd::link out()
 cmd::link run(const std::string& cmd)
 {
 	char buff[BUFSIZ];
-	return [cmd, &buff](cmd::in&, cmd::out& yield)
+	return [cmd, &buff](cmd::in& source, cmd::out& yield)
 	{
 		file_redirect silence_err(stderr, stdout);
 		
