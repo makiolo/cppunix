@@ -62,9 +62,8 @@ cmd::link cat(const std::string& filename)
 {
 	return [&](cmd::in&, cmd::out& yield)
 	{
-		std::string line;
 		std::ifstream input(filename);
-		while (std::getline(input, line))
+		for (std::string line; std::getline(input, line);)
 		{
 			yield(line);
 		}
@@ -82,7 +81,7 @@ cmd::link cat()
 	};
 }
 
-void find_tree(const boost::filesystem::path& p, std::vector<std::string>& files)
+void find_tree(const boost::filesystem::path& p, cmd::out& yield)
 {
 	namespace fs = boost::filesystem;
 	if(fs::is_directory(p))
@@ -91,17 +90,17 @@ void find_tree(const boost::filesystem::path& p, std::vector<std::string>& files
 		{
 			if(fs::is_directory(f->path()))
 			{
-				find_tree(f->path(), files);
+				find_tree(f->path(), yield);
 			}
 			else
 			{
-				files.emplace_back(f->path().string());
+				yield(f->path().string());
 			}
 		}
 	}
 	else
 	{
-		files.emplace_back(p.string());
+		yield(p.string());
 	}
 }
 
@@ -112,12 +111,7 @@ cmd::link find(const std::string& dir)
 		boost::filesystem::path p(dir);
 		if (boost::filesystem::exists(p))
 		{
-			std::vector<std::string> files;
-			find_tree(p, files);
-			for(auto& f : files)
-			{
-				yield(f);
-			}
+			find_tree(p, yield);
 		}
 	};
 }
