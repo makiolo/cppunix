@@ -299,20 +299,28 @@ cmd::link join(const char* delim = " ")
 	};
 }
 
+cmd::link split(const std::string& text, const char* delim = " ", bool keep_empty=true)
+{
+	return [&](cmd::in&, cmd::out& yield)
+	{
+		std::vector<std::string> chunks;
+		boost::split(chunks, text, boost::is_any_of(delim));
+		for(auto& chunk : chunks)
+		{
+			if(!keep_empty && chunk.empty())
+				continue;
+			yield(chunk);
+		}
+	};
+}
+	
 cmd::link split(const char* delim = " ", bool keep_empty=true)
 {
 	return [&](cmd::in& source, cmd::out& yield)
 	{
 		for (auto s : source)
 		{
-			std::vector<std::string> chunks;
-			boost::split(chunks, s, boost::is_any_of(delim));
-			for(auto& chunk : chunks)
-			{
-				if(!keep_empty && chunk.empty())
-					continue;
-				yield(chunk);
-			}
+			split(s, delim, keep_empty)(source, yield);
 		}
 	};
 }
@@ -483,9 +491,13 @@ cmd::link run(const std::string& cmd)
 		}
 		while(fgets(buff, BUFSIZ, in) != 0)
 		{
+			split(std::string(buff), '\n')(source, yield);
+			/*
+			// remove endline
 			std::string newline(buff);
 			newline.erase(std::remove(newline.begin(), newline.end(), '\n'), newline.end());
 			yield(newline);
+			*/
 		}
 		pclose(in);
 	};
