@@ -491,7 +491,7 @@ cmd::link run(const std::string& cmd)
 		}
 		while(fgets(buff, BUFSIZ, in) != 0)
 		{
-			split(std::string(buff), '\n')(source, yield);
+			split(std::string(buff), "\n")(source, yield);
 			/*
 			// remove endline
 			std::string newline(buff);
