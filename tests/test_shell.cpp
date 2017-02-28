@@ -170,6 +170,7 @@ public:
 		}
 		else
 		{
+			// bloquear esta cpproutine
 			_sche.lock(); // (*this)
 		}
 	}
@@ -188,9 +189,13 @@ public:
 	///
 	inline void unlock()
 	{
-		if((_count == 0) || (_count < count_max))
+		if((_count == 0) || (_count < _count_max))
 		{
 			++_count;
+		}
+		else
+		{
+			// ejecutar al primero que se bloqueo
 		}
 	}
 protected:
@@ -198,7 +203,7 @@ protected:
 	int _count;
 	int _count_max;
 }
-	
+
 }
 
 TEST(CoroTest, Test3)
