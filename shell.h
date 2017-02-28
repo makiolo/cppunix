@@ -325,7 +325,7 @@ cmd::link split(const char* delim = " ", bool keep_empty=true)
 	};
 }
 
-cmd::link assert(const std::string& matching)
+cmd::link assert_string(const std::string& matching)
 {
 	return [&](cmd::in& source, cmd::out& yield)
 	{
@@ -342,7 +342,7 @@ cmd::link assert(const std::string& matching)
 	};
 }
 
-cmd::link assert(const std::vector<std::string>& matches)
+cmd::link assert_string(const std::vector<std::string>& matches)
 {
 	return [&](cmd::in& source, cmd::out& yield)
 	{
