@@ -131,21 +131,49 @@ cmd::link ls(const std::string& dir)
 {
 	namespace fs = boost::filesystem;
 	return [&](cmd::in&, cmd::out& yield)
-	{
-		fs::path p(dir);
-		if (fs::exists(p) && fs::is_directory(p))
+	{	
+		// fs::initial_path()
+		// fs::current_path()
+		//
+		fs::path full_path = fs::system_complete( fs::path( dir, fs::native ) );
+
+		unsigned long file_count = 0;
+		unsigned long dir_count = 0;
+		unsigned long err_count = 0;
+
+		if ( fs::exists( full_path ) )
 		{
-			for (auto f = fs::directory_iterator(p); f != fs::directory_iterator(); ++f)
+			if ( fs::is_directory( full_path ) )
 			{
-				if (fs::is_regular_file(f->path()))
+				fs::directory_iterator end_iter;
+				for ( fs::directory_iterator dir_itr( full_path ); dir_itr != end_iter; ++dir_itr )
 				{
-					yield(f->path().string());
+					try
+					{
+						if ( fs::is_directory( *dir_itr ) )
+						{
+							++dir_count;
+						}
+						else
+						{
+							++file_count;
+						}
+						yield( dir_itr->leaf() );
+					}
+					catch ( const std::exception & ex )
+					{
+						++err_count;
+					}
 				}
+			}
+			else // must be a file
+			{
+				yield( full_path.native_file_string() );
 			}
 		}
 	};
 }
-	
+
 cmd::link ls()
 {
 	return [&](cmd::in& source, cmd::out& yield)
