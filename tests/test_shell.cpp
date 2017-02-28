@@ -45,6 +45,12 @@ TEST(CoroTest, TestCut)
 	cmd(in("hello big world"), cut(2), out(), assert_string("world"));
 }
 
+TEST(CoroTest, TestGrep)
+{
+	cmd(in("line1\nline2\nline3\n"), split("\n"), grep("line2"), out(), assert_string("line2"));
+	// cmd(in("line1\nline2\nline3\n"), split("\n"), grep("line2"), out(), assert_string("line2"), assert_count(1));
+}
+
 namespace cu {
 
 class scheduler {
