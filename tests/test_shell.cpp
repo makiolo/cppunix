@@ -45,9 +45,9 @@ public:
 	void spawn(Function&& func)
 	{
 		_running.emplace_back(cu::make_generator<control_type>(
-			[&func](auto& yield) {
+			[f = std::move(func)](auto& yield) {
 				yield();
-				(std::forward<Function>(func))(yield);
+				f(yield);
 			}
 		));
 	}
