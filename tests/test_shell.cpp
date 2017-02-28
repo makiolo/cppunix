@@ -40,9 +40,9 @@ TEST(CoroTest, TestFind)
 
 TEST(CoroTest, TestCut)
 {
-	cmd(in("hello big world"), cut(0), out(), assert("hello"));
-	cmd(in("hello big world"), cut(1), out(), assert("big"));
-	cmd(in("hello big world"), cut(2), out(), assert("world"));
+	cmd(in("hello big world"), cut(0), out(), assert_string("hello"));
+	cmd(in("hello big world"), cut(1), out(), assert_string("big"));
+	cmd(in("hello big world"), cut(2), out(), assert_string("world"));
 }
 
 namespace cu {
