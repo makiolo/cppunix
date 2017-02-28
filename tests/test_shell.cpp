@@ -38,6 +38,13 @@ TEST(CoroTest, TestFind)
 	cmd(find("../.."), grep(".*\\.cpp$|.*\\.h$"), out());
 }
 
+TEST(CoroTest, TestCut)
+{
+	cmd(in("hello big world"), cut(0), out(), assert("hello"));
+	cmd(in("hello big world"), cut(1), out(), assert("big"));
+	cmd(in("hello big world"), cut(2), out(), assert("world"));
+}
+
 namespace cu {
 
 class scheduler {
