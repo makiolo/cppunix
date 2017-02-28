@@ -57,7 +57,7 @@
 namespace cu {
 
 using cmd = cu::pipeline<std::string>;
-
+	
 cmd::link cat(const std::string& filename)
 {
 	return [&](cmd::in&, cmd::out& yield)
@@ -319,6 +319,42 @@ cmd::link split(const char* delim = " ", bool keep_empty=true)
 					continue;
 				yield(chunk);
 			}
+		}
+	};
+}
+
+cmd::link assert(const std::string& matching)
+{
+	return [&](cmd::in& source, cmd::out& yield)
+	{
+		for (auto s : source)
+		{
+			if(matching != s)
+			{
+				std::stringstream ss;
+				ss << "error in string: " << s << ", expected value: " << matching << std::endl;
+				throw std::runtime_error(ss.str());
+			}
+			yield(s);
+		}
+	};
+}
+
+cmd::link assert(const std::vector<std::string>& matches)
+{
+	return [&](cmd::in& source, cmd::out& yield)
+	{
+		int i = 0;
+		for (auto s : source)
+		{
+			if(matches[i] != s)
+			{
+				std::stringstream ss;
+				ss << "error in string: " << s << ", expected value: " << matches[i] << std::endl;
+				throw std::runtime_error(ss.str());
+			}
+			++i;
+			yield(s);
 		}
 	};
 }
