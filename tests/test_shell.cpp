@@ -202,7 +202,7 @@ protected:
 	scheduler& _sche;
 	int _count;
 	int _count_max;
-}
+};
 
 }
 
