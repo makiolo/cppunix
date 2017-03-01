@@ -135,7 +135,8 @@ cmd::link ls(const std::string& dir)
 		// fs::initial_path()
 		// fs::current_path()
 		//
-		fs::path full_path = fs::system_complete( fs::path( dir, fs::native ) );
+		// fs::path full_path = fs::system_complete( fs::path( dir, fs::native ) );
+		fs::path full_path(dir);
 
 		unsigned long file_count = 0;
 		unsigned long dir_count = 0;
