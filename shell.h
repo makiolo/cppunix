@@ -229,12 +229,37 @@ cmd::link uniq()
 {
 	return [&](cmd::in& source, cmd::out& yield)
 	{
+		// TODO: use std::unique
 		std::set<std::string> unique;
 		for (auto s : source)
 		{
 			unique.insert(s);
 		}
 		for (const auto& s : unique)
+		{
+			yield(s);
+		}
+	};
+}
+
+cmd::link sort(bool stable = false)
+{
+	return [&](cmd::in& source, cmd::out& yield)
+	{
+		std::vector<std::string> sorted;
+		for (auto s : source)
+		{
+			sorted.emplace_back(s);
+		}
+		if(!stable)
+		{
+			std::sort(sorted.begin(), sorted.end());
+		}
+		else
+		{
+			std::stable_sort(sorted.begin(), sorted.end());
+		}
+		for (const auto& s : sorted)
 		{
 			yield(s);
 		}
