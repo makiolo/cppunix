@@ -159,7 +159,7 @@ cmd::link ls(const std::string& dir)
 						{
 							++file_count;
 						}
-						yield( dir_itr->leaf() );
+						yield( dir_itr->path().string() );
 					}
 					catch ( const std::exception & ex )
 					{
@@ -169,7 +169,7 @@ cmd::link ls(const std::string& dir)
 			}
 			else // must be a file
 			{
-				yield( full_path.native_file_string() );
+				yield( full_path.string() );
 			}
 		}
 	};
