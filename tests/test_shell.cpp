@@ -8,7 +8,7 @@ class CoroTest : testing::Test { };
 
 using namespace cu;
 
-TEST(CoroTest, Test1)
+TEST(CoroTest, DISABLED_Test1)
 {
 	std::vector<std::string> lines;
 	cmd(find("../.."), grep("test_"), out(lines));
@@ -16,7 +16,7 @@ TEST(CoroTest, Test1)
 		std::cout << line << std::endl;
 }
 
-TEST(CoroTest, Test2)
+TEST(CoroTest, DISABLED_Test2)
 {
 	cmd(find("../.."),
 		grep(".*\\.cpp$|.*\\.h$"),
@@ -30,7 +30,7 @@ TEST(CoroTest, Test2)
 		out());
 }
 
-TEST(CoroTest, TestFind)
+TEST(CoroTest, DISABLED_TestFind)
 {
 	std::cout << "using unix find" << std::endl;
 	cmd(run("find ../.. -name '*.cpp' -o -name '*.h'"), out());
