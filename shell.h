@@ -59,6 +59,68 @@
 namespace cu {
 
 using cmd = cu::pipeline<std::string>;
+
+std::string translate(const char *pattern)
+{
+    int i = 0, n = strlen(pattern);
+    std::string result;
+
+    while (i < n) {
+        char c = pattern[i];
+        ++i;
+
+        if (c == '*') {
+            result += ".*";
+        } else if (c == '?') {
+            result += '.';
+        } else if (c == '[') {
+            int j = i;
+            /*
+             * The following two statements check if the sequence we stumbled
+             * upon is '[]' or '[!]' because those are not valid character
+             * classes.
+             */
+            if (j < n && pattern[j] == '!')
+                ++j;
+            if (j < n && pattern[j] == ']')
+                ++j;
+            /*
+             * Look for the closing ']' right off the bat. If one is not found,
+             * escape the opening '[' and continue.  If it is found, process
+             * the contents of '[...]'.
+             */
+            while (j < n && pattern[j] != ']')
+                ++j;
+            if (j >= n) {
+                result += "\\[";
+            } else {
+                std::string stuff = replace_all(std::string(&pattern[i], j - i), "\\", "\\\\");
+                char first_char = pattern[i];
+                i = j + 1;
+                result += "[";
+                if (first_char == '!') {
+                    result += "^" + stuff.substr(1);
+                } else if (first_char == '^') {
+                    result += "\\" + stuff;
+                } else {
+                    result += stuff;
+                }
+                result += "]";
+            }
+        } else {
+            if (isalnum(c)) {
+                result += c;
+            } else {
+                result += "\\";
+                result += c;
+            }
+        }
+    }
+    /*
+     * Make the expression multi-line and make the dot match any character at all.
+     */
+    return result + "\\Z(?ms)";
+}
 	
 cmd::link cat(const std::string& filename)
 {
@@ -192,7 +254,7 @@ cmd::link grep(const std::string& pattern, bool exclusion = false)
 {
 	return [=](cmd::in& source, cmd::out& yield)
 	{
-		const boost::regex re(pattern);
+		const boost::regex re(translate(pattern));
 		for (auto s : source)
 		{
 			const std::string& line(s);
@@ -398,6 +460,25 @@ cmd::link assert_string(const std::string& matching)
 	};
 }
 
+cmd::link assert_string(const std::vector<std::string>& matches)
+{
+	return [=](cmd::in& source, cmd::out& yield)
+	{
+		int i = 0;
+		for (auto s : source)
+		{
+			if(matches[i] != s)
+			{
+				std::stringstream ss;
+				ss << "error in string: " << s << ", expected value: " << matches[i] << std::endl;
+				throw std::runtime_error(ss.str());
+			}
+			++i;
+			yield(s);
+		}
+	};
+}
+
 cmd::link assert_count(size_t expected)
 {
 	return [=](cmd::in& source, cmd::out& yield)
@@ -417,25 +498,6 @@ cmd::link assert_count(size_t expected)
 	};
 }
 
-cmd::link assert_string(const std::vector<std::string>& matches)
-{
-	return [=](cmd::in& source, cmd::out& yield)
-	{
-		int i = 0;
-		for (auto s : source)
-		{
-			if(matches[i] != s)
-			{
-				std::stringstream ss;
-				ss << "error in string: " << s << ", expected value: " << matches[i] << std::endl;
-				throw std::runtime_error(ss.str());
-			}
-			++i;
-			yield(s);
-		}
-	};
-}
-	
 class file_redirect
 {
 public:
@@ -494,7 +556,6 @@ file_redirect::~file_redirect()
 		fclose(_destiny);
 	}
 }
-
 
 cmd::link in()
 {
@@ -627,7 +688,7 @@ cmd::link run(const std::string& cmd)
 		pclose(in);
 	};
 }
-
+	
 }
 
 #endif
