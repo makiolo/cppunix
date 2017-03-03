@@ -8,6 +8,8 @@
 #include <sstream>
 #include <exception>
 #include <vector>
+#include <algorithm>
+#include <locale>
 
 #include <boost/tokenizer.hpp>
 #include <boost/filesystem.hpp>
@@ -60,7 +62,7 @@ using cmd = cu::pipeline<std::string>;
 	
 cmd::link cat(const std::string& filename)
 {
-	return [&](cmd::in&, cmd::out& yield)
+	return [=](cmd::in&, cmd::out& yield)
 	{
 		std::ifstream input(filename);
 		for (std::string line; std::getline(input, line);)
@@ -106,7 +108,7 @@ void find_tree(const boost::filesystem::path& p, cmd::out& yield)
 
 cmd::link find(const std::string& dir)
 {
-	return [&](cmd::in&, cmd::out& yield)
+	return [=](cmd::in&, cmd::out& yield)
 	{
 		boost::filesystem::path p(dir);
 		if (boost::filesystem::exists(p))
@@ -130,7 +132,7 @@ cmd::link find()
 cmd::link ls(const std::string& dir)
 {
 	namespace fs = boost::filesystem;
-	return [&](cmd::in&, cmd::out& yield)
+	return [=](cmd::in&, cmd::out& yield)
 	{	
 		// fs::initial_path()
 		// fs::current_path()
@@ -188,7 +190,7 @@ cmd::link ls()
 
 cmd::link grep(const std::string& pattern, bool exclusion = false)
 {
-	return [&](cmd::in& source, cmd::out& yield)
+	return [=](cmd::in& source, cmd::out& yield)
 	{
 		const boost::regex re(pattern);
 		for (auto s : source)
@@ -205,7 +207,7 @@ cmd::link grep(const std::string& pattern, bool exclusion = false)
 
 cmd::link grep_v(const std::string& pattern)
 {
-	return [&](cmd::in& source, cmd::out& yield)
+	return [=](cmd::in& source, cmd::out& yield)
 	{
 		grep(pattern, true)(source, yield);
 	};
@@ -213,7 +215,7 @@ cmd::link grep_v(const std::string& pattern)
 
 cmd::link contain(const std::string& in)
 {
-	return [&](cmd::in& source, cmd::out& yield)
+	return [=](cmd::in& source, cmd::out& yield)
 	{
 		for (auto s : source)
 		{
@@ -228,7 +230,7 @@ cmd::link contain(const std::string& in)
 
 cmd::link uniq()
 {
-	return [&](cmd::in& source, cmd::out& yield)
+	return [=](cmd::in& source, cmd::out& yield)
 	{
 		// TODO: use std::unique
 		std::set<std::string> unique;
@@ -245,7 +247,7 @@ cmd::link uniq()
 
 cmd::link sort(bool stable = false)
 {
-	return [&](cmd::in& source, cmd::out& yield)
+	return [=](cmd::in& source, cmd::out& yield)
 	{
 		std::vector<std::string> sorted;
 		for (auto s : source)
@@ -295,7 +297,7 @@ cmd::link rtrim()
 
 cmd::link trim()
 {
-	return [&](cmd::in& source, cmd::out& yield)
+	return [=](cmd::in& source, cmd::out& yield)
 	{
 		ltrim()(source, yield);
 		rtrim()(source, yield);
@@ -304,7 +306,7 @@ cmd::link trim()
 
 cmd::link cut(int field, const char* delim = " ")
 {
-	return [&](cmd::in& source, cmd::out& yield)
+	return [=](cmd::in& source, cmd::out& yield)
 	{
 		typedef boost::tokenizer<boost::char_separator<char>> tokenizer;
 		for (auto s : source)
@@ -324,7 +326,7 @@ cmd::link cut(int field, const char* delim = " ")
 
 cmd::link quote(const char* delim = "\"")
 {
-	return [&](cmd::in& source, cmd::out& yield)
+	return [=](cmd::in& source, cmd::out& yield)
 	{
 		for (auto s : source)
 		{
@@ -337,7 +339,7 @@ cmd::link quote(const char* delim = "\"")
 
 cmd::link join(const char* delim = " ")
 {
-	return [&](cmd::in& source, cmd::out& yield)
+	return [=](cmd::in& source, cmd::out& yield)
 	{
 		std::stringstream ss;
 		int i = 0;
@@ -355,7 +357,7 @@ cmd::link join(const char* delim = " ")
 
 cmd::link split(const std::string& text, const char* delim = " ", bool keep_empty=true)
 {
-	return [&](cmd::in&, cmd::out& yield)
+	return [=](cmd::in&, cmd::out& yield)
 	{
 		std::vector<std::string> chunks;
 		boost::split(chunks, text, boost::is_any_of(delim));
@@ -370,7 +372,7 @@ cmd::link split(const std::string& text, const char* delim = " ", bool keep_empt
 	
 cmd::link split(const char* delim = " ", bool keep_empty=true)
 {
-	return [&](cmd::in& source, cmd::out& yield)
+	return [=](cmd::in& source, cmd::out& yield)
 	{
 		for (auto s : source)
 		{
@@ -381,7 +383,7 @@ cmd::link split(const char* delim = " ", bool keep_empty=true)
 
 cmd::link assert_string(const std::string& matching)
 {
-	return [&](cmd::in& source, cmd::out& yield)
+	return [=](cmd::in& source, cmd::out& yield)
 	{
 		for (auto s : source)
 		{
@@ -396,9 +398,28 @@ cmd::link assert_string(const std::string& matching)
 	};
 }
 
+cmd::link assert_count(size_t expected)
+{
+	return [=](cmd::in& source, cmd::out& yield)
+	{
+		size_t total = 0;
+		for (auto s : source)
+		{
+			yield(s);
+			++total;
+		}
+		if(expected != total)
+		{
+			std::stringstream ss;
+			ss << "<assert_count> error count: " << total << ", but expected value: " << expected << std::endl;
+			throw std::runtime_error(ss.str());
+		}
+	};
+}
+
 cmd::link assert_string(const std::vector<std::string>& matches)
 {
-	return [&](cmd::in& source, cmd::out& yield)
+	return [=](cmd::in& source, cmd::out& yield)
 	{
 		int i = 0;
 		for (auto s : source)
@@ -499,7 +520,7 @@ cmd::link in(const std::vector<std::string>& strs)
 
 cmd::link in(const std::string& str)
 {
-	return [&](cmd::in&, cmd::out& yield)
+	return [=](cmd::in&, cmd::out& yield)
 	{
 		yield(str);
 	};
@@ -517,6 +538,18 @@ cmd::link out(std::vector<std::string>& strs)
 	};
 }
 
+cmd::link out(std::string& str)
+{
+	return [&](cmd::in& source, cmd::out& yield)
+	{
+		for (auto s : source)
+		{
+			str = s;
+			yield(s);
+		}
+	};
+}
+
 cmd::link out()
 {
 	return [&](cmd::in& source, cmd::out& yield)
@@ -525,6 +558,50 @@ cmd::link out()
 		{
 			std::cout << s << std::endl;
 			yield(s);
+		}
+	};
+}
+
+cmd::link err()
+{
+	return [&](cmd::in& source, cmd::out& yield)
+	{
+		for (auto s : source)
+		{
+			std::cerr << s << std::endl;
+			yield(s);
+		}
+	};
+}
+
+template <std::ctype_base::mask mask>
+class IsNot
+{
+	std::locale myLocale;       // To ensure lifetime of facet...
+	std::ctype<char> const* myCType;
+public:
+	IsNot( std::locale const& l = std::locale() )
+		: myLocale( l )
+		, myCType( &std::use_facet<std::ctype<char> >( l ) )
+	{
+	}
+	bool operator()( char ch ) const
+	{
+		return ! myCType->is( mask, ch );
+	}
+};
+
+using IsNotSpace = IsNot<std::ctype_base::space>;
+
+cmd::link strip()
+{
+	return [&](cmd::in& source, cmd::out& yield)
+	{
+		for (auto s : source)
+		{
+			auto right = std::find_if( s.rbegin(), s.rend(), IsNotSpace() ).base();
+			auto left = std::find_if(s.begin(), right, IsNotSpace() );
+			yield( std::string( left, right ) );
 		}
 	};
 }
@@ -545,13 +622,7 @@ cmd::link run(const std::string& cmd)
 		}
 		while(fgets(buff, BUFSIZ, in) != 0)
 		{
-			split(std::string(buff), "\n")(source, yield);
-			/*
-			// remove endline
-			std::string newline(buff);
-			newline.erase(std::remove(newline.begin(), newline.end(), '\n'), newline.end());
-			yield(newline);
-			*/
+			yield(std::string(buff));
 		}
 		pclose(in);
 	};

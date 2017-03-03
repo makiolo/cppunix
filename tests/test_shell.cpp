@@ -8,47 +8,94 @@ class CoroTest : testing::Test { };
 
 using namespace cu;
 
-TEST(CoroTest, Test1)
+TEST(CoroTest, Test_run_ls_strip_quote_grep)
 {
-	std::vector<std::string> lines;
-	cmd(find("../.."), grep("test_"), out(lines));
-	for (auto& line : lines)
-		std::cout << line << std::endl;
+	cmd(
+			  run("ls .")
+			, strip()
+			, quote()
+			, grep("shell_exe")
+			, assert_count(1)
+			, assert_string("\"shell_exe\"")
+	);
+
+	cmd(
+			  ls(".")
+			, strip()
+			, quote()
+			, grep("shell_exe")
+			, assert_count(1)
+			, assert_string("\"shell_exe\"")
+	);
 }
 
-TEST(CoroTest, Test2)
+TEST(CoroTest, Test_run_ls_sort_grep_uniq_join)
 {
-	cmd(find("../.."),
-		grep(".*\\.cpp$|.*\\.h$"),
-		cat(),
-		grep("class|struct|typedef|using|void|int|double|float"),
-		grep_v("enable_if|;|\"|\'"),
-		split(" "),
-		trim(),
-		uniq(),
-		join(" "),
-		out());
+	std::string out_subproces;
+	cmd(run("ls ."), strip(), sort(), grep_v("_exe"), uniq(), join(), out(out_subproces));
+	//
+	std::string out_ls;
+	cmd(ls("."), sort(), grep_v("_exe"), uniq(), join(), out(out_ls));
+	//
+	ASSERT_STREQ(out_subproces.c_str(), out_ls.c_str());
 }
 
-TEST(CoroTest, TestFind)
+TEST(CoroTest, TestCut)
 {
-	std::cout << "using unix find" << std::endl;
-	cmd(run("find ../.. -name '*.cpp' -o -name '*.h'"), out());
-	std::cout << "using cppunix find" << std::endl;
-	cmd(find("../.."), grep(".*\\.cpp$|.*\\.h$"), out());
+	cmd(
+			  in("hello big world")
+			, assert_count(1)
+			, split()
+			, assert_count(3)
+			, join()
+			, assert_count(1)
+			, cut(0)
+			, assert_count(1)
+			, assert_string("hello")
+	);
+	cmd(
+			  in("hello big world")
+			, assert_count(1)
+			, split()
+			, assert_count(3)
+			, join()
+			, assert_count(1)
+			, cut(1)
+			, assert_count(1)
+			, assert_string("big")
+	);
+	cmd(
+			  in("hello big world")
+			, assert_count(1)
+			, split()
+			, assert_count(3)
+			, join()
+			, assert_count(1)
+			, cut(2)
+			, assert_count(1)
+			, assert_string("world")
+	);
 }
 
-TEST(CoroTest, DISABLED_TestCut)
+TEST(CoroTest, TestGrep)
 {
-	cmd(in("hello big world"), cut(0), out());
-	cmd(in("hello big world"), cut(1), out());
-	cmd(in("hello big world"), cut(2), out());
+	cmd(	  
+			  in("line1\nline2\nline3")
+			, split("\n")
+			, assert_count(3)
+			, grep("line2")
+			, assert_count(1)
+			, assert_string("line2")
+	);
 }
 
-TEST(CoroTest, DISABLED_TestGrep)
+TEST(CoroTest, TestGrep2)
 {
-	cmd(in("line1\nline2\nline3\n"), split("\n"), quote(), out());
-	// cmd(in("line1\nline2\nline3\n"), split("\n"), grep("line2"), out(), assert_string("line2"), assert_count(1));
+	cmd(	  
+			  in("line1\nline2\nline3\n")
+			, split("\n")
+			, assert_count(4)
+	);
 }
 
 namespace cu {
@@ -206,7 +253,7 @@ protected:
 
 }
 
-TEST(CoroTest, Test3)
+TEST(CoroTest, TestScheduler)
 {
 	const int N = 16;
 	cu::scheduler sch;
@@ -230,3 +277,4 @@ TEST(CoroTest, Test3)
 	}
 	sch.run_until_complete();
 }
+
