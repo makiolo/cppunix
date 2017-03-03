@@ -123,16 +123,29 @@ public:
 		bool any_updated = false;
 		_pid = 0;
 		LOGD("total = %d", _running.size());
-		for(auto& c : _running)
-		{
+		
+		auto i = std::begin(_running);
+		while (i != std::end(_running)) {
 			LOGD("ticking = %d", getpid());
+			auto c = *i;
 			if(*c)
 			{
+				_move_to_blocked = false;
 				(*c)();
 				any_updated = true;
 			}
 			++_pid;
+			if (move_to_blocked)
+			{
+				_blocked.emplace_back(std::move(c));
+				i = inv.erase(i);
+			}
+			else
+			{
+				++i;
+			}
 		}
+		
 		return any_updated;
 	}
 	
@@ -162,11 +175,7 @@ public:
 	
 	inline void lock()
 	{
-		// cid id = whoiam_cpproutine()
-		// if(is.is_running())
-		// {
-		//	move id to blocked
-		// }
+		_move_to_blocked = true;
 	}
 	
 	// auto create_semaphore();
@@ -177,11 +186,10 @@ protected:
 	// normal running
 	std::vector<cu::pull_type_ptr<control_type> > _running;
 	// locked
-	// std::vector<cu::pull_type_ptr<control_type> > _blocked;
-	// unlocked and prepared for return
-	// std::vector<cu::pull_type_ptr<control_type> > _ready;
+	std::vector<cu::pull_type_ptr<control_type> > _blocked;
 private:
 	int _pid;
+	bool _move_to_blocked;
 };
 
 class semaphore
@@ -266,6 +274,10 @@ TEST(CoroTest, TestScheduler)
 			yield();
 			std::cout << "patching " << i << " - pid: " << sch.getpid() << std::endl;
 			yield();
+			if(i == 5)
+			{
+				sch.lock();
+			}
 			std::cout << "compile " << i << " - pid: " << sch.getpid() << std::endl;
 			yield();
 			std::cout << "tests " << i << " - pid: " << sch.getpid() << std::endl;
