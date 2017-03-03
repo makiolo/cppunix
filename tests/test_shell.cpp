@@ -32,10 +32,10 @@ TEST(CoroTest, Test_run_ls_strip_quote_grep)
 TEST(CoroTest, Test_run_ls_sort_grep_uniq_join)
 {
 	std::string out_subproces;
-	cmd(run("ls ."), strip(), sort(), grep_v("_exe"), uniq(), join(), out(out_subproces));
+	cmd(run("ls ."), strip(), sort(), grep_v("\\./."), grep_v("._exe"), uniq(), join(), out(out_subproces));
 	//
 	std::string out_ls;
-	cmd(ls("."), sort(), grep_v("_exe"), uniq(), join(), out(out_ls));
+	cmd(ls("."), sort(), grep_v("\\./."), grep_v("._exe"), uniq(), join(), out(out_ls));
 	//
 	ASSERT_STREQ(out_subproces.c_str(), out_ls.c_str());
 }
