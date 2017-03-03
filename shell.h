@@ -60,8 +60,23 @@ namespace cu {
 
 using cmd = cu::pipeline<std::string>;
 
+std::string replace_all(const std::string &str, const char *from, const char *to)
+{
+    std::string result(str);
+    std::string::size_type
+        index = 0,
+        from_len = strlen(from),
+        to_len = strlen(to);
+    while ((index = result.find(from, index)) != std::string::npos) {
+        result.replace(index, from_len, to);
+        index += to_len;
+    }
+    return result;
+}
+	
 std::string translate(const char *pattern)
 {
+    // from https://gist.github.com/alco/1869512
     int i = 0, n = strlen(pattern);
     std::string result;
 
