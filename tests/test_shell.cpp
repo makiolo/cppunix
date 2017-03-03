@@ -125,7 +125,8 @@ public:
 		LOGD("total = %d", _running.size());
 		
 		auto i = std::begin(_running);
-		while (i != std::end(_running)) {
+		while (i != std::end(_running))
+		{
 			LOGD("ticking = %d", getpid());
 			auto c = *i;
 			if(*c)
@@ -265,9 +266,10 @@ TEST(CoroTest, TestScheduler)
 {
 	const int N = 16;
 	cu::scheduler sch;
+	semaphore sem(sch);
 	for(int i=0; i<N; ++i)
 	{
-		sch.spawn([&sch, i](auto& yield) {
+		sch.spawn([&sch, &sem, i](auto& yield) {
 			std::cout << "create " << i << " - pid: " << sch.getpid() << std::endl;
 			yield();
 			std::cout << "download " << i << " - pid: " << sch.getpid() << std::endl;
@@ -276,7 +278,7 @@ TEST(CoroTest, TestScheduler)
 			yield();
 			if(i == 5)
 			{
-				sch.lock();
+				sem.lock();
 			}
 			std::cout << "compile " << i << " - pid: " << sch.getpid() << std::endl;
 			yield();
@@ -285,6 +287,10 @@ TEST(CoroTest, TestScheduler)
 			std::cout << "packing " << i << " - pid: " << sch.getpid() << std::endl;
 			yield();
 			std::cout << "destroy " << i << " - pid: " << sch.getpid() << std::endl;
+			if(i == 5)
+			{
+				sem.unlock();
+			}
 		});
 	}
 	sch.run_until_complete();
