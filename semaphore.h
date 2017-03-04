@@ -1,6 +1,7 @@
 #ifndef _CU_SEMAPHORE_H_
 #define _CU_SEMAPHORE_H_
 
+#include <teelogging/teelogging.h>
 #include "scheduler.h"
 
 namespace cu {
@@ -8,13 +9,14 @@ namespace cu {
 class semaphore
 {
 public:
-	explicit semaphore(scheduler& sche, int count = 0, int count_max = 1)
+	explicit semaphore(cu::scheduler& sche, int count_max = 1, int count_initial = 0)
 		: _sche(sche)
-		, _count(count)
+		, _count(count_initial)
 		, _count_max(count_max)
 	{
-		assert((1 <= count_max) || (0 <= count));
-		assert(count <= count_max);
+		assert((1 <= count_max) || (0 <= count_initial));
+		assert(count_initial <= count_max);
+		LOGI("created semaphore %d / %d", _count, _count_max);
 	}
 	///
 	/// Aumenta el semaforo. Libera la region critica.
@@ -63,7 +65,7 @@ public:
 		}
 	}
 protected:
-	scheduler& _sche;
+	cu::scheduler& _sche;
 	int _count;
 	int _count_max;
 };

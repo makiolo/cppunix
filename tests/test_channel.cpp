@@ -2,6 +2,7 @@
 #include <gtest/gtest.h>
 #include "../pipeline.h"
 #include "../channel.h"
+#include "../scheduler.h"
 #include <thread>
 #include <asyncply/run.h>
 
@@ -62,64 +63,43 @@ TEST(ChannelTest, pipeline)
 	cmd(generator(), link1(), link2(), link3());
 }
 
-TEST(ChannelTest, DISABLED_goroutines_consumer)
+TEST(ChannelTest, goroutines_consumer)
 {
-	// channel
-	cu::channel<int> go(100);
+	cu::scheduler sch;
+	cu::channel<int> go(sch, 80);
+	sch.spawn("producer", [&sch, &go](auto& yield) {
 
-	auto task = asyncply::async([&](){
+		// channel
 		for(int i=0; i<100; ++i)
 		{
-			go << i;
+			std::cout << "sending: " << i << std::endl;
+			go(yield, i);
 		}
-		go.close();
+		go.close(yield);
 	});
-	for(auto d : go)
-	{
-		std::cout << "recv: " << d << std::endl;
-	}
-	task->get();
+	sch.spawn("consumer", [&sch, &go](auto& yield) {
+
+		go.sync(yield);
+
+		// for(auto data : go)
+		// {
+		// 	std::cout << "recving: " << data << std::endl;
+		// }
+
+		for(;;)
+		{
+			auto data = go.get(yield);
+			if(!data)
+			{
+				std::cout << "channel closed" << std::endl;
+				break;
+			}
+			else
+			{
+				std::cout << "recving: " << *data << std::endl;
+			}
+		}
+	});
+	sch.run_until_complete();
 }
 
-TEST(ChannelTest, goroutines_consumer2)
-{
-	// channel
-	cu::channel<int> go(100);
-	auto task = asyncply::async([&](){
-		for(int i=0; i<100; ++i)
-		{
-			go << i;
-		}
-		go.close();
-	});
-	for(;;)
-	{
-		auto data = go.get();
-		if(!data)
-		{
-			std::cout << "channel closed" << std::endl;
-			break;
-		}
-		else
-		{
-			std::cout << "recv: " << *data << std::endl;
-		}
-	}
-	task->get();
-}
-
-TEST(ChannelTest, goroutines_consumer3)
-{
-	cu::channel<int> go;
-	std::cout << "produce in channel" << std::endl;
-	go << 100;
-	auto data = go.get();
-	if(data)
-	{
-		std::cout << "data = " << *data << std::endl;
-	}
-	else
-	{
-		std::cout << "channel closed" << std::endl;
-	}
-}

@@ -87,7 +87,7 @@ public:
 	
 	inline void wait(cu::push_type<control_type>& yield)
 	{
-		LOGI("lock pid %d", getpid());
+		LOGD("lock pid %d", getpid());
 		_move_to_blocked = true;
 		yield();
 	}
