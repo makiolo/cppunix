@@ -39,4 +39,8 @@ debug/
 html/
 release/
 .clang_complete
+bin/
+clang/
+gcc/
+depends/
 

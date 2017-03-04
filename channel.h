@@ -271,7 +271,7 @@ public:
 	{
 		if(!_closed)
 		{
-			std::unique_lock<std::mutex> lock(_w_coros);
+			// std::unique_lock<std::mutex> lock(_w_coros);
 			_empty.wait();
 			(*_coros.top())( optional<T>(data) );
 			_full.notify();
@@ -317,7 +317,7 @@ public:
 protected:
 	void _set_tail(size_t buffer)
 	{
-		std::unique_lock<std::mutex> lock(_w_coros);
+		// std::unique_lock<std::mutex> lock(_w_coros);
 		assert(buffer > 0);
 		auto r = cu::make_iterator< optional<T> >(
 			[this](auto& source) {
@@ -336,14 +336,14 @@ protected:
 	template <typename Function>
 	void _add(Function&& f)
 	{
-		std::unique_lock<std::mutex> lock(_w_coros);
+		// std::unique_lock<std::mutex> lock(_w_coros);
 		_coros.push(cu::make_iterator< optional<T> >(boost::bind(link_template<T, Function>(f), _1, boost::ref(*_coros.top().get()))));
 	}
 
 	template <typename Function, typename ... Functions>
 	void _add(Function&& f, Functions&& ... fs)
 	{
-		std::unique_lock<std::mutex> lock(_w_coros);
+		// std::unique_lock<std::mutex> lock(_w_coros);
 		_add(std::forward<Functions>(fs)...);
 		_coros.push(cu::make_iterator< optional<T> >(boost::bind(link_template<T, Function>(f), _1, boost::ref(*_coros.top().get()))));
 	}
@@ -352,7 +352,7 @@ protected:
 	fes::async_fast< optional<T> > _buf;
 	fes::semaphore _full;
 	fes::semaphore _empty;
-	std::mutex _w_coros;
+	// std::mutex _w_coros;
 	bool _closed;
 };
 
