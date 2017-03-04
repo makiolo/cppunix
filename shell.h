@@ -265,7 +265,7 @@ cmd::link ls()
 	};
 }
 
-cmd::link grep(const std::string& pattern, bool exclusion = false)
+cmd::link grep(const char* pattern, bool exclusion = false)
 {
 	return [=](cmd::in& source, cmd::out& yield)
 	{
@@ -282,7 +282,7 @@ cmd::link grep(const std::string& pattern, bool exclusion = false)
 	};
 }
 
-cmd::link grep_v(const std::string& pattern)
+cmd::link grep_v(const char* pattern)
 {
 	return [=](cmd::in& source, cmd::out& yield)
 	{

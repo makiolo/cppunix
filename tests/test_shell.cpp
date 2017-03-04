@@ -14,7 +14,7 @@ TEST(CoroTest, Test_run_ls_strip_quote_grep)
 			  run("ls .")
 			, strip()
 			, quote()
-			, grep("shell_exe")
+			, grep("shell_*")
 			, assert_count(1)
 			, assert_string("\"shell_exe\"")
 	);
@@ -23,7 +23,7 @@ TEST(CoroTest, Test_run_ls_strip_quote_grep)
 			  ls(".")
 			, strip()
 			, quote()
-			, grep("shell_exe")
+			, grep("shell_*")
 			, assert_count(1)
 			, assert_string("\"shell_exe\"")
 	);
@@ -99,20 +99,59 @@ TEST(CoroTest, TestGrep2)
 }
 
 namespace cu {
-	
-class scheduler {
+
+using control_type = void;
+
+class cpproutine
+{
 public:
-	using control_type = void;
-	
 	template <typename Function>
-	void spawn(Function&& func)
-	{
-		_running.emplace_back(cu::make_generator<control_type>(
+	cpproutine(int pid, Function&& func)
+		: _pid(pid)
+		, _coroutine(cu::make_generator<control_type>(
 			[f = std::move(func)](auto& yield) {
 				yield();
 				f(yield);
 			}
-		));
+		))
+	{
+		
+	}
+
+	bool ready() const
+	{
+		return bool(*_coroutine);
+	}
+
+	void run()
+	{
+		(*_coroutine)();
+	}
+	
+	int getpid() const
+	{
+		return _pid;
+	}
+
+protected:
+	int _pid;
+	cu::pull_type_ptr<control_type> _coroutine;
+};
+
+class scheduler {
+public:
+	scheduler()
+		: _pid(0)
+		, _active(nullptr)
+	{
+		
+	}
+
+	template <typename Function>
+	void spawn(Function&& func)
+	{
+		_running.emplace_back(_pid, std::forward<Function>(func));
+		++_pid;
 	}
 		
 	/*
@@ -121,25 +160,24 @@ public:
 	bool run()
 	{
 		bool any_updated = false;
-		_pid = 0;
-		LOGD("total = %d", _running.size());
+		LOGI("total = %d", _running.size());
 		
 		auto i = std::begin(_running);
 		while (i != std::end(_running))
 		{
-			LOGD("ticking = %d", getpid());
 			auto c = *i;
-			if(*c)
+			if(c.ready())
 			{
 				_move_to_blocked = false;
-				(*c)();
+				_active = &c;
+				c.run();
 				any_updated = true;
+				_active = nullptr;
 			}
-			++_pid;
-			if (move_to_blocked)
+			if (_move_to_blocked)
 			{
 				_blocked.emplace_back(std::move(c));
-				i = inv.erase(i);
+				i = _running.erase(i);
 			}
 			else
 			{
@@ -158,7 +196,7 @@ public:
 	void run_until_complete()
 	{
 		bool any_updated = true;
-		while(any_updated)
+		while(any_updated && (_running.size() > 0))
 		{
 			any_updated = run();
 		}
@@ -172,7 +210,10 @@ public:
 		}
 	}
 	
-	int getpid() const {return _pid;}
+	int getpid() const
+	{
+		return _active->getpid();
+	}
 	
 	inline void lock()
 	{
@@ -184,10 +225,11 @@ public:
 	// each semaphore have 2 channels and ret code
 	
 protected:
+	cpproutine* _active;
 	// normal running
-	std::vector<cu::pull_type_ptr<control_type> > _running;
+	std::vector<cpproutine > _running;
 	// locked
-	std::vector<cu::pull_type_ptr<control_type> > _blocked;
+	std::vector<cpproutine > _blocked;
 private:
 	int _pid;
 	bool _move_to_blocked;
@@ -227,6 +269,7 @@ public:
 		else
 		{
 			// bloquear esta cpproutine
+			// std::cout << "lock cpproutine" << std::endl;
 			_sche.lock(); // (*this)
 		}
 	}
@@ -266,17 +309,17 @@ TEST(CoroTest, TestScheduler)
 {
 	const int N = 16;
 	cu::scheduler sch;
-	semaphore sem(sch);
 	for(int i=0; i<N; ++i)
 	{
-		sch.spawn([&sch, &sem, i](auto& yield) {
+		sch.spawn([&sch, i](auto& yield) {
+			semaphore sem(sch);
 			std::cout << "create " << i << " - pid: " << sch.getpid() << std::endl;
 			yield();
 			std::cout << "download " << i << " - pid: " << sch.getpid() << std::endl;
 			yield();
 			std::cout << "patching " << i << " - pid: " << sch.getpid() << std::endl;
 			yield();
-			if(i == 5)
+			if(i % 2 == 0)
 			{
 				sem.lock();
 			}
@@ -287,7 +330,7 @@ TEST(CoroTest, TestScheduler)
 			std::cout << "packing " << i << " - pid: " << sch.getpid() << std::endl;
 			yield();
 			std::cout << "destroy " << i << " - pid: " << sch.getpid() << std::endl;
-			if(i == 5)
+			if(i % 2 == 0)
 			{
 				sem.unlock();
 			}
