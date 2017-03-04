@@ -106,8 +106,9 @@ TEST(CoroTest, TestScheduler)
 	cu::scheduler sch;
 	cu::semaphore maria(sch);
 	cu::semaphore ricardo(sch);
+	cu::semaphore other(sch);
 	// Ricardo
-	sch.spawn("ricardo", [&sch, &maria, &ricardo](auto& yield) {
+	sch.spawn("ricardo", [&](auto& yield) {
 		std::cout << "Hola Maria" << std::endl;
 		ricardo.notify(yield);
 		//
@@ -118,9 +119,11 @@ TEST(CoroTest, TestScheduler)
 		maria.wait(yield);
 		std::cout << "me alegro nena" << std::endl;
 		ricardo.notify(yield);
+		//
+		other.notify(yield);
 	});
 	// Maria
-	sch.spawn("maria", [&sch, &maria, &ricardo](auto& yield) {
+	sch.spawn("maria", [&](auto& yield) {
 		//
 		ricardo.wait(yield);
 		std::cout << "Hola Ricardo" << std::endl;
@@ -132,6 +135,15 @@ TEST(CoroTest, TestScheduler)
 		//
 		ricardo.wait(yield);
 		std::cout << "y yo ^^" << std::endl;
+		//
+		other.notify(yield);
+	});
+	// other
+	sch.spawn("other", [&](auto& yield) {
+		//
+		other.wait(yield);
+		other.wait(yield);
+		std::cout << "parar!!! tengo algo importante" << std::endl;
 	});
 	sch.run_until_complete();
 }

@@ -5,13 +5,14 @@
 
 namespace cu {
 
+using pid_type = int;
 using control_type = void;
 
 class cpproutine
 {
 public:
 	template <typename Function>
-	cpproutine(const std::string& name, int pid, Function&& func)
+	cpproutine(const std::string& name, pid_type pid, Function&& func)
 		: _name(name)
 		, _pid(pid)
 		, _coroutine(cu::make_generator<control_type>(
@@ -43,7 +44,7 @@ public:
 
 protected:
 	std::string _name;
-	int _pid;
+	pid_type _pid;
 	cu::pull_type_ptr<control_type> _coroutine;
 };
 

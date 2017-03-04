@@ -1,6 +1,7 @@
 #ifndef _CU_SCHEDULER_H_
 #define _CU_SCHEDULER_H_
 
+#include <map>
 #include <teelogging/teelogging.h>
 #include "cpproutine.h"
 
@@ -79,7 +80,7 @@ public:
 		}
 	}
 	
-	int getpid() const
+	pid_type getpid() const
 	{
 		return _active->getpid();
 	}
@@ -110,10 +111,11 @@ protected:
 	cpproutine* _active;
 	// normal running
 	std::vector<std::unique_ptr<cpproutine> > _running;
-	// locked
+	// cpproutines waiting for pid
+	// std::map<int, std::vector<std::unique_ptr<cpproutine> > > _blocked;
 	std::vector<std::unique_ptr<cpproutine> > _blocked;
 private:
-	int _pid_counter;
+	pid_type _pid_counter;
 	bool _move_to_blocked;
 };
 
