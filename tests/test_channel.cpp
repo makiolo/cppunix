@@ -103,3 +103,50 @@ TEST(ChannelTest, goroutines_consumer)
 	sch.run_until_complete();
 }
 
+TEST(CoroTest, TestScheduler)
+{
+	cu::scheduler sch;
+	cu::semaphore person1(sch);
+	cu::semaphore person2(sch);
+	cu::semaphore other(sch);
+	// person2
+	sch.spawn("person2", [&](auto& yield) {
+		std::cout << "Hola person1" << std::endl;
+		person2.notify(yield);
+		//
+		person1.wait(yield);
+		std::cout << "que tal ?" << std::endl;
+		person2.notify(yield);
+		//
+		person1.wait(yield);
+		std::cout << "me alegro" << std::endl;
+		person2.notify(yield);
+		//
+		other.notify(yield);
+	});
+	// person1
+	sch.spawn("person1", [&](auto& yield) {
+		//
+		person2.wait(yield);
+		std::cout << "Hola person2" << std::endl;
+		person1.notify(yield);
+		//
+		person2.wait(yield);
+		std::cout << "bien!" << std::endl;
+		person1.notify(yield);
+		//
+		person2.wait(yield);
+		std::cout << "y yo ^^" << std::endl;
+		//
+		other.notify(yield);
+	});
+	// other
+	sch.spawn("other", [&](auto& yield) {
+		//
+		other.wait(yield);
+		other.wait(yield);
+		std::cout << "parar!!! tengo algo importante" << std::endl;
+	});
+	sch.run_until_complete();
+}
+
