@@ -6,6 +6,8 @@
 
 namespace cu {
 
+static int last_id = 0;
+
 class semaphore
 {
 public:
@@ -13,10 +15,11 @@ public:
 		: _sche(sche)
 		, _count(count_initial)
 		, _count_max(count_max)
+		, _id(last_id++)
 	{
 		assert((1 <= count_max) || (0 <= count_initial));
 		assert(count_initial <= count_max);
-		LOGI("created semaphore %d / %d", _count, _count_max);
+		LOGI("<%d> created semaphore %d / %d", _id, _count, _count_max);
 	}
 	///
 	/// Aumenta el semaforo. Libera la region critica.
@@ -36,7 +39,7 @@ public:
 		if((_count == 0) || (_count < _count_max))
 		{
 			++_count;
-			_sche.notify(yield);
+			_sche.notify(yield, _id);
 		}
 	}
 
@@ -61,10 +64,11 @@ public:
 		}
 		else
 		{
-			_sche.wait(yield);
+			_sche.wait(yield, _id);
 		}
 	}
 protected:
+	int _id;
 	cu::scheduler& _sche;
 	int _count;
 	int _count_max;

@@ -108,7 +108,7 @@ TEST(CoroTest, TestScheduler)
 	cu::scheduler sch;
 	cu::semaphore person1(sch);
 	cu::semaphore person2(sch);
-	cu::semaphore other(sch);
+	cu::semaphore other(sch, 2);
 	// person2
 	sch.spawn("person2", [&](auto& yield) {
 		std::cout << "Hola person1" << std::endl;
@@ -143,7 +143,6 @@ TEST(CoroTest, TestScheduler)
 	// other
 	sch.spawn("other", [&](auto& yield) {
 		//
-		other.wait(yield);
 		other.wait(yield);
 		std::cout << "parar!!! tengo algo importante" << std::endl;
 	});

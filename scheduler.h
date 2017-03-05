@@ -17,6 +17,13 @@ public:
 	}
 
 	template <typename Function>
+	void spawn(Function&& func)
+	{
+		_running.emplace_back(std::make_unique<cpproutine>("anonymous", _pid_counter, std::forward<Function>(func)));
+		++_pid_counter;
+	}
+
+	template <typename Function>
 	void spawn(const std::string& name, Function&& func)
 	{
 		_running.emplace_back(std::make_unique<cpproutine>(name, _pid_counter, std::forward<Function>(func)));
@@ -37,12 +44,14 @@ public:
 				_active = c.get();
 				{
 					_move_to_blocked = false;
+					_last_id = -1;
 					c->run();
 
 					if (_move_to_blocked)
 					{
-						LOGI("<%d> suspend process %s", getpid(), (c->get_name().c_str()));
-						_blocked.emplace_back(std::move(c));
+						LOGI("se bloquea, para esperar a una señal: %d", _last_id);
+						auto& blocked = _blocked[_last_id];
+						blocked.emplace_back(std::move(c));
 						i = _running.erase(i);
 					}
 					else
@@ -57,9 +66,6 @@ public:
 				i = _running.erase(i);
 			}
 		}
-		
-		LOGD("still running %d", _running.size());
-		LOGD("and blocked %d", _blocked.size());
 		return _running.size() > 0;
 	}
 	
@@ -79,30 +85,32 @@ public:
 			run();
 		}
 	}
+
+	std::string get_name() const
+	{
+		return _active->get_name();
+	}
 	
 	pid_type getpid() const
 	{
 		return _active->getpid();
 	}
 	
-	inline void wait(cu::push_type<control_type>& yield)
+	inline void wait(cu::push_type<control_type>& yield, int id)
 	{
-		LOGD("lock pid %d", getpid());
 		_move_to_blocked = true;
+		_last_id = id;
 		yield();
 	}
 
-	inline void notify(cu::push_type<control_type>& yield)
+	inline void notify(cu::push_type<control_type>& yield, int id)
 	{
-		if(_blocked.size() > 0)
+		auto& blocked = _blocked[id];
+		if(blocked.size() > 0)
 		{
-			LOGI("<%d> resume process %s", getpid(), (*_blocked.begin())->get_name().c_str());
-			_running.emplace(_running.end(), std::move(*_blocked.begin()));
-			_blocked.erase(_blocked.begin());
-		}
-		else
-		{
-			LOGD("nobody is waiting for %d", getpid());
+			LOGI("me desbloqueo porque hay una señal de %d", id);
+			_running.emplace(_running.end(), std::move(*blocked.begin()));
+			blocked.erase(blocked.begin());
 		}
 		yield();
 	}
@@ -112,11 +120,11 @@ protected:
 	// normal running
 	std::vector<std::unique_ptr<cpproutine> > _running;
 	// cpproutines waiting for pid
-	// std::map<int, std::vector<std::unique_ptr<cpproutine> > > _blocked;
-	std::vector<std::unique_ptr<cpproutine> > _blocked;
+	std::map<int, std::vector<std::unique_ptr<cpproutine> > > _blocked;
 private:
 	pid_type _pid_counter;
 	bool _move_to_blocked;
+	int _last_id;
 };
 
 }
