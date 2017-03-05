@@ -66,39 +66,47 @@ TEST(ChannelTest, pipeline)
 TEST(ChannelTest, goroutines_consumer)
 {
 	cu::scheduler sch;
-	cu::channel<int> go(sch, 80);
+	cu::channel<int> go(sch, 100 + 1);
 	sch.spawn("producer", [&sch, &go](auto& yield) {
 
 		// channel
 		for(int i=0; i<100; ++i)
 		{
 			std::cout << "sending: " << i << std::endl;
-			go(yield, i);
+			// go(yield, i);
+			go(i);
+			yield();
 		}
-		go.close(yield);
+		// go.close(yield);
+		go.close();
 	});
 	sch.spawn("consumer", [&sch, &go](auto& yield) {
 
-		go.sync(yield);
 
-		// for(auto data : go)
+		// for(int i=0; i<100; ++i)
 		// {
-		// 	std::cout << "recving: " << data << std::endl;
+		// 	yield();
 		// }
 
-		for(;;)
+		for(auto data : go)
 		{
-			auto data = go.get(yield);
-			if(!data)
-			{
-				std::cout << "channel closed" << std::endl;
-				break;
-			}
-			else
-			{
-				std::cout << "recving: " << *data << std::endl;
-			}
+			std::cout << "recving: " << data << std::endl;
+			yield();
 		}
+
+		// for(;;)
+		// {
+		// 	auto data = go.get(yield);
+		// 	if(!data)
+		// 	{
+		// 		std::cout << "channel closed" << std::endl;
+		// 		break;
+		// 	}
+		// 	else
+		// 	{
+		// 		std::cout << "recving: " << *data << std::endl;
+		// 	}
+		// }
 	});
 	sch.run_until_complete();
 }

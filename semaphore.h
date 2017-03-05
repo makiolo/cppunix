@@ -34,11 +34,22 @@ public:
 	///
 	///	avisar / signal / unlock / up / wakeup / release / V
 	///
-	inline void notify(cu::push_type<control_type>& yield)
+	void notify()
 	{
 		if((_count == 0) || (_count < _count_max))
 		{
 			++_count;
+			LOGI("increasing semaphore %d to %d", _id, _count);
+			_sche.notify(_id);
+		}
+	}
+
+	void notify(cu::push_type<control_type>& yield)
+	{
+		if((_count == 0) || (_count < _count_max))
+		{
+			++_count;
+			LOGI("increasing semaphore %d to %d", _id, _count);
 			_sche.notify(yield, _id);
 		}
 	}
@@ -56,11 +67,25 @@ public:
 	///
 	///		esperar / wait / lock / down / sleep / P
 	///
-	inline void wait(cu::push_type<control_type>& yield)
+	void wait()
 	{
 		if(_count > 0)
 		{
 			--_count;
+			LOGI("decreasing semaphore %d to %d", _id, _count);
+		}
+		else
+		{
+			_sche.wait(_id);
+		}
+	}
+
+	void wait(cu::push_type<control_type>& yield)
+	{
+		if(_count > 0)
+		{
+			--_count;
+			LOGI("decreasing semaphore %d to %d", _id, _count);
 		}
 		else
 		{

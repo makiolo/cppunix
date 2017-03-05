@@ -49,7 +49,6 @@ public:
 
 					if (_move_to_blocked)
 					{
-						LOGI("se bloquea, para esperar a una señal: %d", _last_id);
 						auto& blocked = _blocked[_last_id];
 						blocked.emplace_back(std::move(c));
 						i = _running.erase(i);
@@ -96,22 +95,33 @@ public:
 		return _active->getpid();
 	}
 	
-	inline void wait(cu::push_type<control_type>& yield, int id)
+	void wait(int id)
 	{
 		_move_to_blocked = true;
 		_last_id = id;
+		LOGI("%s: se bloquea, para esperar a la señal: %d", get_name().c_str(), _last_id);
+	}
+	
+	void wait(cu::push_type<control_type>& yield, int id)
+	{
+		wait(id);
 		yield();
 	}
 
-	inline void notify(cu::push_type<control_type>& yield, int id)
+	void notify(int id)
 	{
 		auto& blocked = _blocked[id];
 		if(blocked.size() > 0)
 		{
-			LOGI("me desbloqueo porque hay una señal de %d", id);
+			LOGI("%s se desbloquea porque ha sido despertado por la señal %d", (*blocked.begin())->get_name().c_str(), id);
 			_running.emplace(_running.end(), std::move(*blocked.begin()));
 			blocked.erase(blocked.begin());
 		}
+	}
+
+	void notify(cu::push_type<control_type>& yield, int id)
+	{
+		notify(id);
 		yield();
 	}
 	

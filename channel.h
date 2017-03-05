@@ -140,8 +140,8 @@ public:
 	explicit channel(cu::scheduler& sch, size_t buffer = 0)
 		: _closed(false)
 		, _buffer(buffer)
-		, _full(sch, buffer)
-		, _empty(sch, buffer)
+		, _elements(sch, buffer)
+		, _slots(sch, buffer, buffer)
 	{
 		_set_tail(buffer);
 	}
@@ -150,8 +150,8 @@ public:
 	explicit channel(cu::scheduler& sch, size_t buffer, Function&& f)
 		: _closed(false)
 		, _buffer(buffer)
-		, _full(sch, buffer)
-		, _empty(sch, buffer)
+		, _elements(sch, buffer)
+		, _slots(sch, buffer, buffer)
 	{
 		_set_tail(buffer);
 		_add(std::forward<Function>(f));
@@ -161,8 +161,8 @@ public:
 	explicit channel(cu::scheduler& sch, size_t buffer, Function&& f, Functions&& ... fs)
 		: _closed(false)
 		, _buffer(buffer)
-		, _full(sch, buffer)
-		, _empty(sch, buffer)
+		, _elements(sch, buffer)
+		, _slots(sch, buffer, buffer)
 	{
 		_set_tail(buffer);
 		_add(std::forward<Function>(f), std::forward<Functions>(fs)...);
@@ -185,25 +185,57 @@ public:
 		_coros.pop();
 	}
 
+	// producer
 	template <typename R>
-	void operator()(cu::push_type<control_type>& yield, const R& data)
+	void operator()(const R& data)
 	{
+		// producer
 		// std::unique_lock<std::mutex> lock(_w_coros);
 		if(!_closed)
 		{
-			_empty.wait(yield);
+			_slots.wait();
 			(*_coros.top())( optional<T>(data) );
-			_full.notify(yield);
+			_elements.notify();
 		}
 	}
 
+	// producer
+	template <typename R>
+	void operator()(cu::push_type<control_type>& yield, const R& data)
+	{
+		// producer
+		// std::unique_lock<std::mutex> lock(_w_coros);
+		if(!_closed)
+		{
+			_slots.wait(yield);
+			(*_coros.top())( optional<T>(data) );
+			_elements.notify(yield);
+		}
+	}
+
+	// consumer
+	optional<T> get()
+	{
+		// std::unique_lock<std::mutex> lock(_w_coros);
+		_elements.wait();
+		optional<T> data = std::get<0>(_buf.get());
+		_slots.notify();
+		return std::move(data);
+	}
+
+	// consumer
 	optional<T> get(cu::push_type<control_type>& yield)
 	{
 		// std::unique_lock<std::mutex> lock(_w_coros);
-		_full.wait(yield);
+		_elements.wait(yield);
 		optional<T> data = std::get<0>(_buf.get());
-		_empty.notify(yield);
+		_slots.notify(yield);
 		return std::move(data);
+	}
+
+	void close()
+	{
+		operator()<bool>(true);
 	}
 
 	void close(cu::push_type<control_type>& yield)
@@ -219,12 +251,6 @@ public:
 	auto end()
 	{
 		return channel_iterator<T>(*this);
-	}
-
-	void sync(cu::push_type<control_type>& yield)
-	{
-		for(size_t i = 0;i < _buffer; ++i)
-			_empty.notify(yield);
 	}
 
 protected:
@@ -261,8 +287,8 @@ protected:
 protected:
 	std::stack< coroutine > _coros;
 	fes::async_fast< optional<T> > _buf;
-	cu::semaphore _full;
-	cu::semaphore _empty;
+	cu::semaphore _elements;
+	cu::semaphore _slots;
 	// std::mutex _w_coros;
 	bool _closed;
 	size_t _buffer;
