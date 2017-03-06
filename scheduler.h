@@ -101,12 +101,6 @@ public:
 		_last_id = id;
 		LOGI("%s: se bloquea, para esperar a la señal: %d", get_name().c_str(), _last_id);
 	}
-	
-	void wait(cu::push_type<control_type>& yield, int id)
-	{
-		wait(id);
-		yield();
-	}
 
 	void notify(int id)
 	{
