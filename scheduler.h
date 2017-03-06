@@ -102,7 +102,7 @@ public:
 		LOGI("%s: se bloquea, para esperar a la señal: %d", get_name().c_str(), _last_id);
 	}
 
-	void notify(int id)
+	bool notify(int id)
 	{
 		auto& blocked = _blocked[id];
 		if(blocked.size() > 0)
@@ -110,13 +110,15 @@ public:
 			LOGI("%s se desbloquea porque ha sido despertado por la señal %d", (*blocked.begin())->get_name().c_str(), id);
 			_running.emplace(_running.end(), std::move(*blocked.begin()));
 			blocked.erase(blocked.begin());
+			return true;
 		}
+		return  false;
 	}
 
 	void notify(cu::push_type<control_type>& yield, int id)
 	{
-		notify(id);
-		yield();
+		if(notify(id))
+			yield();
 	}
 	
 protected:
