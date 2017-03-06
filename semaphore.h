@@ -89,7 +89,8 @@ public:
 		}
 		else
 		{
-			_sche.wait(yield, _id);
+			_sche.wait(_id);
+			yield();
 		}
 	}
 protected:
