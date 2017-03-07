@@ -69,7 +69,7 @@ TEST(ChannelTest, goroutines_consumer)
 	cu::channel<int> go(sch, 10);
 	sch.spawn("producer", [&sch, &go](auto& yield) {
 		// send
-		for(int i=0; i<100; ++i)
+		for(int i=0; i<200; ++i)
 		{
 			std::cout << "sending: " << i << std::endl;
 			go(yield, i);
