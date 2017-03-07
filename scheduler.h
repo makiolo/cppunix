@@ -68,7 +68,7 @@ public:
 			}
 			else
 			{
-				LOGI("%s ha terminado", get_name().c_str());
+				LOGI("cpproutine ha terminado");
 				i = _running.erase(i);
 			}
 		}

@@ -11,15 +11,12 @@ static int last_id = 0;
 class semaphore
 {
 public:
-	explicit semaphore(cu::scheduler& sche, int count_max = 1, int count_initial = 0)
+	explicit semaphore(cu::scheduler& sche, int count_initial = 1)
 		: _sche(sche)
 		, _count(count_initial)
-		, _count_max(count_max)
 		, _id(last_id++)
 	{
-		assert((1 <= count_max) || (0 <= count_initial));
-		assert(count_initial <= count_max);
-		LOGI("<%d> created semaphore %d / %d", _id, _count, _count_max);
+		LOGI("<%d> created semaphore %d", _id, _count);
 	}
 	///
 	/// Aumenta el semaforo. Libera la region critica.
@@ -36,35 +33,25 @@ public:
 	///
 	void notify(int q=1)
 	{
-		if( (0 <= _count) && (_count < _count_max) )
+		_count += q;
+		LOGI("<%d> increase semaphore from %d to %d", _id, _count-q, _count);
+		if(_count <= 0)
 		{
-			_count += q;
-			// TODO: evitar exceder de _count_max
-			LOGI("<%d> increase semaphore from %d to %d / %d", _id, _count-q, _count, _count_max);
 			_sche.notify_one(_id);
-		}
-		else
-		{
-			LOGI("<%d> skipping notify() in sempahore");
 		}
 	}
 
 	void notify(cu::push_type<control_type>& yield, int q=1)
 	{
-		if( (0 <= _count) && (_count < _count_max) )
+		_count += q;
+		LOGI("<%d> increase semaphore from %d to %d", _id, _count-q, _count);
+		if(_count <= 0)
 		{
-			_count += q;
-			// TODO: evitar exceder de _count_max
-			LOGI("<%d> increase semaphore from %d to %d / %d", _id, _count-q, _count, _count_max);
 			if(_sche.notify_one(_id))
 			{
 				LOGI("notify yield in semaphore %d", _id);
 				yield();
 			}
-		}
-		else
-		{
-			LOGI("<%d> skipping notify() in sempahore");
 		}
 	}
 
@@ -83,13 +70,10 @@ public:
 	///
 	void wait(int q = 1)
 	{
-		if(_count > 0)
-		{
-			_count -= q;
-			// TODO: evitar bajar de 0
-			LOGI("<%d> decrease semaphore from %d to %d / %d", _id, _count+q, _count, _count_max);
-		}
-		else
+		_count -= q;
+		// TODO: evitar bajar de 0
+		LOGI("<%d> decrease semaphore from %d to %d", _id, _count+q, _count);
+		if(_count < 0)
 		{
 			LOGI("wait no-yield in semaphore %d", _id);
 			_sche.wait(_id);
@@ -98,13 +82,10 @@ public:
 
 	void wait(cu::push_type<control_type>& yield, int q = 1)
 	{
-		if(_count > 0)
-		{
-			_count -= q;
-			// TODO: evitar bajar de 0
-			LOGI("<%d> decrease semaphore from %d to %d / %d", _id, _count+q, _count, _count_max);
-		}
-		else
+		_count -= q;
+		// TODO: evitar bajar de 0
+		LOGI("<%d> decrease semaphore from %d to %d", _id, _count+q, _count);
+		if(_count < 0)
 		{
 			_sche.wait(_id);
 			LOGI("wait yield in semaphore %d", _id);
@@ -115,7 +96,6 @@ protected:
 	int _id;
 	cu::scheduler& _sche;
 	int _count;
-	int _count_max;
 };
 
 }
