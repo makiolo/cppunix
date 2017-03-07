@@ -138,7 +138,7 @@ public:
 	using link = cu::link< optional<T> >;
 	using coroutine = push_type_ptr< optional<T> >;
 
-	explicit channel(cu::scheduler& sch, size_t buffer)
+	explicit channel(cu::scheduler& sch, size_t buffer = 1)
 		: _closed(false)
 		, _buffer(buffer)
 		, _elements(sch, buffer, 0)
