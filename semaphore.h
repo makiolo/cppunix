@@ -34,29 +34,40 @@ public:
 	///
 	///	avisar / signal / unlock / up / wakeup / release / V
 	///
-	void notify()
+	void notify(int q=1)
 	{
-		if((_count == 0) || (_count < _count_max))
+		if( (0 <= _count) && (_count < _count_max) )
 		{
-			++_count;
-			LOGI("<%d> increase semaphore from %d to %d / %d", _id, _count-1, _count, _count_max);
+			_count += q;
+			// TODO: evitar exceder de _count_max
+			LOGI("<%d> increase semaphore from %d to %d / %d", _id, _count-q, _count, _count_max);
+			_sche.notify_one(_id);
 		}
 		
+		/*
 		if(_count >= _count_max)
 		{
 			LOGI("notify semaphore %d is full with %d", _id, _count);
 			_sche.notify_all(_id);
 		}
+		*/
 	}
 
-	void notify(cu::push_type<control_type>& yield)
+	void notify(cu::push_type<control_type>& yield, int q=1)
 	{
-		if((_count == 0) || (_count < _count_max))
+		if( (0 <= _count) && (_count < _count_max) )
 		{
-			++_count;
-			LOGI("<%d> increase semaphore from %d to %d / %d", _id, _count-1, _count, _count_max);
+			_count += q;
+			// TODO: evitar exceder de _count_max
+			LOGI("<%d> increase semaphore from %d to %d / %d", _id, _count-q, _count, _count_max);
+			if(_sche.notify_one(_id))
+			{
+				LOGI("notify yield in semaphore %d", _id);
+				yield();
+			}
 		}
 		
+		/*
 		if(_count >= _count_max)
 		{
 			LOGI("notify semaphore %d is full with %d", _id, _count);
@@ -66,6 +77,7 @@ public:
 				yield();
 			}
 		}
+		*/
 	}
 
 	///
@@ -81,12 +93,13 @@ public:
 	///
 	///		esperar / wait / lock / down / sleep / P
 	///
-	void wait()
+	void wait(int q = 1)
 	{
 		if(_count > 0)
 		{
-			--_count;
-			LOGI("<%d> decrease semaphore from %d to %d / %d", _id, _count+1, _count, _count_max);
+			_count -= q;
+			// TODO: evitar bajar de 0
+			LOGI("<%d> decrease semaphore from %d to %d / %d", _id, _count+q, _count, _count_max);
 		}
 		else
 		{
@@ -95,12 +108,13 @@ public:
 		}
 	}
 
-	void wait(cu::push_type<control_type>& yield)
+	void wait(cu::push_type<control_type>& yield, int q = 1)
 	{
 		if(_count > 0)
 		{
-			--_count;
-			LOGI("<%d> decrease semaphore from %d to %d / %d", _id, _count+1, _count, _count_max);
+			_count -= q;
+			// TODO: evitar bajar de 0
+			LOGI("<%d> decrease semaphore from %d to %d / %d", _id, _count+q, _count, _count_max);
 		}
 		else
 		{
