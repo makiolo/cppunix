@@ -98,8 +98,8 @@ TEST(ChannelTest, goroutines_consumer)
 TEST(CoroTest, TestScheduler)
 {
 	cu::scheduler sch;
-	cu::semaphore person1(sch);
-	cu::semaphore person2(sch);
+	cu::semaphore person1(sch, 1);
+	cu::semaphore person2(sch, 1);
 	cu::semaphore other(sch, 2);
 	// person2
 	sch.spawn("person2", [&](auto& yield) {
