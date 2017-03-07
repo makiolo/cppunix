@@ -118,7 +118,10 @@ public:
 	void notify(cu::push_type<control_type>& yield, int id)
 	{
 		if(notify(id))
+		{
+			LOGI("notify yield in semaphore %d", id);
 			yield();
+		}
 	}
 	
 protected:
