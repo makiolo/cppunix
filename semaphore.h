@@ -45,7 +45,7 @@ public:
 		if(_count >= _count_max)
 		{
 			LOGI("notify semaphore %d is full with %d", _id, _count);
-			_sche.notify(_id);
+			_sche.notify_all(_id);
 		}
 	}
 
@@ -60,7 +60,11 @@ public:
 		if(_count >= _count_max)
 		{
 			LOGI("notify semaphore %d is full with %d", _id, _count);
-			_sche.notify(yield, _id);
+			if(_sche.notify_all(id))
+			{
+				LOGI("notify yield in semaphore %d", id);
+				yield();
+			}
 		}
 	}
 
