@@ -39,7 +39,7 @@ public:
 		if((_count == 0) || (_count < _count_max))
 		{
 			++_count;
-			LOGI("increasing semaphore %d to %d", _id, _count);
+			LOGI("<%d> increase semaphore from %d to %d / %d", _id, _count-1, _count, _count_max);
 			if(_count == _count_max)
 			{
 				LOGI("notify semaphore %d is full with %d", _id, _count);
@@ -53,7 +53,7 @@ public:
 		if((_count == 0) || (_count < _count_max))
 		{
 			++_count;
-			LOGI("increasing semaphore %d to %d", _id, _count);
+			LOGI("<%d> increase semaphore from %d to %d / %d", _id, _count-1, _count, _count_max);
 			if(_count == _count_max)
 			{
 				LOGI("notify semaphore %d is full with %d", _id, _count);
@@ -80,7 +80,7 @@ public:
 		if(_count > 0)
 		{
 			--_count;
-			LOGI("decreasing semaphore %d to %d", _id, _count);
+			LOGI("<%d> decrease semaphore from %d to %d / %d", _id, _count+1, _count, _count_max);
 		}
 		else
 		{
@@ -94,7 +94,7 @@ public:
 		if(_count > 0)
 		{
 			--_count;
-			LOGI("decreasing semaphore %d to %d", _id, _count);
+			LOGI("<%d> decrease semaphore from %d to %d / %d", _id, _count+1, _count, _count_max);
 		}
 		else
 		{
