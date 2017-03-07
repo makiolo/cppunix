@@ -18,7 +18,8 @@ struct optional
 {
 	explicit optional() : _data(), _invalid(false) { ; }
 	explicit optional(bool close) : _data(), _invalid(close) { ; }
-	optional(const T& data) : _data(data), _invalid(false) { ; }
+	explicit optional(const T& data) : _data(data), _invalid(false) { ; }
+	explicit optional(T&& data) : _data(std::move(data)), _invalid(false) { ; }
 
 	const T& operator*() const
 	{
@@ -185,6 +186,7 @@ public:
 		_coros.pop();
 	}
 
+	/*
 	// producer
 	template <typename R>
 	void operator()(const R& data)
@@ -198,6 +200,7 @@ public:
 			_elements.notify();
 		}
 	}
+	*/
 
 	// producer
 	template <typename R>
@@ -213,6 +216,7 @@ public:
 		}
 	}
 
+	/*
 	// consumer
 	optional<T> get()
 	{
@@ -222,6 +226,7 @@ public:
 		_slots.notify();
 		return std::move(data);
 	}
+	*/
 
 	// consumer
 	optional<T> get(cu::push_type<control_type>& yield)
