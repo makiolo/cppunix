@@ -36,7 +36,7 @@ public:
 	bool run()
 	{
 		auto i = _running.begin();
-		LOGI("begin scheduler");
+		LOGV("begin scheduler");
 		while (i != _running.end())
 		{
 			auto& c = *i;
@@ -46,18 +46,18 @@ public:
 				{
 					_move_to_blocked = false;
 					_last_id = -1;
-					LOGI("<%s> begin run()", get_name().c_str());
+					LOGV("<%s> begin run()", get_name().c_str());
 					c->run();
-					LOGI("<%s> end run()", get_name().c_str());
+					LOGV("<%s> end run()", get_name().c_str());
 
 					if (_move_to_blocked)
 					{
-						LOGI("<%s> begin blocking", get_name().c_str());
-						LOGI("%s: se bloquea, para esperar a la señal: %d", get_name().c_str(), _last_id);
+						LOGV("<%s> begin blocking", get_name().c_str());
+						LOGV("%s: se bloquea, para esperar a la señal: %d", get_name().c_str(), _last_id);
 						auto& blocked = _blocked[_last_id];
 						blocked.emplace_back(std::move(c));
 						i = _running.erase(i);
-						LOGI("<%s> end blocking", get_name().c_str());
+						LOGV("<%s> end blocking", get_name().c_str());
 					}
 					else
 					{
@@ -68,11 +68,11 @@ public:
 			}
 			else
 			{
-				LOGI("cpproutine ha terminado");
+				LOGV("cpproutine ha terminado");
 				i = _running.erase(i);
 			}
 		}
-		LOGI("end scheduler");
+		LOGV("end scheduler");
 		return _running.size() > 0;
 	}
 	
@@ -114,15 +114,15 @@ public:
 		auto& blocked = _blocked[id];
 		if(blocked.size() > 0)
 		{
-			LOGI("<%s> begin resuming", get_name().c_str());
-			LOGI("%s se desbloquea porque ha sido despertado por la señal %d", (*blocked.begin())->get_name().c_str(), id);
+			LOGV("<%s> begin resuming", get_name().c_str());
+			LOGV("%s se desbloquea porque ha sido despertado por la señal %d", (*blocked.begin())->get_name().c_str(), id);
 			_running.emplace(_running.end(), std::move(*blocked.begin()));
 			blocked.erase(blocked.begin());
 			if(blocked.size() == 0)
 			{
 				_blocked.erase(id);
 			}
-			LOGI("<%s> end resuming", get_name().c_str());
+			LOGV("<%s> end resuming", get_name().c_str());
 			return true;
 		}
 		return  false;
@@ -134,8 +134,8 @@ public:
 		bool notified_any = false;
 		while(blocked.size() > 0)
 		{
-			LOGI("<%s> begin resuming", get_name().c_str());
-			LOGI("%s se desbloquea porque ha sido despertado por la señal %d", (*blocked.begin())->get_name().c_str(), id);
+			LOGV("<%s> begin resuming", get_name().c_str());
+			LOGV("%s se desbloquea porque ha sido despertado por la señal %d", (*blocked.begin())->get_name().c_str(), id);
 			_running.emplace(_running.end(), std::move(*blocked.begin()));
 			blocked.erase(blocked.begin());
 			if(blocked.size() == 0)
@@ -143,7 +143,7 @@ public:
 				_blocked.erase(id);
 			}
 			notified_any = true;
-			LOGI("<%s> end resuming", get_name().c_str());
+			LOGV("<%s> end resuming", get_name().c_str());
 		}
 		return notified_any;
 	}

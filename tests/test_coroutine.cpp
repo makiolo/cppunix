@@ -71,11 +71,11 @@ auto range(int start, int stop, int step=1)
 
 TEST(PipelineTest, Test_range_simple)
 {
-	LOGI("range simple");
+	LOGV("range simple");
 	for (auto v : range(100))
-		LOGI("-> %d", v);
+		LOGV("-> %d", v);
 	for (auto v : range(10, 100, 2))
-		LOGI("-> %d", v);
+		LOGV("-> %d", v);
 }
 */
 
@@ -111,9 +111,9 @@ TEST(PipelineTest, Test_recursive_n4134)
 		);
 	};
 
-	LOGI("range recursive");
+	LOGV("range recursive");
 	for (auto v : range_rec(1, 10))
-		LOGI("%d", v);
+		LOGV("%d", v);
 }
 
 TEST(PipelineTest, Test3)
@@ -123,7 +123,7 @@ TEST(PipelineTest, Test3)
 			[&](cu::pull_type<int>& source) {
 				for (auto& s : source)
 				{
-					LOGI("<fib(%d)> received: %d", n, s);
+					LOGV("<fib(%d)> received: %d", n, s);
 				}
 			}
 		);

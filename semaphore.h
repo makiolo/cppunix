@@ -11,12 +11,12 @@ static int last_id = 0;
 class semaphore
 {
 public:
-	explicit semaphore(cu::scheduler& sche, int count_initial = 1)
+	explicit semaphore(cu::scheduler& sche, int count_initial = 0)
 		: _sche(sche)
 		, _count(count_initial)
 		, _id(last_id++)
 	{
-		LOGI("<%d> created semaphore %d", _id, _count);
+		LOGV("<%d> created semaphore %d", _id, _count);
 	}
 	///
 	/// Aumenta el semaforo. Libera la region critica.
@@ -34,7 +34,7 @@ public:
 	void notify(int q=1)
 	{
 		_count += q;
-		LOGI("<%d> increase semaphore from %d to %d", _id, _count-q, _count);
+		LOGV("<%d> increase semaphore from %d to %d", _id, _count-q, _count);
 		if(_count <= 0)
 		{
 			_sche.notify_one(_id);
@@ -44,12 +44,12 @@ public:
 	void notify(cu::push_type<control_type>& yield, int q=1)
 	{
 		_count += q;
-		LOGI("<%d> increase semaphore from %d to %d", _id, _count-q, _count);
+		LOGV("<%d> increase semaphore from %d to %d", _id, _count-q, _count);
 		if(_count <= 0)
 		{
 			if(_sche.notify_one(_id))
 			{
-				LOGI("notify yield in semaphore %d", _id);
+				LOGV("notify yield in semaphore %d", _id);
 				yield();
 			}
 		}
@@ -72,10 +72,10 @@ public:
 	{
 		_count -= q;
 		// TODO: evitar bajar de 0
-		LOGI("<%d> decrease semaphore from %d to %d", _id, _count+q, _count);
+		LOGV("<%d> decrease semaphore from %d to %d", _id, _count+q, _count);
 		if(_count < 0)
 		{
-			LOGI("wait no-yield in semaphore %d", _id);
+			LOGV("wait no-yield in semaphore %d", _id);
 			_sche.wait(_id);
 		}
 	}
@@ -84,11 +84,11 @@ public:
 	{
 		_count -= q;
 		// TODO: evitar bajar de 0
-		LOGI("<%d> decrease semaphore from %d to %d", _id, _count+q, _count);
+		LOGV("<%d> decrease semaphore from %d to %d", _id, _count+q, _count);
 		if(_count < 0)
 		{
 			_sche.wait(_id);
-			LOGI("wait yield in semaphore %d", _id);
+			LOGV("wait yield in semaphore %d", _id);
 			yield();
 		}
 	}
