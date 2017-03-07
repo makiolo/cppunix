@@ -9,7 +9,7 @@ namespace cu {
 
 class scheduler {
 public:
-	scheduler()
+	explicit scheduler()
 		: _pid_counter(0)
 		, _active(nullptr)
 	{
@@ -49,6 +49,7 @@ public:
 
 					if (_move_to_blocked)
 					{
+						LOGI("%s: se bloquea, para esperar a la señal: %d", get_name().c_str(), _last_id);
 						auto& blocked = _blocked[_last_id];
 						blocked.emplace_back(std::move(c));
 						i = _running.erase(i);
@@ -99,7 +100,6 @@ public:
 	{
 		_move_to_blocked = true;
 		_last_id = id;
-		LOGI("%s: se bloquea, para esperar a la señal: %d", get_name().c_str(), _last_id);
 	}
 
 	bool notify_one(int id)
@@ -122,7 +122,7 @@ public:
 	bool notify_all(int id)
 	{
 		auto& blocked = _blocked[id];
-		bool notified_all = false;
+		bool notified_any = false;
 		while(blocked.size() > 0)
 		{
 			LOGI("%s se desbloquea porque ha sido despertado por la señal %d", (*blocked.begin())->get_name().c_str(), id);
@@ -132,9 +132,9 @@ public:
 			{
 				_blocked.erase(id);
 			}
-			notified_all = true;
+			notified_any = true;
 		}
-		return notified_all;
+		return notified_any;
 	}
 	
 protected:
