@@ -84,6 +84,7 @@ public:
 		}
 		else
 		{
+			LOGI("wait no-yield in semaphore %d", _id);
 			_sche.wait(_id);
 		}
 	}
@@ -98,6 +99,7 @@ public:
 		else
 		{
 			_sche.wait(_id);
+			LOGI("wait yield in semaphore %d", _id);
 			yield();
 		}
 	}
