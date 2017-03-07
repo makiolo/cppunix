@@ -60,9 +60,9 @@ public:
 		if(_count >= _count_max)
 		{
 			LOGI("notify semaphore %d is full with %d", _id, _count);
-			if(_sche.notify_all(id))
+			if(_sche.notify_all(_id))
 			{
-				LOGI("notify yield in semaphore %d", id);
+				LOGI("notify yield in semaphore %d", _id);
 				yield();
 			}
 		}
