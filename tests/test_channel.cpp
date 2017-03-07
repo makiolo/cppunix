@@ -66,10 +66,10 @@ TEST(ChannelTest, pipeline)
 TEST(ChannelTest, goroutines_consumer)
 {
 	cu::scheduler sch;
-	cu::channel<int> go(sch, 10);
+	cu::channel<int> go(sch, 9);
 	sch.spawn("producer", [&sch, &go](auto& yield) {
 		// send
-		for(int i=0; i<200; ++i)
+		for(int i=1; i<=200; ++i)
 		{
 			std::cout << "sending: " << i << std::endl;
 			go(yield, i);
@@ -98,9 +98,9 @@ TEST(ChannelTest, goroutines_consumer)
 TEST(CoroTest, TestScheduler)
 {
 	cu::scheduler sch;
-	cu::semaphore person1(sch, 1);
-	cu::semaphore person2(sch, 1);
-	cu::semaphore other(sch, 2);
+	cu::semaphore person1(sch);
+	cu::semaphore person2(sch);
+	cu::semaphore other(sch);
 	// person2
 	sch.spawn("person2", [&](auto& yield) {
 		std::cout << "Hola person1" << std::endl;
@@ -135,6 +135,7 @@ TEST(CoroTest, TestScheduler)
 	// other
 	sch.spawn("other", [&](auto& yield) {
 		//
+		other.wait(yield);
 		other.wait(yield);
 		std::cout << "parar!!! tengo algo importante" << std::endl;
 	});
