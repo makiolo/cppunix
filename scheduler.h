@@ -110,6 +110,10 @@ public:
 			LOGI("%s se desbloquea porque ha sido despertado por la señal %d", (*blocked.begin())->get_name().c_str(), id);
 			_running.emplace(_running.end(), std::move(*blocked.begin()));
 			blocked.erase(blocked.begin());
+			if(blocked.size() == 0)
+			{
+				_blocked.erase(id);
+			}
 			return true;
 		}
 		return  false;
@@ -118,14 +122,19 @@ public:
 	bool notify_all(int id)
 	{
 		auto& blocked = _blocked[id];
+		bool notified_all = false;
 		while(blocked.size() > 0)
 		{
 			LOGI("%s se desbloquea porque ha sido despertado por la señal %d", (*blocked.begin())->get_name().c_str(), id);
 			_running.emplace(_running.end(), std::move(*blocked.begin()));
 			blocked.erase(blocked.begin());
-			return true;
+			if(blocked.size() == 0)
+			{
+				_blocked.erase(id);
+			}
+			notified_all = true;
 		}
-		return  false;
+		return notified_all;
 	}
 	
 protected:
