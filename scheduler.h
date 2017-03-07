@@ -102,7 +102,7 @@ public:
 		LOGI("%s: se bloquea, para esperar a la señal: %d", get_name().c_str(), _last_id);
 	}
 
-	bool notify(int id)
+	bool notify_one(int id)
 	{
 		auto& blocked = _blocked[id];
 		if(blocked.size() > 0)
@@ -114,14 +114,18 @@ public:
 		}
 		return  false;
 	}
-
-	void notify(cu::push_type<control_type>& yield, int id)
+	
+	bool notify_all(int id)
 	{
-		if(notify(id))
+		auto& blocked = _blocked[id];
+		while(blocked.size() > 0)
 		{
-			LOGI("notify yield in semaphore %d", id);
-			yield();
+			LOGI("%s se desbloquea porque ha sido despertado por la señal %d", (*blocked.begin())->get_name().c_str(), id);
+			_running.emplace(_running.end(), std::move(*blocked.begin()));
+			blocked.erase(blocked.begin());
+			return true;
 		}
+		return  false;
 	}
 	
 protected:
