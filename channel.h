@@ -138,10 +138,10 @@ public:
 	using link = cu::link< optional<T> >;
 	using coroutine = push_type_ptr< optional<T> >;
 
-	explicit channel(cu::scheduler& sch, size_t buffer = 0)
+	explicit channel(cu::scheduler& sch, size_t buffer)
 		: _closed(false)
 		, _buffer(buffer)
-		, _elements(sch, buffer)
+		, _elements(sch, buffer, 0)
 		, _slots(sch, buffer, buffer)
 	{
 		_set_tail(buffer);
@@ -151,7 +151,7 @@ public:
 	explicit channel(cu::scheduler& sch, size_t buffer, Function&& f)
 		: _closed(false)
 		, _buffer(buffer)
-		, _elements(sch, buffer)
+		, _elements(sch, buffer, 0)
 		, _slots(sch, buffer, buffer)
 	{
 		_set_tail(buffer);
@@ -162,7 +162,7 @@ public:
 	explicit channel(cu::scheduler& sch, size_t buffer, Function&& f, Functions&& ... fs)
 		: _closed(false)
 		, _buffer(buffer)
-		, _elements(sch, buffer)
+		, _elements(sch, buffer, 0)
 		, _slots(sch, buffer, buffer)
 	{
 		_set_tail(buffer);
