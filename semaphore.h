@@ -43,14 +43,10 @@ public:
 			LOGI("<%d> increase semaphore from %d to %d / %d", _id, _count-q, _count, _count_max);
 			_sche.notify_one(_id);
 		}
-		
-		/*
-		if(_count >= _count_max)
+		else
 		{
-			LOGI("notify semaphore %d is full with %d", _id, _count);
-			_sche.notify_all(_id);
+			LOGI("<%d> skipping notify() in sempahore");
 		}
-		*/
 	}
 
 	void notify(cu::push_type<control_type>& yield, int q=1)
@@ -66,18 +62,10 @@ public:
 				yield();
 			}
 		}
-		
-		/*
-		if(_count >= _count_max)
+		else
 		{
-			LOGI("notify semaphore %d is full with %d", _id, _count);
-			if(_sche.notify_all(_id))
-			{
-				LOGI("notify yield in semaphore %d", _id);
-				yield();
-			}
+			LOGI("<%d> skipping notify() in sempahore");
 		}
-		*/
 	}
 
 	///
