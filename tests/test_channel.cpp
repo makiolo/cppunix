@@ -66,7 +66,7 @@ TEST(ChannelTest, pipeline)
 TEST(ChannelTest, goroutines_consumer)
 {
 	cu::scheduler sch;
-	cu::channel<int> go(sch, 20);
+	cu::channel<int> go(sch);
 	sch.spawn("producer", [&sch, &go](auto& yield) {
 		// send
 		for(int i=1; i<=200; ++i)
