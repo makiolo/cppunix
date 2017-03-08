@@ -3,6 +3,7 @@
 #include "../pipeline.h"
 #include "../channel.h"
 #include "../scheduler.h"
+#include "../shell.h"
 #include <thread>
 #include <asyncply/run.h>
 
@@ -66,17 +67,19 @@ TEST(ChannelTest, pipeline)
 TEST(ChannelTest, goroutines_consumer)
 {
 	cu::scheduler sch;
-	cu::channel<int> go(sch);
-	sch.spawn("producer", [&sch, &go](auto& yield) {
+	cu::channel<std::string> go(sch);
+	go.connect(quote("__^-^__"));
+	go.connect(quote("__\o/__"));
+	sch.spawn([&](auto& yield) {
 		// send
 		for(int i=1; i<=200; ++i)
 		{
 			std::cout << "sending: " << i << std::endl;
-			go(yield, i);
+			go(yield, std::to_string(i));
 		}
 		go.close(yield);
 	});
-	sch.spawn("consumer", [&sch, &go](auto& yield) {
+	sch.spawn([&](auto& yield) {
 		// recv
 		for(;;)
 		{
