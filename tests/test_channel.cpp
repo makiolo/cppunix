@@ -67,12 +67,12 @@ TEST(ChannelTest, pipeline)
 TEST(ChannelTest, goroutines_consumer)
 {
 	cu::scheduler sch;
-	cu::channel<std::string> go(sch);
+	cu::channel<std::string> go(sch, 5);
 	// go.connect(cu::quote("__^-^__"));
 	// go.connect(cu::quote("__\o/__"));
 	sch.spawn([&](auto& yield) {
 		// send
-		for(int i=1; i<=200; ++i)
+		for(int i=1; i<=50; ++i)
 		{
 			std::cout << "sending: " << i << std::endl;
 			go(yield, std::to_string(i));
@@ -105,7 +105,7 @@ TEST(CoroTest, TestScheduler)
 	cu::semaphore person2(sch);
 	cu::semaphore other(sch);
 	// person2
-	sch.spawn("person2", [&](auto& yield) {
+	sch.spawn([&](auto& yield) {
 		std::cout << "Hola person1" << std::endl;
 		person2.notify(yield);
 		//
@@ -120,7 +120,7 @@ TEST(CoroTest, TestScheduler)
 		other.notify(yield);
 	});
 	// person1
-	sch.spawn("person1", [&](auto& yield) {
+	sch.spawn([&](auto& yield) {
 		//
 		person2.wait(yield);
 		std::cout << "Hola person2" << std::endl;
@@ -136,7 +136,7 @@ TEST(CoroTest, TestScheduler)
 		other.notify(yield);
 	});
 	// other
-	sch.spawn("other", [&](auto& yield) {
+	sch.spawn([&](auto& yield) {
 		//
 		other.wait(yield);
 		other.wait(yield);
