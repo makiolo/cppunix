@@ -701,6 +701,17 @@ cmd::link run(const std::string& cmd)
 	};
 }
 
+cmd::link run()
+{
+	return [&](cmd::in& source, cmd::out& yield)
+	{
+		for (auto s : source)
+		{
+			run(s)(source, yield);
+		}
+	};
+}
+
 }
 
 #endif
