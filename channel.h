@@ -186,7 +186,6 @@ public:
 		_coros.pop();
 	}
 
-	/*
 	// producer
 	template <typename R>
 	void operator()(const R& data)
@@ -195,12 +194,12 @@ public:
 		// std::unique_lock<std::mutex> lock(_w_coros);
 		if(!_closed)
 		{
-			_slots.wait();
+			if (_buffer > 0)
+				_slots.wait();
 			(*_coros.top())( optional<T>(data) );
 			_elements.notify();
 		}
 	}
-	*/
 
 	// producer
 	template <typename R>
@@ -217,17 +216,16 @@ public:
 		}
 	}
 
-	/*
 	// consumer
 	optional<T> get()
 	{
 		// std::unique_lock<std::mutex> lock(_w_coros);
 		_elements.wait();
 		optional<T> data = std::get<0>(_buf.get());
-		_slots.notify();
+		if (_buffer > 0)
+			_slots.notify();
 		return std::move(data);
 	}
-	*/
 
 	// consumer
 	optional<T> get(cu::push_type<control_type>& yield)
@@ -264,7 +262,6 @@ protected:
 	void _set_tail(size_t buffer)
 	{
 		// std::unique_lock<std::mutex> lock(_w_coros);
-		// assert(buffer > 0);
 		auto r = cu::make_iterator< optional<T> >(
 			[this](auto& source) {
 				for (auto& s : source)
@@ -274,7 +271,6 @@ protected:
 			}
 		);
 		_coros.push( cu::make_iterator< optional<T> >( term_receiver<T>(r) ) );
-
 	}
 
 	template <typename Function>
