@@ -323,41 +323,6 @@ cmd::link sort(bool stable = false)
 	};
 }
 
-cmd::link ltrim()
-{
-	return [&](cmd::in& source, cmd::out& yield)
-	{
-		for (auto s : source)
-		{
-			std::string buf(s);
-			buf.erase(buf.begin(), std::find_if(buf.begin(), buf.end(), std::not1(std::ptr_fun<int, int>(std::isspace))));
-			yield(buf);
-		}
-	};
-}
-
-cmd::link rtrim()
-{
-	return [&](cmd::in& source, cmd::out& yield)
-	{
-		for (auto s : source)
-		{
-			std::string buf(s);
-			buf.erase(std::find_if(buf.rbegin(), buf.rend(), std::not1(std::ptr_fun<int, int>(std::isspace))).base(), buf.end());
-			yield(buf);
-		}
-	};
-}
-
-cmd::link trim()
-{
-	return [=](cmd::in& source, cmd::out& yield)
-	{
-		ltrim()(source, yield);
-		rtrim()(source, yield);
-	};
-}
-
 cmd::link cut(int field, const char* delim = " ")
 {
 	return [=](cmd::in& source, cmd::out& yield)
@@ -471,6 +436,19 @@ cmd::link assert_string(const std::vector<std::string>& matches)
 	};
 }
 
+cmd::link count()
+{
+	return [=](cmd::in& source, cmd::out& yield)
+	{
+		size_t total = 0;
+		for (auto s : source)
+		{
+			++total;
+		}
+		yield(std::to_string(total));
+	};
+}
+	
 cmd::link assert_count(size_t expected)
 {
 	return [=](cmd::in& source, cmd::out& yield)
@@ -478,7 +456,6 @@ cmd::link assert_count(size_t expected)
 		size_t total = 0;
 		for (auto s : source)
 		{
-			yield(s);
 			++total;
 		}
 		if(expected != total)
@@ -487,6 +464,7 @@ cmd::link assert_count(size_t expected)
 			ss << "<assert_count> error count: " << total << ", but expected value: " << expected << std::endl;
 			throw std::runtime_error(ss.str());
 		}
+		yield(std::to_string(total));
 	};
 }
 
@@ -602,6 +580,18 @@ cmd::link out(std::string& str)
 		}
 	};
 }
+	
+cmd::link out(int& number)
+{
+	return [&](cmd::in& source, cmd::out& yield)
+	{
+		for (auto s : source)
+		{
+			number = std::stoi(s);
+			yield(s);
+		}
+	};
+}
 
 cmd::link out()
 {
@@ -646,16 +636,46 @@ public:
 
 using IsNotSpace = IsNot<std::ctype_base::space>;
 
-cmd::link strip()
+cmd::link lstrip()
 {
 	return [&](cmd::in& source, cmd::out& yield)
 	{
+		for (auto s : source)
+		{
+			std::string buf(s);
+			buf.erase(buf.begin(), std::find_if( buf.begin(), buf.end(), IsNotSpace() ) );
+			yield(buf);
+		}
+	};
+}
+
+cmd::link rstrip()
+{
+	return [&](cmd::in& source, cmd::out& yield)
+	{
+		for (auto s : source)
+		{
+			std::string buf(s);
+			buf.erase(std::find_if(buf.rbegin(), buf.rend(), IsNotSpace()).base(), buf.end());
+			yield(buf);
+		}
+		/*
 		for (auto s : source)
 		{
 			auto right = std::find_if( s.rbegin(), s.rend(), IsNotSpace() ).base();
 			auto left = std::find_if(s.begin(), right, IsNotSpace() );
 			yield( std::string( left, right ) );
 		}
+		*/
+	};
+}
+
+cmd::link strip()
+{
+	return [=](cmd::in& source, cmd::out& yield)
+	{
+		lstrip()(source, yield);
+		rstrip()(source, yield);
 	};
 }
 
@@ -680,7 +700,7 @@ cmd::link run(const std::string& cmd)
 		pclose(in);
 	};
 }
-	
+
 }
 
 #endif
