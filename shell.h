@@ -356,8 +356,12 @@ cmd::link quote(const char* delim = "\"")
 	};
 }
 
-cmd::link join(const char* delim = " ")
+cmd::link join(const char* delim = " ", int grouping = 0)
 {
+	/*
+	use grouping=0 for disabling groups.
+	use grouping>0 for yield end line each "grouping" times
+	*/
 	return [=](cmd::in& source, cmd::out& yield)
 	{
 		std::stringstream ss;
@@ -368,6 +372,8 @@ cmd::link join(const char* delim = " ")
 				ss << delim << s;
 			else
 				ss << s;
+			if(i % grouping == 0)
+				ss << '\n';
 			++i;
 		}
 		yield(ss.str());
@@ -599,7 +605,7 @@ cmd::link out()
 	{
 		for (auto s : source)
 		{
-			std::cout << s << std::endl;
+			std::cout << s << "\n";
 			yield(s);
 		}
 	};
@@ -611,7 +617,7 @@ cmd::link err()
 	{
 		for (auto s : source)
 		{
-			std::cerr << s << std::endl;
+			std::cerr << s << "\n";
 			yield(s);
 		}
 	};
@@ -707,6 +713,7 @@ cmd::link run()
 	{
 		for (auto s : source)
 		{
+			// use run("echo $1 $2 $3")
 			run(s)(source, yield);
 		}
 	};
