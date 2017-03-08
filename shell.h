@@ -463,6 +463,7 @@ cmd::link assert_count(size_t expected)
 		for (auto s : source)
 		{
 			++total;
+			yield(s);
 		}
 		if(expected != total)
 		{
@@ -470,7 +471,6 @@ cmd::link assert_count(size_t expected)
 			ss << "<assert_count> error count: " << total << ", but expected value: " << expected << std::endl;
 			throw std::runtime_error(ss.str());
 		}
-		yield(std::to_string(total));
 	};
 }
 
