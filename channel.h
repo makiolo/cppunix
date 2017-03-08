@@ -138,7 +138,7 @@ public:
 	using link = cu::link< optional<T> >;
 	using coroutine = push_type_ptr< optional<T> >;
 
-	explicit channel(cu::scheduler& sch, size_t buffer = 1)
+	explicit channel(cu::scheduler& sch, size_t buffer = 0)
 		: _closed(false)
 		, _buffer(buffer)
 		, _elements(sch, 0)
@@ -210,7 +210,8 @@ public:
 		// std::unique_lock<std::mutex> lock(_w_coros);
 		if(!_closed)
 		{
-			_slots.wait(yield);
+			if (_buffer > 0)
+				_slots.wait(yield);
 			(*_coros.top())( optional<T>(data) );
 			_elements.notify(yield);
 		}
@@ -234,7 +235,8 @@ public:
 		// std::unique_lock<std::mutex> lock(_w_coros);
 		_elements.wait(yield);
 		optional<T> data = std::get<0>(_buf.get());
-		_slots.notify(yield);
+		if (_buffer > 0)
+			_slots.notify(yield);
 		return std::move(data);
 	}
 
