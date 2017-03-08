@@ -100,3 +100,15 @@ TEST(CoroTest, TestGrep2)
 	);
 }
 
+
+TEST(CoroTest, TestCount)
+{
+	int result;
+	cmd(	  
+			  in("line1\nline2\nline3")
+			, split("\n")
+			, count()
+			, out(result)
+	);
+	ASSERT_EQ(result, 3) << "maybe count() is not working well";
+}
