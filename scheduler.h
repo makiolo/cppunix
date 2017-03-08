@@ -83,6 +83,13 @@ public:
 		{
 			pending_work = run();
 		} while(pending_work);
+		
+		if(_blocked.size() > 0)
+		{
+			std::stringstream ss;
+			ss << "fatal error: all cpproutines are asleep" << std::endl;
+			throw std::runtime_error(ss.str());
+		}
 	}
 	
 	void run_forever()
