@@ -665,14 +665,6 @@ cmd::link rstrip()
 			buf.erase(std::find_if(buf.rbegin(), buf.rend(), IsNotSpace()).base(), buf.end());
 			yield(buf);
 		}
-		/*
-		for (auto s : source)
-		{
-			auto right = std::find_if( s.rbegin(), s.rend(), IsNotSpace() ).base();
-			auto left = std::find_if(s.begin(), right, IsNotSpace() );
-			yield( std::string( left, right ) );
-		}
-		*/
 	};
 }
 
@@ -680,8 +672,16 @@ cmd::link strip()
 {
 	return [=](cmd::in& source, cmd::out& yield)
 	{
+		/*
 		lstrip()(source, yield);
 		rstrip()(source, yield);
+		*/
+		for (auto s : source)
+		{
+			auto right = std::find_if( s.rbegin(), s.rend(), IsNotSpace() ).base();
+			auto left = std::find_if(s.begin(), right, IsNotSpace() );
+			yield( std::string( left, right ) );
+		}
 	};
 }
 
