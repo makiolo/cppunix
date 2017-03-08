@@ -372,7 +372,7 @@ cmd::link join(const char* delim = " ", int grouping = 0)
 				ss << delim << s;
 			else
 				ss << s;
-			if(i % grouping == 0)
+			if((grouping > 0) && (i % grouping == 0))
 				ss << '\n';
 			++i;
 		}
