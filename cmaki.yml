@@ -12,4 +12,8 @@
         - ./*.h include/cppunix/
     mode: dr
     source: https://github.com/makiolo/cppunix
+    targets:
+        - dummy:
+            info:
+                <<: *library_dynamic
 
