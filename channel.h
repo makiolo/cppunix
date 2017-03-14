@@ -201,8 +201,8 @@ public:
 		_slots.wait(yield);
 		(*_coros.top())( optional<T>(data) );
 		_elements.notify(yield);
-		// TODO: 1 si es un dato, 0 si es un cierre de canal
-		if(_slots.size() <= 1)
+		// TODO: revisar esto
+		if(_slots.size() <= 0)
 		{
 			std::cout << "change to consumer" << std::endl;
 			yield();
