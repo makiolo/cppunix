@@ -203,10 +203,10 @@ public:
 		// std::unique_lock<std::mutex> lock(_w_coros);
 		if (_buffer > 0)
 			_slots.wait(yield);
-		if(full())
-			yield();
 		(*_coros.top())( optional<T>(data) );
 		_elements.notify(yield);
+		if(full())
+			yield();
 	}
 
 	// consumer
@@ -258,7 +258,7 @@ public:
 	
 	inline bool full() const
 	{
-		return (_buffer > 0) && (_elements.size() >= _buffer);
+		return (_buffer > 0) && (_elements.size() >= (_buffer - 1) );
 	}
 	
 	inline int size() const
