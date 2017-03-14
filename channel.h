@@ -256,7 +256,7 @@ public:
 	
 	inline bool full() const
 	{
-		return (_buffer > 0) && (_slots.empty());
+		return (_buffer > 0) && (_elements.size() >= _buffer);
 	}
 	
 	inline int size() const
