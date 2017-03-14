@@ -84,17 +84,17 @@ TEST(ChannelTest, goroutines_consumer)
 	sch.spawn([&](auto& yield) {
 		for(;;)
 		{
--			auto& data = go.get();
- -			if(!data)
- -			{
- -				std::cout << "channel closed" << std::endl;
- -				break;
- -			}
- -			else
+-			auto data = go.get();
+ -			if(data)
  -			{
  -				std::cout << "recving: " << *data << std::endl;
 				if(go.empty())
 					yield();
+ -			}
+ -			else
+ -			{
+ -				std::cout << "channel closed" << std::endl;
+ -				break;
  -			}
 		}
 	});
