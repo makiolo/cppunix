@@ -260,12 +260,12 @@ public:
 	
 	inline bool empty() const
 	{
-		return (_elements.size() <= 0);
+		return (_elements.empty());
 	}
 	
 	inline bool full() const
 	{
-		return (_buffer > 0) && (_slots.size() <= 0);
+		return (_buffer > 0) && (_slots.empty());
 	}
 	
 	inline int size() const
