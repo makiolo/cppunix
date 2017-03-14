@@ -257,6 +257,21 @@ public:
 	{
 		return channel_iterator<T>(*this);
 	}
+	
+	inline bool empty() const
+	{
+		return (_elements.size() <= 0);
+	}
+	
+	inline bool full() const
+	{
+		return (_buffer > 0) && (_slots.size() <= 0);
+	}
+	
+	inline int size() const
+	{
+		return _elements.size();
+	}
 
 protected:
 	void _set_tail(size_t buffer)
