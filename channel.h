@@ -203,7 +203,7 @@ public:
 		_slots.wait(yield);
 		(*_coros.top())( optional<T>(data) );
 		_elements.notify(yield);
-		if(full())
+		if(full() && !empty())
 			yield();
 	}
 
@@ -222,10 +222,10 @@ public:
 	{
 		// std::unique_lock<std::mutex> lock(_w_coros);
 		_elements.wait(yield);
-		if(empty())
-			yield();
 		optional<T> data = std::get<0>(_buf.get());
 		_slots.notify(yield);
+		if(empty() && !full())
+			yield();
 		return std::move(data);
 	}
 
@@ -257,7 +257,8 @@ public:
 	// full in n-1
 	inline bool full() const
 	{
-		return _elements.size() >= _buffer;
+		// return _elements.size() >= _buffer;
+		return _slots.empty();
 	}
 	
 	inline int size() const
