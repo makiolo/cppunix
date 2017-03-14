@@ -93,8 +93,6 @@ TEST(ChannelTest, goroutines_consumer)
 		{
 			std::cout << "----> send " << i << " [PRE]" << std::endl;
 			go(yield, std::to_string(i));
-			if(go.full())
-				yield();
 			std::cout << "----> send " << i << " [POST]" << std::endl;
 		}
 		go.close(yield);
