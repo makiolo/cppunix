@@ -189,8 +189,7 @@ public:
 	{
 		// producer
 		// std::unique_lock<std::mutex> lock(_w_coros);
-		if (_buffer > 0)
-			_slots.wait();
+		_slots.wait();
 		(*_coros.top())( optional<T>(data) );
 		_elements.notify();
 	}
@@ -201,8 +200,7 @@ public:
 	{
 		// producer
 		// std::unique_lock<std::mutex> lock(_w_coros);
-		if (_buffer > 0)
-			_slots.wait(yield);
+		_slots.wait(yield);
 		(*_coros.top())( optional<T>(data) );
 		_elements.notify(yield);
 		if(full())
@@ -215,8 +213,7 @@ public:
 		// std::unique_lock<std::mutex> lock(_w_coros);
 		_elements.wait();
 		optional<T> data = std::get<0>(_buf.get());
-		if (_buffer > 0)
-			_slots.notify();
+		_slots.notify();
 		return std::move(data);
 	}
 
@@ -226,8 +223,7 @@ public:
 		// std::unique_lock<std::mutex> lock(_w_coros);
 		_elements.wait(yield);
 		optional<T> data = std::get<0>(_buf.get());
-		if (_buffer > 0)
-			_slots.notify(yield);
+		_slots.notify(yield);
 		return std::move(data);
 	}
 
@@ -253,12 +249,12 @@ public:
 	
 	inline bool empty() const
 	{
-		return (_elements.empty());
+		return _elements.empty();
 	}
 	
 	inline bool full() const
 	{
-		return (_buffer > 0) && (_elements.size() >= (_buffer - 1) );
+		return _elements.size() >= _buffer;
 	}
 	
 	inline int size() const
