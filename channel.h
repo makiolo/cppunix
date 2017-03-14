@@ -139,18 +139,18 @@ public:
 	using coroutine = push_type_ptr< optional<T> >;
 
 	explicit channel(cu::scheduler& sch, size_t buffer = 0)
-		: _buffer(buffer + 1)
+		: _buffer(buffer + 2)
 		, _elements(sch, 0)
-		, _slots(sch, buffer + 1)
+		, _slots(sch, buffer + 2)
 	{
 		_set_tail(buffer);
 	}
 
 	template <typename Function>
 	explicit channel(cu::scheduler& sch, size_t buffer, Function&& f)
-		: _buffer(buffer + 1)
+		: _buffer(buffer + 2)
 		, _elements(sch, 0)
-		, _slots(sch, buffer + 1)
+		, _slots(sch, buffer + 2)
 	{
 		_set_tail(buffer);
 		_add(std::forward<Function>(f));
@@ -158,9 +158,9 @@ public:
 
 	template <typename Function, typename ... Functions>
 	explicit channel(cu::scheduler& sch, size_t buffer, Function&& f, Functions&& ... fs)
-		: _buffer(buffer + 1)
+		: _buffer(buffer + 2)
 		, _elements(sch, 0)
-		, _slots(sch, buffer + 1)
+		, _slots(sch, buffer + 2)
 	{
 		_set_tail(buffer);
 		_add(std::forward<Function>(f), std::forward<Functions>(fs)...);
@@ -252,9 +252,10 @@ public:
 		return _elements.empty();
 	}
 	
+	// full in n-1
 	inline bool full() const
 	{
-		return _elements.size() >= _buffer;
+		return _elements.size() >= (_buffer - 1);
 	}
 	
 	inline int size() const
