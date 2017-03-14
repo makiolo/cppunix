@@ -74,10 +74,11 @@ TEST(ChannelTest, goroutines_consumer)
 		// send
 		for(int i=1; i<=50; ++i)
 		{
-			std::cout << "sending: " << i << std::endl;
+			std::cout << "sending: " << i << " [PRE]" << std::endl;
 			go(std::to_string(i));
 			if(go.full())
 				yield();
+			std::cout << "sending: " << i << " [POST]" << std::endl;
 		}
 		go.close();
 	});
@@ -87,9 +88,10 @@ TEST(ChannelTest, goroutines_consumer)
 			auto data = go.get();
  			if(data)
  			{
- 				std::cout << "recving: " << *data << std::endl;
+ 				std::cout << "recving: " << *data << " [PRE]" << std::endl;
 				if(go.empty())
 					yield();
+				std::cout << "recving: " << *data << " [POST]" << std::endl;
  			}
  			else
 	 		{
