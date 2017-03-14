@@ -40,7 +40,7 @@ template <typename T> class channel;
 template <typename T>
 struct channel_iterator
 {
-	channel_iterator(channel<T>& channel, bool is_begin=false)
+	explicit channel_iterator(channel<T>& channel, bool is_begin=false)
 		: _channel(channel)
 		, _sentinel()
 	{
@@ -139,8 +139,7 @@ public:
 	using coroutine = push_type_ptr< optional<T> >;
 
 	explicit channel(cu::scheduler& sch, size_t buffer = 0)
-		: _closed(false)
-		, _buffer(buffer)
+		: _buffer(buffer)
 		, _elements(sch, 0)
 		, _slots(sch, buffer)
 	{
@@ -149,8 +148,7 @@ public:
 
 	template <typename Function>
 	explicit channel(cu::scheduler& sch, size_t buffer, Function&& f)
-		: _closed(false)
-		, _buffer(buffer)
+		: _buffer(buffer)
 		, _elements(sch, 0)
 		, _slots(sch, buffer)
 	{
@@ -160,8 +158,7 @@ public:
 
 	template <typename Function, typename ... Functions>
 	explicit channel(cu::scheduler& sch, size_t buffer, Function&& f, Functions&& ... fs)
-		: _closed(false)
-		, _buffer(buffer)
+		: _buffer(buffer)
 		, _elements(sch, 0)
 		, _slots(sch, buffer)
 	{
@@ -192,13 +189,10 @@ public:
 	{
 		// producer
 		// std::unique_lock<std::mutex> lock(_w_coros);
-		if(!_closed)
-		{
-			if (_buffer > 0)
-				_slots.wait();
-			(*_coros.top())( optional<T>(data) );
-			_elements.notify();
-		}
+		if (_buffer > 0)
+			_slots.wait();
+		(*_coros.top())( optional<T>(data) );
+		_elements.notify();
 	}
 
 	// producer
@@ -207,13 +201,10 @@ public:
 	{
 		// producer
 		// std::unique_lock<std::mutex> lock(_w_coros);
-		if(!_closed)
-		{
-			if (_buffer > 0)
-				_slots.wait(yield);
-			(*_coros.top())( optional<T>(data) );
-			_elements.notify(yield);
-		}
+		if (_buffer > 0)
+			_slots.wait(yield);
+		(*_coros.top())( optional<T>(data) );
+		_elements.notify(yield);
 	}
 
 	// consumer
@@ -308,11 +299,9 @@ protected:
 	cu::semaphore _elements;
 	cu::semaphore _slots;
 	// std::mutex _w_coros;
-	bool _closed;
 	size_t _buffer;
 };
 
 }
 
 #endif
-
