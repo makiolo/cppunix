@@ -222,6 +222,8 @@ public:
 	{
 		// std::unique_lock<std::mutex> lock(_w_coros);
 		_elements.wait(yield);
+		if(empty())
+			yield();
 		optional<T> data = std::get<0>(_buf.get());
 		_slots.notify(yield);
 		return std::move(data);
@@ -255,7 +257,7 @@ public:
 	// full in n-1
 	inline bool full() const
 	{
-		return _elements.size() >= (_buffer - 1);
+		return _elements.size() >= _buffer;
 	}
 	
 	inline int size() const
