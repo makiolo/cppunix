@@ -71,14 +71,13 @@ TEST(ChannelTest, goroutines_consumer)
 	// go.connect(cu::quote("__^-^__"));
 	// go.connect(cu::quote("__\o/__"));
 	sch.spawn([&](auto& yield) {
-		// send
 		for(int i=0; i<50; ++i)
 		{
-			std::cout << "send " << i << " [PRE]" << std::endl;
+			std::cout << "----> send " << i << " [PRE]" << std::endl;
 			go(std::to_string(i));
 			if(go.full())
 				yield();
-			std::cout << "send " << i << " [POST]" << std::endl;
+			std::cout << "----> send " << i << " [POST]" << std::endl;
 		}
 		go.close();
 	});
@@ -88,10 +87,10 @@ TEST(ChannelTest, goroutines_consumer)
 			auto data = go.get();
  			if(data)
  			{
- 				std::cout << "recv " << *data << " [PRE]" << std::endl;
+ 				std::cout << "recv " << *data << " [PRE] ---->" << std::endl;
 				if(go.empty())
 					yield();
-				std::cout << "recv " << *data << " [POST]" << std::endl;
+				std::cout << "recv " << *data << " [POST] ---->" << std::endl;
  			}
  			else
 	 		{
