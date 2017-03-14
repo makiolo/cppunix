@@ -141,7 +141,7 @@ public:
 	explicit channel(cu::scheduler& sch, size_t buffer = 0)
 		: _buffer(buffer + 1)
 		, _elements(sch, 0)
-		, _slots(sch, buffer + 1)
+		, _slots(sch, buffer + 2)
 	{
 		_set_tail(buffer);
 	}
@@ -150,7 +150,7 @@ public:
 	explicit channel(cu::scheduler& sch, size_t buffer, Function&& f)
 		: _buffer(buffer + 1)
 		, _elements(sch, 0)
-		, _slots(sch, buffer + 1)
+		, _slots(sch, buffer + 2)
 	{
 		_set_tail(buffer);
 		_add(std::forward<Function>(f));
@@ -160,7 +160,7 @@ public:
 	explicit channel(cu::scheduler& sch, size_t buffer, Function&& f, Functions&& ... fs)
 		: _buffer(buffer + 1)
 		, _elements(sch, 0)
-		, _slots(sch, buffer + 1)
+		, _slots(sch, buffer + 2)
 	{
 		_set_tail(buffer);
 		_add(std::forward<Function>(f), std::forward<Functions>(fs)...);
@@ -251,7 +251,7 @@ public:
 	
 	inline bool empty() const
 	{
-		return (_elements.size() < 0);
+		return (_elements.empty());
 	}
 	
 	inline bool full() const
