@@ -251,7 +251,7 @@ public:
 	
 	inline bool empty() const
 	{
-		return (_elements.empty());
+		return (_elements.size() < 0);
 	}
 	
 	inline bool full() const
