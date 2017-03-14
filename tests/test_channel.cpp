@@ -75,18 +75,27 @@ TEST(ChannelTest, goroutines_consumer)
 		for(int i=1; i<=50; ++i)
 		{
 			std::cout << "sending: " << i << std::endl;
-			go(std::to_string(i));
+			go(yield, std::to_string(i));
 			if(go.full())
 				yield();
 		}
 		go.close();
 	});
 	sch.spawn([&](auto& yield) {
-		for(auto data : go)
+		for(;;)
 		{
-			std::cout << "recving: " << data << std::endl;
-			if(go.empty())
-				yield();
+-			auto data = go.get(yield);
+ -			if(!data)
+ -			{
+ -				std::cout << "channel closed" << std::endl;
+ -				break;
+ -			}
+ -			else
+ -			{
+ -				std::cout << "recving: " << *data << std::endl;
+				if(go.empty())
+					yield();
+ -			}
 		}
 	});
 	sch.run_until_complete();
