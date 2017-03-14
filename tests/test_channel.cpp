@@ -76,10 +76,7 @@ TEST(ChannelTest, goroutines_consumer)
 			auto data = go.get(yield);
  			if(data)
  			{
- 				std::cout << "recv " << *data << " [PRE] ---->" << std::endl;
-				if(go.empty())
-					yield();
-				std::cout << "recv " << *data << " [POST] ---->" << std::endl;
+ 				std::cout << "recv " << *data << " ---->" << std::endl;
  			}
  			else
 	 		{
