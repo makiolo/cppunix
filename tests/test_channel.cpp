@@ -155,6 +155,72 @@ TEST(ChannelTest, goroutines_consumer_unbuffered)
 	sch.run_until_complete();
 }
 
+TEST(ChannelTest, goroutines_consumer_buffered_one)
+{
+	cu::scheduler sch;
+	cu::channel<std::string> go(sch, 1);
+	// go.connect(cu::quote("__^-^__"));
+	// go.connect(cu::quote("__\o/__"));	
+	sch.spawn([&](auto& yield) {
+		for(;;)
+		{
+			auto data = go.get(yield);
+ 			if(data)
+ 			{
+ 				std::cout << "recv " << *data << " <----" << std::endl;
+ 			}
+ 			else
+	 		{
+			 	std::cout << "channel closed" << std::endl;
+ 				break;
+ 			}
+		}
+	});
+	sch.spawn([&](auto& yield) {
+		for(int i=0; i<50; ++i)
+		{
+			std::cout << "----> send " << i << " [PRE]" << std::endl;
+			go(yield, std::to_string(i));
+			std::cout << "----> send " << i << " [POST]" << std::endl;
+		}
+		go.close(yield);
+	});
+	sch.run_until_complete();
+}
+
+TEST(ChannelTest, goroutines_consumer_buffered_two)
+{
+	cu::scheduler sch;
+	cu::channel<std::string> go(sch, 2);
+	// go.connect(cu::quote("__^-^__"));
+	// go.connect(cu::quote("__\o/__"));	
+	sch.spawn([&](auto& yield) {
+		for(;;)
+		{
+			auto data = go.get(yield);
+ 			if(data)
+ 			{
+ 				std::cout << "recv " << *data << " <----" << std::endl;
+ 			}
+ 			else
+	 		{
+			 	std::cout << "channel closed" << std::endl;
+ 				break;
+ 			}
+		}
+	});
+	sch.spawn([&](auto& yield) {
+		for(int i=0; i<50; ++i)
+		{
+			std::cout << "----> send " << i << " [PRE]" << std::endl;
+			go(yield, std::to_string(i));
+			std::cout << "----> send " << i << " [POST]" << std::endl;
+		}
+		go.close(yield);
+	});
+	sch.run_until_complete();
+}
+
 TEST(CoroTest, TestScheduler)
 {
 	cu::scheduler sch;
