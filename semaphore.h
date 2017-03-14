@@ -67,6 +67,17 @@ public:
 			yield();
 		}
 	}
+
+	inline bool empty() const
+	{
+		return (_count <= 0);
+	}
+	
+	inline int size() const
+	{
+		return _count;
+	}
+	
 protected:
 	cu::scheduler& _sche;
 	int _count;
