@@ -201,7 +201,7 @@ public:
 		_slots.wait(yield);
 		(*_coros.top())( optional<T>(data) );
 		_elements.notify(yield);
-		if(_slots.size() <= 0)
+		if(_slots.size() <= 1)
 		{
 			std::cout << "change to consumer" << std::endl;
 			yield();
@@ -252,18 +252,6 @@ public:
 	{
 		return channel_iterator<T>(*this);
 	}
-	
-	/*
-	inline bool empty() const
-	{
-		return _elements.empty();
-	}
-	
-	inline bool full() const
-	{
-		return _slots.empty();
-	}
-	*/
 
 protected:
 	void _set_tail(size_t buffer)
