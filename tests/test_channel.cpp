@@ -70,13 +70,38 @@ TEST(ChannelTest, goroutines_consumer)
 	cu::channel<std::string> go(sch, 8);
 	// go.connect(cu::quote("__^-^__"));
 	// go.connect(cu::quote("__\o/__"));
+	
+	// https://play.golang.org/
+	/*
+package main
+
+import "fmt"
+
+func worker(done chan int) {
+    for i := 0; i < 50; i++ {
+        fmt.Println("----> send ", i, " [PRE]")
+	done <- i
+        fmt.Println("----> send ", i, " [POST]")
+    }
+}
+
+func main() {
+    done := make(chan int, 8)
+    go worker(done)
+    for i := 0; i < 50; i++ {
+	j := <- done
+	fmt.Println("recv ", j, "  <---- ")
+    }
+}
+	*/
+	
 	sch.spawn([&](auto& yield) {
 		for(;;)
 		{
 			auto data = go.get(yield);
  			if(data)
  			{
- 				std::cout << "recv " << *data << " ---->" << std::endl;
+ 				std::cout << "recv " << *data << " <----" << std::endl;
  			}
  			else
 	 		{
