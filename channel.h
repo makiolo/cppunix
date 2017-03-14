@@ -1,6 +1,7 @@
 #ifndef _CU_CHANNEL_H_
 #define _CU_CHANNEL_H_
 
+#include <iostream>
 #include <vector>
 #include <stack>
 #include <boost/bind.hpp>
@@ -139,18 +140,16 @@ public:
 	using coroutine = push_type_ptr< optional<T> >;
 
 	explicit channel(cu::scheduler& sch, size_t buffer = 0)
-		: _buffer(buffer + 1 + 1)
-		, _elements(sch, 0)
-		, _slots(sch, buffer + 1 + 1)
+		: _elements(sch, 0)
+		, _slots(sch, buffer + 1)
 	{
 		_set_tail(buffer);
 	}
 
 	template <typename Function>
 	explicit channel(cu::scheduler& sch, size_t buffer, Function&& f)
-		: _buffer(buffer + 1 + 1)
-		, _elements(sch, 0)
-		, _slots(sch, buffer + 1 + 1)
+		: _elements(sch, 0)
+		, _slots(sch, buffer + 1)
 	{
 		_set_tail(buffer);
 		_add(std::forward<Function>(f));
@@ -158,9 +157,8 @@ public:
 
 	template <typename Function, typename ... Functions>
 	explicit channel(cu::scheduler& sch, size_t buffer, Function&& f, Functions&& ... fs)
-		: _buffer(buffer + 1 + 1)
-		, _elements(sch, 0)
-		, _slots(sch, buffer + 1 + 1)
+		: _elements(sch, 0)
+		, _slots(sch, buffer + 1)
 	{
 		_set_tail(buffer);
 		_add(std::forward<Function>(f), std::forward<Functions>(fs)...);
@@ -203,8 +201,11 @@ public:
 		_slots.wait(yield);
 		(*_coros.top())( optional<T>(data) );
 		_elements.notify(yield);
-		if(full() && !empty())
+		if(_slots.size() <= 0)
+		{
+			std::cout << "change to consumer" << std::endl;
 			yield();
+		}
 	}
 
 	// consumer
@@ -224,8 +225,11 @@ public:
 		_elements.wait(yield);
 		optional<T> data = std::get<0>(_buf.get());
 		_slots.notify(yield);
-		if(empty() && !full())
+		if(_elements.size() <= 0)
+		{
+			std::cout << "change to producer" << std::endl;
 			yield();
+		}
 		return std::move(data);
 	}
 
@@ -249,6 +253,7 @@ public:
 		return channel_iterator<T>(*this);
 	}
 	
+	/*
 	inline bool empty() const
 	{
 		return _elements.empty();
@@ -258,6 +263,7 @@ public:
 	{
 		return _slots.empty();
 	}
+	*/
 
 protected:
 	void _set_tail(size_t buffer)
@@ -294,7 +300,6 @@ protected:
 	cu::semaphore _elements;
 	cu::semaphore _slots;
 	// std::mutex _w_coros;
-	size_t _buffer;
 };
 
 }
