@@ -67,7 +67,7 @@ TEST(ChannelTest, pipeline)
 TEST(ChannelTest, goroutines_consumer)
 {
 	cu::scheduler sch;
-	cu::channel<std::string> go(sch, 5);
+	cu::channel<std::string> go(sch, 8);
 	// go.connect(cu::quote("__^-^__"));
 	// go.connect(cu::quote("__\o/__"));
 	sch.spawn([&](auto& yield) {
@@ -75,24 +75,18 @@ TEST(ChannelTest, goroutines_consumer)
 		for(int i=1; i<=50; ++i)
 		{
 			std::cout << "sending: " << i << std::endl;
-			go(yield, std::to_string(i));
+			go(std::to_string(i));
+			if(go.full())
+				yield();
 		}
-		go.close(yield);
+		go.close();
 	});
 	sch.spawn([&](auto& yield) {
-		// recv
-		for(;;)
+		for(auto data : go)
 		{
-			auto data = go.get(yield);
-			if(!data)
-			{
-				std::cout << "channel closed" << std::endl;
-				break;
-			}
-			else
-			{
-				std::cout << "recving: " << *data << std::endl;
-			}
+			if(go.empty())
+				yield();
+			std::cout << "recving: " << data << std::endl;
 		}
 	});
 	sch.run_until_complete();
