@@ -165,13 +165,13 @@ public:
 	}
 	
 	template <typename Function>
-	void connect(Function&& f)
+	void pipeline(Function&& f)
 	{
 		_add(std::forward<Function>(f));
 	}
 
 	template <typename Function, typename ... Functions>
-	void connect(Function&& f, Functions&& ... fs)
+	void pipeline(Function&& f, Functions&& ... fs)
 	{
 		_add(std::forward<Function>(f), std::forward<Functions>(fs)...);
 	}
