@@ -3,9 +3,23 @@
 #include "../pipeline.h"
 #include "../channel.h"
 #include "../scheduler.h"
-#include "../shell.h"
 #include <thread>
 #include <asyncply/run.h>
+
+// TODO: remove
+#include <set>
+#include <string>
+#include <fstream>
+#include <iostream>
+#include <sstream>
+#include <exception>
+#include <vector>
+#include <algorithm>
+#include <locale>
+#include <boost/tokenizer.hpp>
+#include <boost/filesystem.hpp>
+#include <boost/regex.hpp>
+#include <boost/algorithm/string.hpp>
 
 class ChannelTest : testing::Test { };
 
