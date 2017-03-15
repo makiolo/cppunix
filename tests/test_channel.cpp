@@ -144,10 +144,9 @@ std::string quot(const std::string& s, const char* delim = "\"")
 }
 
 
-template <typename T = std::string>
-typename channel<T>::link quot(const char* delim = "\"")
+cu::channel<std::string>::link quot(const char* delim = "\"")
 {
-	return [&func](typename channel<T>::in& source, typename channel<T>::out& yield)
+	return [&func](cu::channel<std::string>::in& source, cu::channel<std::string>::out& yield)
 	{
 		for (auto& s : source)
 		{
