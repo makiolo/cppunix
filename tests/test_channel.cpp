@@ -143,6 +143,29 @@ std::string quot(const std::string& s, const char* delim = "\"")
 	return ss.str();
 }
 
+
+template <typename T = std::string>
+typename channel<T>::link quot(const char* delim = "\"")
+{
+	return [&func](typename channel<T>::in& source, typename channel<T>::out& yield)
+	{
+		for (auto& s : source)
+		{
+			if(s)
+			{
+				std::stringstream ss;
+				ss << delim << *s << delim;
+				yield(ss.str());
+			}
+			else
+			{
+				// propagate error
+				yield(s);
+			}
+		}
+	};
+}
+
 TEST(ChannelTest, goroutines_consumer_unbuffered)
 {
 	cu::scheduler sch;
