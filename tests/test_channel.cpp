@@ -136,34 +136,17 @@ func main() {
 	sch.run_until_complete();
 }
 
-using cmd_test = cu::channel<std::string>;
-
-cmd_test::link quot(const char* delim = "\"")
+std::string quot(const std::string& s, const char* delim = "\"")
 {
-	return [=](cmd_test::in& source, cmd_test::out& yield)
-	{
-		for (auto s : source)
-		{
-			std::stringstream ss;
-			ss << delim << s << delim;
-			yield(ss.str());
-		}
-	};
-}
-
-namespace cu {
-	/*
-	void for_each(yield, channel)
-	{
-		
-	}
-	*/
+	std::stringstream ss;
+	ss << delim << s << delim;
+	return ss.str();
 }
 
 TEST(ChannelTest, goroutines_consumer_unbuffered)
 {
 	cu::scheduler sch;
-	cu::channel<std::string> go(sch, 0, quot("__^-^__"), quot("__\o/__"));
+	cu::channel<std::string> go(sch, 0, quot("1__^-^__1"), quot("2__\o/__2"));
 	sch.spawn([&](auto& yield) {
 		for(;;)
 		{
