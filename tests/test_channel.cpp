@@ -126,8 +126,8 @@ TEST(ChannelTest, goroutines_consumer_unbuffered)
 {
 	cu::scheduler sch;
 	cu::channel<std::string> go(sch);
-	// go.connect(cu::quote("__^-^__"));
-	// go.connect(cu::quote("__\o/__"));	
+	go.connect(cu::quote("__^-^__"));
+	go.connect(cu::quote("__\o/__"));
 	sch.spawn([&](auto& yield) {
 		for(;;)
 		{
