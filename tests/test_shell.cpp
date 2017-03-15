@@ -1,10 +1,11 @@
 #include <atomic>
+#include <gtest/gtest.h>
+#include <teelogging/teelogging.h>
 #include "../shell.h"
 #include "../coroutine.h"
 #include "../scheduler.h"
 #include "../semaphore.h"
-#include <teelogging/teelogging.h>
-#include <gtest/gtest.h>
+#include "../channel.h"
 
 class CoroTest : testing::Test { };
 
