@@ -3,23 +3,9 @@
 #include "../pipeline.h"
 #include "../channel.h"
 #include "../scheduler.h"
+#include "../shell.h"
 #include <thread>
 #include <asyncply/run.h>
-
-// TODO: remove
-#include <set>
-#include <string>
-#include <fstream>
-#include <iostream>
-#include <sstream>
-#include <exception>
-#include <vector>
-#include <algorithm>
-#include <locale>
-#include <boost/tokenizer.hpp>
-#include <boost/filesystem.hpp>
-#include <boost/regex.hpp>
-#include <boost/algorithm/string.hpp>
 
 class ChannelTest : testing::Test { };
 
@@ -136,31 +122,10 @@ func main() {
 	sch.run_until_complete();
 }
 
-cu::channel<std::string>::link quot(const char* delim = "\"")
-{
-	return [=](cu::channel<std::string>::in& source, cu::channel<std::string>::out& yield)
-	{
-		for (auto& s : source)
-		{
-			if(s)
-			{
-				std::stringstream ss;
-				ss << delim << *s << delim;
-				yield(ss.str());
-			}
-			else
-			{
-				// propagate error
-				yield(s);
-			}
-		}
-	};
-}
-
 TEST(ChannelTest, goroutines_consumer_unbuffered)
 {
 	cu::scheduler sch;
-	cu::channel<std::string> go(sch)
+	cu::channel<std::string> go(sch);
 	go.pipeline(quot("1__^-^__1"), quot("2__\o/__2"));
 	sch.spawn([&](auto& yield) {
 		for(;;)
