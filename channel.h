@@ -17,8 +17,7 @@ namespace cu {
 template <typename T>
 struct optional
 {
-	// let implicit
-	optional(const T& data) : _data(data), _invalid(false) { ; }
+	explicit optional(const T& data) : _data(data), _invalid(false) { ; }
 	explicit optional() : _data(), _invalid(false) { ; }
 	explicit optional(bool close) : _data(), _invalid(close) { ; }
 	explicit optional(T&& data) : _data(std::move(data)), _invalid(false) { ; }
@@ -144,7 +143,7 @@ public:
 		: _elements(sch, 0)
 		, _slots(sch, buffer + 2)
 	{
-		_set_tail(buffer);
+		_set_tail();
 	}
 
 	template <typename Function>
@@ -152,7 +151,7 @@ public:
 		: _elements(sch, 0)
 		, _slots(sch, buffer + 2)
 	{
-		_set_tail(buffer);
+		_set_tail();
 		_add(std::forward<Function>(f));
 	}
 
@@ -161,14 +160,8 @@ public:
 		: _elements(sch, 0)
 		, _slots(sch, buffer + 2)
 	{
-		_set_tail(buffer);
+		_set_tail();
 		_add(std::forward<Function>(f), std::forward<Functions>(fs)...);
-	}
-
-	template <typename Function>
-	void wrap(Function&& f)
-	{
-		_coros.push(cu::make_iterator< optional<T> >(boost::bind(f, _1, boost::ref(*_coros.top().get()))));
 	}
 	
 	template <typename Function>
@@ -211,7 +204,6 @@ public:
 		// TODO: revisar esto
 		if(_slots.size() <= 0)
 		{
-			std::cout << "change to consumer" << std::endl;
 			yield();
 		}
 	}
@@ -235,7 +227,6 @@ public:
 		_slots.notify(yield);
 		if(_elements.size() <= 0)
 		{
-			std::cout << "change to producer" << std::endl;
 			yield();
 		}
 		return std::move(data);
@@ -262,7 +253,7 @@ public:
 	}
 
 protected:
-	void _set_tail(size_t buffer)
+	void _set_tail()
 	{
 		// std::unique_lock<std::mutex> lock(_w_coros);
 		auto r = cu::make_iterator< optional<T> >(
@@ -280,7 +271,8 @@ protected:
 	void _add(Function&& f)
 	{
 		// std::unique_lock<std::mutex> lock(_w_coros);
-		_coros.push(cu::make_iterator< optional<T> >(boost::bind(link_template<T, Function>(f), _1, boost::ref(*_coros.top().get()))));
+		//_coros.push(cu::make_iterator< optional<T> >(boost::bind(link_template<T, Function>(f), _1, boost::ref(*_coros.top().get()))));
+		_coros.push(cu::make_iterator< optional<T> >(boost::bind(f, _1, boost::ref(*_coros.top().get()))));
 	}
 
 	template <typename Function, typename ... Functions>
@@ -288,7 +280,8 @@ protected:
 	{
 		// std::unique_lock<std::mutex> lock(_w_coros);
 		_add(std::forward<Functions>(fs)...);
-		_coros.push(cu::make_iterator< optional<T> >(boost::bind(link_template<T, Function>(f), _1, boost::ref(*_coros.top().get()))));
+		//_coros.push(cu::make_iterator< optional<T> >(boost::bind(link_template<T, Function>(f), _1, boost::ref(*_coros.top().get()))));
+		_coros.push(cu::make_iterator< optional<T> >(boost::bind(f, _1, boost::ref(*_coros.top().get()))));
 	}
 protected:
 	std::stack< coroutine > _coros;
