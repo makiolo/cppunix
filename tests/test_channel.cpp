@@ -68,8 +68,7 @@ TEST(ChannelTest, goroutines_consumer)
 {
 	cu::scheduler sch;
 	cu::channel<std::string> go(sch, 7);
-	// go.connect(cu::quote("__^-^__"));
-	// go.connect(cu::quote("__\o/__"));
+	go.pipeline(cu::quot("<html>"), cu::quot("<head>"));
 	
 	// https://play.golang.org/
 	/*
@@ -126,7 +125,7 @@ TEST(ChannelTest, goroutines_consumer_unbuffered)
 {
 	cu::scheduler sch;
 	cu::channel<std::string> go(sch);
-	go.pipeline(quot("1__^-^__1"), quot("2__\o/__2"));
+	go.pipeline(cu::quot("<html>"), cu::quot("<head>"));
 	sch.spawn([&](auto& yield) {
 		for(;;)
 		{
@@ -158,8 +157,7 @@ TEST(ChannelTest, goroutines_consumer_buffered_one)
 {
 	cu::scheduler sch;
 	cu::channel<std::string> go(sch, 1);
-	// go.connect(cu::quote("__^-^__"));
-	// go.connect(cu::quote("__\o/__"));	
+	go.pipeline(cu::quot("<html>"), cu::quot("<head>"));
 	sch.spawn([&](auto& yield) {
 		for(;;)
 		{
@@ -191,8 +189,7 @@ TEST(ChannelTest, goroutines_consumer_buffered_two)
 {
 	cu::scheduler sch;
 	cu::channel<std::string> go(sch, 2);
-	// go.connect(cu::quote("__^-^__"));
-	// go.connect(cu::quote("__\o/__"));	
+	go.pipeline(cu::quot("<html>"), cu::quot("<head>"));
 	sch.spawn([&](auto& yield) {
 		for(;;)
 		{
