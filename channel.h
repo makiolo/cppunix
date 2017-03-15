@@ -17,9 +17,10 @@ namespace cu {
 template <typename T>
 struct optional
 {
+	// let implicit
+	optional(const T& data) : _data(data), _invalid(false) { ; }
 	explicit optional() : _data(), _invalid(false) { ; }
 	explicit optional(bool close) : _data(), _invalid(close) { ; }
-	explicit optional(const T& data) : _data(data), _invalid(false) { ; }
 	explicit optional(T&& data) : _data(std::move(data)), _invalid(false) { ; }
 
 	const T& operator*() const
