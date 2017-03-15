@@ -151,12 +151,19 @@ cmd_test::link quot(const char* delim = "\"")
 	};
 }
 
+namespace cu {
+	/*
+	void for_each(yield, channel)
+	{
+		
+	}
+	*/
+}
+
 TEST(ChannelTest, goroutines_consumer_unbuffered)
 {
 	cu::scheduler sch;
-	cu::channel<std::string> go(sch);
-	go.wrap(quot("__^-^__"));
-	go.wrap(quot("__\o/__"));
+	cu::channel<std::string> go(sch, 0, quot("__^-^__"), quot("__\o/__"));
 	sch.spawn([&](auto& yield) {
 		for(;;)
 		{
