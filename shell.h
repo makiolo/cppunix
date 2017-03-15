@@ -59,6 +59,7 @@
 namespace cu {
 
 using cmd = cu::pipeline<std::string>;
+using ch_str = cu::channel<std::string>;
 
 std::string replace_all(const std::string &str, const char *from, const char *to)
 {
@@ -719,6 +720,27 @@ cmd::link run()
 	};
 }
 
+ch_str::link quot(const char* delim = "\"")
+{
+	return [=](ch_str::in& source, ch_str::out& yield)
+	{
+		for (auto& s : source)
+		{
+			if(s)
+			{
+				std::stringstream ss;
+				ss << delim << *s << delim;
+				yield(ss.str());
+			}
+			else
+			{
+				// propagate error
+				yield(s);
+			}
+		}
+	};
+}
+	
 }
 
 #endif
