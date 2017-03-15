@@ -138,7 +138,7 @@ func main() {
 
 cu::channel<std::string>::link quot(const char* delim = "\"")
 {
-	return [&func](cu::channel<std::string>::in& source, cu::channel<std::string>::out& yield)
+	return [=](cu::channel<std::string>::in& source, cu::channel<std::string>::out& yield)
 	{
 		for (auto& s : source)
 		{
