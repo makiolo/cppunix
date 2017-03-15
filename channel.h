@@ -271,8 +271,8 @@ protected:
 	void _add(Function&& f)
 	{
 		// std::unique_lock<std::mutex> lock(_w_coros);
-		_coros.push(cu::make_iterator< optional<T> >(boost::bind(link_template<T, Function>(f), _1, boost::ref(*_coros.top().get()))));
-		//_coros.push(cu::make_iterator< optional<T> >(boost::bind(f, _1, boost::ref(*_coros.top().get()))));
+		//_coros.push(cu::make_iterator< optional<T> >(boost::bind(link_template<T, Function>(f), _1, boost::ref(*_coros.top().get()))));
+		_coros.push(cu::make_iterator< optional<T> >(boost::bind(f, _1, boost::ref(*_coros.top().get()))));
 	}
 
 	template <typename Function, typename ... Functions>
@@ -280,8 +280,8 @@ protected:
 	{
 		// std::unique_lock<std::mutex> lock(_w_coros);
 		_add(std::forward<Functions>(fs)...);
-		_coros.push(cu::make_iterator< optional<T> >(boost::bind(link_template<T, Function>(f), _1, boost::ref(*_coros.top().get()))));
-		// _coros.push(cu::make_iterator< optional<T> >(boost::bind(f, _1, boost::ref(*_coros.top().get()))));
+		//_coros.push(cu::make_iterator< optional<T> >(boost::bind(link_template<T, Function>(f), _1, boost::ref(*_coros.top().get()))));
+		_coros.push(cu::make_iterator< optional<T> >(boost::bind(f, _1, boost::ref(*_coros.top().get()))));
 	}
 protected:
 	std::stack< coroutine > _coros;
