@@ -160,7 +160,8 @@ cu::channel<std::string>::link quot(const char* delim = "\"")
 TEST(ChannelTest, goroutines_consumer_unbuffered)
 {
 	cu::scheduler sch;
-	cu::channel<std::string> go(sch, 0, quot("1__^-^__1"), quot("2__\o/__2"));
+	cu::channel<std::string> go(sch)
+	go.pipeline(quot("1__^-^__1"), quot("2__\o/__2"));
 	sch.spawn([&](auto& yield) {
 		for(;;)
 		{
