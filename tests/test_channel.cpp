@@ -136,14 +136,6 @@ func main() {
 	sch.run_until_complete();
 }
 
-std::string quot(const std::string& s, const char* delim = "\"")
-{
-	std::stringstream ss;
-	ss << delim << s << delim;
-	return ss.str();
-}
-
-
 cu::channel<std::string>::link quot(const char* delim = "\"")
 {
 	return [&func](cu::channel<std::string>::in& source, cu::channel<std::string>::out& yield)
