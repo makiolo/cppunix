@@ -166,6 +166,12 @@ public:
 	}
 
 	template <typename Function>
+	void wrap(Function&& f)
+	{
+		_coros.push(cu::make_iterator< optional<T> >(boost::bind(f, _1, boost::ref(*_coros.top().get()))));
+	}
+	
+	template <typename Function>
 	void connect(Function&& f)
 	{
 		_add(std::forward<Function>(f));
