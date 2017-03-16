@@ -139,14 +139,14 @@ TEST(CoroTest, TestCount)
 
 TEST(CoroTest, TestUpper)
 {
-	cu::scheduler sch_test;
-	cu::channel<std::string> c1(sch_test, 1);
-	c1.pipeline(toupper(), out());
-	sch.spawn([&](auto& yield){
-		c1(yield, "hola mundo");
-	});
-	sch_test.run_until_complete();
-	std::cout << c1.get() << std::endl;
+	// cu::scheduler sch_test;
+	// cu::channel<std::string> c1(sch_test, 1);
+	// c1.pipeline(toupper(), out());
+	// sch.spawn([&](auto& yield){
+	// 	c1(yield, "hola mundo");
+	// });
+	// sch_test.run_until_complete();
+	// std::cout << c1.get() << std::endl;
 }
 
 TEST(CoroTest, TestScheduler2)
