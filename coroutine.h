@@ -6,6 +6,9 @@
 
 namespace cu {
 
+using pid_type = int;
+using control_type = void;
+
 template <typename T>
 using asymm_coroutine = boost::coroutines2::asymmetric_coroutine<T>;
 
