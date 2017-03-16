@@ -39,26 +39,14 @@ func main() {
 	*/
 	
 	sch.spawn([&](auto& yield) {
-		for(;;)
-		{
-			auto data = go.get(yield);
- 			if(data)
- 			{
- 				std::cout << "recv " << *data << " <----" << std::endl;
- 			}
- 			else
-	 		{
-			 	std::cout << "channel closed" << std::endl;
- 				break;
- 			}
-		}
+		go.foreach(yield, [](auto& data){
+			std::cout << "recv " << data << " <----" << std::endl;
+		});
 	});
 	sch.spawn([&](auto& yield) {
 		for(int i=0; i<50; ++i)
 		{
-			std::cout << "----> send " << i << " [PRE]" << std::endl;
 			go(yield, std::to_string(i));
-			std::cout << "----> send " << i << " [POST]" << std::endl;
 		}
 		go.close(yield);
 	});
