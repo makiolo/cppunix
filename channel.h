@@ -111,9 +111,9 @@ public:
 		// producer
 		// std::unique_lock<std::mutex> lock(_w_coros);
 		_slots.wait();
-		_mutex.wait();
+		// _mutex.wait();
 		(*_coros.top())( optional<T>(data) );
-		_mutex.notify();
+		// _mutex.notify();
 		_elements.notify();
 	}
 
@@ -124,9 +124,9 @@ public:
 		// producer
 		// std::unique_lock<std::mutex> lock(_w_coros);
 		_slots.wait(yield);
-		_mutex.wait();
+		// _mutex.wait();
 		(*_coros.top())( optional<T>(data) );
-		_mutex.notify();
+		// _mutex.notify();
 		_elements.notify(yield);
 		// TODO: revisar esto
 		if(_slots.size() <= 0)
@@ -140,9 +140,9 @@ public:
 	{
 		// std::unique_lock<std::mutex> lock(_w_coros);
 		_elements.wait();
-		_mutex.wait();
+		// _mutex.wait();
 		optional<T> data = std::get<0>(_buf.get());
-		_mutex.notify();
+		// _mutex.notify();
 		_slots.notify();
 		return std::move(data);
 	}
@@ -152,9 +152,9 @@ public:
 	{
 		// std::unique_lock<std::mutex> lock(_w_coros);
 		_elements.wait(yield);
-		_mutex.wait();
+		// _mutex.wait();
 		optional<T> data = std::get<0>(_buf.get());
-		_mutex.notify();
+		// _mutex.notify();
 		_slots.notify(yield);
 		if(_elements.size() <= 0)
 		{
@@ -220,7 +220,7 @@ protected:
 	fes::async_fast< optional<T> > _buf;
 	cu::semaphore _elements;
 	cu::semaphore _slots;
-	fes::semaphore _mutex;
+	// fes::semaphore _mutex;
 	// std::mutex _mutex;
 };
 
