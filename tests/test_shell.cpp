@@ -145,7 +145,7 @@ TEST(CoroTest, TestUpper)
 	sch.spawn([&](auto& yield){
 		c1(yield, "hola mundo");
 	});
-	sch_test.run_until_completed();
+	sch_test.run_until_complete();
 	std::cout << c1.get() << std::endl;
 }
 
@@ -214,5 +214,5 @@ TEST(CoroTest, TestScheduler)
 			std::cout << "result = " << r + 1 << std::endl;
 		});
 	});
-	sch1.run_until_completed();
+	sch1.run_until_complete();
 }
