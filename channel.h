@@ -251,6 +251,23 @@ public:
 	{
 		return channel_iterator<T>(*this);
 	}
+	
+	template <typename Function>
+	void for_each(cu::push_type<control_type>& yield, Function&& f)
+	{
+		for(;;)
+		{
+			auto data = go.get(yield);
+ 			if(data)
+ 			{
+ 				f(*data);
+ 			}
+ 			else
+	 		{
+ 				break;
+ 			}
+		}
+	}
 
 protected:
 	void _set_tail()
