@@ -54,11 +54,10 @@
 #endif
 ////
 
-#include "pipeline.h"
+#include "channel.h"
 
 namespace cu {
 
-using cmd = cu::pipeline<std::string>;
 using ch_str = cu::channel<std::string>;
 
 std::string replace_all(const std::string &str, const char *from, const char *to)
@@ -138,9 +137,9 @@ std::string translate(const char *pattern)
     return result + "\\Z(?ms)";
 }
 	
-cmd::link cat(const std::string& filename)
+ch_str::link cat(const std::string& filename)
 {
-	return [=](cmd::in&, cmd::out& yield)
+	return [=](ch_str::in&, ch_str::out& yield)
 	{
 		std::ifstream input(filename);
 		for (std::string line; std::getline(input, line);)
@@ -150,18 +149,26 @@ cmd::link cat(const std::string& filename)
 	};
 }
 
-cmd::link cat()
+ch_str::link cat()
 {
-	return [&](cmd::in& source, cmd::out& yield)
+	return [&](ch_str::in& source, ch_str::out& yield)
 	{
 		for (auto s : source)
 		{
-			cat(s)(source, yield);
+			if(s)
+			{
+				cat(*s)(source, yield);
+			}
+			else
+			{
+				// propagate error
+				yield(s);
+			}
 		}
 	};
 }
 
-void find_tree(const boost::filesystem::path& p, cmd::out& yield)
+void find_tree(const boost::filesystem::path& p, ch_str::out& yield)
 {
 	namespace fs = boost::filesystem;
 	if(fs::is_directory(p))
@@ -184,9 +191,9 @@ void find_tree(const boost::filesystem::path& p, cmd::out& yield)
 	}
 }
 
-cmd::link find(const std::string& dir)
+ch_str::link find(const std::string& dir)
 {
-	return [=](cmd::in&, cmd::out& yield)
+	return [=](ch_str::in&, ch_str::out& yield)
 	{
 		boost::filesystem::path p(dir);
 		if (boost::filesystem::exists(p))
@@ -196,21 +203,29 @@ cmd::link find(const std::string& dir)
 	};
 }
 	
-cmd::link find()
+ch_str::link find()
 {
-	return [&](cmd::in& source, cmd::out& yield)
+	return [&](ch_str::in& source, ch_str::out& yield)
 	{
 		for (auto s : source)
 		{
-			find(s)(source, yield);
+			if(s)
+			{
+				find(*s)(source, yield);
+			}
+			else
+			{
+				// propagate error
+				yield(s);
+			}
 		}
 	};
 }
 
-cmd::link ls(const std::string& dir)
+ch_str::link ls(const std::string& dir)
 {
 	namespace fs = boost::filesystem;
-	return [=](cmd::in&, cmd::out& yield)
+	return [=](ch_str::in&, ch_str::out& yield)
 	{	
 		fs::path full_path(dir);
 
@@ -232,66 +247,98 @@ cmd::link ls(const std::string& dir)
 	};
 }
 
-cmd::link ls()
+ch_str::link ls()
 {
-	return [&](cmd::in& source, cmd::out& yield)
+	return [&](ch_str::in& source, ch_str::out& yield)
 	{
 		for (auto s : source)
 		{
-			ls(s)(source, yield);
-		}
-	};
-}
-
-cmd::link grep(const char* pattern, bool exclusion = false)
-{
-	return [=](cmd::in& source, cmd::out& yield)
-	{
-		const boost::regex re(translate(pattern));
-		for (auto s : source)
-		{
-			const std::string& line(s);
-			boost::match_results<std::string::const_iterator> groups;
-			if ((boost::regex_search(line, groups, re) && (groups.size() > 0)) == !exclusion)
+			if(s)
 			{
-				yield(line);
+				ls(*s)(source, yield);
+			}
+			else
+			{
+				// propagate error
+				yield(s);
 			}
 		}
 	};
 }
 
-cmd::link grep_v(const char* pattern)
+ch_str::link grep(const char* pattern, bool exclusion = false)
 {
-	return [=](cmd::in& source, cmd::out& yield)
+	return [=](ch_str::in& source, ch_str::out& yield)
+	{
+		const boost::regex re(translate(pattern));
+		for (auto s : source)
+		{
+			if(s)
+			{
+				const std::string& line(*s);
+				boost::match_results<std::string::const_iterator> groups;
+				if ((boost::regex_search(line, groups, re) && (groups.size() > 0)) == !exclusion)
+				{
+					yield(line);
+				}
+			}
+			else
+			{
+				// propagate error
+				yield(s);
+			}
+		}
+	};
+}
+
+ch_str::link grep_v(const char* pattern)
+{
+	return [=](ch_str::in& source, ch_str::out& yield)
 	{
 		grep(pattern, true)(source, yield);
 	};
 }
 
-cmd::link contain(const std::string& in)
+ch_str::link contain(const std::string& in)
 {
-	return [=](cmd::in& source, cmd::out& yield)
+	return [=](ch_str::in& source, ch_str::out& yield)
 	{
 		for (auto s : source)
 		{
-			const std::string& line(s);
-			if (line.find(in) != std::string::npos)
+			if(s)
 			{
-				yield(line);
+				const std::string& line(*s);
+				if (line.find(in) != std::string::npos)
+				{
+					yield(line);
+				}
+			}
+			else
+			{
+				// propagate error
+				yield(s);
 			}
 		}
 	};
 }
 
-cmd::link uniq()
+ch_str::link uniq()
 {
-	return [=](cmd::in& source, cmd::out& yield)
+	return [=](ch_str::in& source, ch_str::out& yield)
 	{
 		// TODO: use std::unique
 		std::set<std::string> unique;
 		for (auto s : source)
 		{
-			unique.insert(s);
+			if(s)
+			{
+				unique.insert(*s);
+			}
+			else
+			{
+				// propagate error
+				yield(s);
+			}
 		}
 		for (const auto& s : unique)
 		{
@@ -300,14 +347,22 @@ cmd::link uniq()
 	};
 }
 
-cmd::link sort(bool stable = false)
+ch_str::link sort(bool stable = false)
 {
-	return [=](cmd::in& source, cmd::out& yield)
+	return [=](ch_str::in& source, ch_str::out& yield)
 	{
 		std::vector<std::string> sorted;
 		for (auto s : source)
 		{
-			sorted.emplace_back(s);
+			if(s)
+			{
+				sorted.emplace_back(*s);
+			}
+			else
+			{
+				// propagate error
+				yield(s);
+			}
 		}
 		if(!stable)
 		{
@@ -324,66 +379,90 @@ cmd::link sort(bool stable = false)
 	};
 }
 
-cmd::link cut(int field, const char* delim = " ")
+ch_str::link cut(int field, const char* delim = " ")
 {
-	return [=](cmd::in& source, cmd::out& yield)
+	return [=](ch_str::in& source, ch_str::out& yield)
 	{
 		typedef boost::tokenizer<boost::char_separator<char>> tokenizer;
 		for (auto s : source)
 		{
-			int i = 0;
-			for (auto& t : tokenizer(s, boost::char_separator<char>(delim)))
+			if(s)
 			{
-				if (i++ == field)
+				int i = 0;
+				for (auto& t : tokenizer(*s, boost::char_separator<char>(delim)))
 				{
-					yield(t);
-					break;
+					if (i++ == field)
+					{
+						yield(t);
+						break;
+					}
 				}
+			}
+			else
+			{
+				// propagate error
+				yield(s);
 			}
 		}
 	};
 }
 
-cmd::link quote(const char* delim = "\"")
+ch_str::link quote(const char* delim = "\"")
 {
-	return [=](cmd::in& source, cmd::out& yield)
+	return [=](ch_str::in& source, ch_str::out& yield)
 	{
 		for (auto s : source)
 		{
-			std::stringstream ss;
-			ss << delim << s << delim;
-			yield(ss.str());
+			if(s)
+			{
+				std::stringstream ss;
+				ss << delim << *s << delim;
+				yield(ss.str());
+			}
+			else
+			{
+				// propagate error
+				yield(s);
+			}
 		}
 	};
 }
 
-cmd::link join(const char* delim = " ", int grouping = 0)
+ch_str::link join(const char* delim = " ", int grouping = 0)
 {
 	/*
 	use grouping=0 for disabling groups.
 	use grouping>0 for yield end line each "grouping" times
 	*/
-	return [=](cmd::in& source, cmd::out& yield)
+	return [=](ch_str::in& source, ch_str::out& yield)
 	{
 		std::stringstream ss;
 		int i = 0;
 		for (auto s : source)
 		{
-			if(i != 0)
-				ss << delim << s;
+			if(s)
+			{
+				if(i != 0)
+					ss << delim << *s;
+				else
+					ss << *s;
+				if((grouping > 0) && (i % grouping == 0))
+					ss << '\n';
+				++i;
+			}
 			else
-				ss << s;
-			if((grouping > 0) && (i % grouping == 0))
-				ss << '\n';
-			++i;
+			{
+				// propagate error
+				yield(s);
+			}
 		}
 		yield(ss.str());
 	};
 }
 
-cmd::link split(const std::string& text, const char* delim = " ", bool keep_empty=true)
+ch_str::link split(const std::string& text, const char* delim = " ", bool keep_empty=true)
 {
-	return [=](cmd::in&, cmd::out& yield)
+	return [=](ch_str::in&, ch_str::out& yield)
 	{
 		std::vector<std::string> chunks;
 		boost::split(chunks, text, boost::is_any_of(delim));
@@ -396,74 +475,94 @@ cmd::link split(const std::string& text, const char* delim = " ", bool keep_empt
 	};
 }
 	
-cmd::link split(const char* delim = " ", bool keep_empty=true)
+ch_str::link split(const char* delim = " ", bool keep_empty=true)
 {
-	return [=](cmd::in& source, cmd::out& yield)
+	return [=](ch_str::in& source, ch_str::out& yield)
 	{
 		for (auto s : source)
 		{
-			split(s, delim, keep_empty)(source, yield);
+			if(s)
+			{
+				split(*s, delim, keep_empty)(source, yield);
+			}
+			else
+			{
+				// propagate error
+				yield(s);
+			}
 		}
 	};
 }
 
-cmd::link assert_string(const std::string& matching)
+ch_str::link assert_string(const std::string& matching)
 {
-	return [=](cmd::in& source, cmd::out& yield)
+	return [=](ch_str::in& source, ch_str::out& yield)
 	{
 		for (auto s : source)
 		{
-			if(matching != s)
+			if(s)
 			{
-				std::stringstream ss;
-				ss << "error in string: " << s << ", expected value: " << matching << std::endl;
-				throw std::runtime_error(ss.str());
+				if(matching != *s)
+				{
+					std::stringstream ss;
+					ss << "error in string: " << *s << ", expected value: " << matching << std::endl;
+					throw std::runtime_error(ss.str());
+				}
 			}
 			yield(s);
 		}
 	};
 }
 
-cmd::link assert_string(const std::vector<std::string>& matches)
+ch_str::link assert_string(const std::vector<std::string>& matches)
 {
-	return [=](cmd::in& source, cmd::out& yield)
+	return [=](ch_str::in& source, ch_str::out& yield)
 	{
 		int i = 0;
 		for (auto s : source)
 		{
-			if(matches[i] != s)
+			if(s)
 			{
-				std::stringstream ss;
-				ss << "error in string: " << s << ", expected value: " << matches[i] << std::endl;
-				throw std::runtime_error(ss.str());
+				if(matches[i] != *s)
+				{
+					std::stringstream ss;
+					ss << "error in string: " << *s << ", expected value: " << matches[i] << std::endl;
+					throw std::runtime_error(ss.str());
+				}
+				++i;
 			}
-			++i;
 			yield(s);
 		}
 	};
 }
 
-cmd::link count()
+ch_str::link count()
 {
-	return [=](cmd::in& source, cmd::out& yield)
+	return [=](ch_str::in& source, ch_str::out& yield)
 	{
 		size_t total = 0;
 		for (auto s : source)
 		{
-			++total;
+			if(s)
+			{
+				++total;
+			}
 		}
 		yield(std::to_string(total));
 	};
 }
 	
-cmd::link assert_count(size_t expected)
+ch_str::link assert_count(size_t expected)
 {
-	return [=](cmd::in& source, cmd::out& yield)
+	return [=](ch_str::in& source, ch_str::out& yield)
 	{
 		size_t total = 0;
 		for (auto s : source)
 		{
-			++total;
+			if(s)
+			{
+				++total;
+			}
 			yield(s);
 		}
 		if(expected != total)
@@ -534,9 +633,9 @@ file_redirect::~file_redirect()
 	}
 }
 
-cmd::link in()
+ch_str::link in()
 {
-	return [&](cmd::in&, cmd::out& yield)
+	return [&](ch_str::in&, ch_str::out& yield)
 	{
 		for (std::string line; std::getline(std::cin, line);)
 		{
@@ -545,9 +644,9 @@ cmd::link in()
 	};
 }
 	
-cmd::link in(const std::vector<std::string>& strs)
+ch_str::link in(const std::vector<std::string>& strs)
 {
-	return [&](cmd::in&, cmd::out& yield)
+	return [&](ch_str::in&, ch_str::out& yield)
 	{
 		for(auto& str : strs)
 		{
@@ -556,70 +655,110 @@ cmd::link in(const std::vector<std::string>& strs)
 	};
 }
 
-cmd::link in(const std::string& str)
+ch_str::link in(const std::string& str)
 {
-	return [=](cmd::in&, cmd::out& yield)
+	return [=](ch_str::in&, ch_str::out& yield)
 	{
 		yield(str);
 	};
 }
 
-cmd::link out(std::vector<std::string>& strs)
+ch_str::link out(std::vector<std::string>& strs)
 {
-	return [&](cmd::in& source, cmd::out& yield)
+	return [&](ch_str::in& source, ch_str::out& yield)
 	{
 		for (auto s : source)
 		{
-			strs.emplace_back(s);
-			yield(s);
+			if(s)
+			{
+				strs.emplace_back(*s);
+				yield(s);
+			}
+			else
+			{
+				// propagate error
+				yield(s);
+			}
 		}
 	};
 }
 
-cmd::link out(std::string& str)
+ch_str::link out(std::string& str)
 {
-	return [&](cmd::in& source, cmd::out& yield)
+	return [&](ch_str::in& source, ch_str::out& yield)
 	{
 		for (auto s : source)
 		{
-			str = s;
-			yield(s);
+			if(s)
+			{
+				str = *s;
+				yield(s);
+			}
+			else
+			{
+				// propagate error
+				yield(s);
+			}
 		}
 	};
 }
 	
-cmd::link out(int& number)
+ch_str::link out(int& number)
 {
-	return [&](cmd::in& source, cmd::out& yield)
+	return [&](ch_str::in& source, ch_str::out& yield)
 	{
 		for (auto s : source)
 		{
-			number = std::stoi(s);
-			yield(s);
+			if(s)
+			{
+				number = std::stoi(*s);
+				yield(s);
+			}
+			else
+			{
+				// propagate error
+				yield(s);
+			}
 		}
 	};
 }
 
-cmd::link out()
+ch_str::link out()
 {
-	return [&](cmd::in& source, cmd::out& yield)
+	return [&](ch_str::in& source, ch_str::out& yield)
 	{
 		for (auto s : source)
 		{
-			std::cout << s << "\n";
-			yield(s);
+			if(s)
+			{
+				std::cout << *s << "\n";
+				yield(s);
+			}
+			else
+			{
+				// propagate error
+				yield(s);
+			}
 		}
 	};
 }
 
-cmd::link err()
+ch_str::link err()
 {
-	return [&](cmd::in& source, cmd::out& yield)
+	return [&](ch_str::in& source, ch_str::out& yield)
 	{
 		for (auto s : source)
 		{
-			std::cerr << s << "\n";
-			yield(s);
+			if(s)
+			{
+				std::cerr << *s << "\n";
+				yield(s);
+			}
+			else
+			{
+				// propagate error
+				yield(s);
+			}
 		}
 	};
 }
@@ -643,35 +782,51 @@ public:
 
 using IsNotSpace = IsNot<std::ctype_base::space>;
 
-cmd::link lstrip()
+ch_str::link lstrip()
 {
-	return [&](cmd::in& source, cmd::out& yield)
+	return [&](ch_str::in& source, ch_str::out& yield)
 	{
 		for (auto s : source)
 		{
-			std::string buf(s);
-			buf.erase(buf.begin(), std::find_if( buf.begin(), buf.end(), IsNotSpace() ) );
-			yield(buf);
+			if(s)
+			{
+				std::string buf(*s);
+				buf.erase(buf.begin(), std::find_if( buf.begin(), buf.end(), IsNotSpace() ) );
+				yield(buf);
+			}
+			else
+			{
+				// propagate error
+				yield(s);
+			}
 		}
 	};
 }
 
-cmd::link rstrip()
+ch_str::link rstrip()
 {
-	return [&](cmd::in& source, cmd::out& yield)
+	return [&](ch_str::in& source, ch_str::out& yield)
 	{
 		for (auto s : source)
 		{
-			std::string buf(s);
-			buf.erase(std::find_if(buf.rbegin(), buf.rend(), IsNotSpace()).base(), buf.end());
-			yield(buf);
+			if(s)
+			{
+				std::string buf(*s);
+				buf.erase(std::find_if(buf.rbegin(), buf.rend(), IsNotSpace()).base(), buf.end());
+				yield(buf);
+			}
+			else
+			{
+				// propagate error
+				yield(s);
+			}
 		}
 	};
 }
 
-cmd::link strip()
+ch_str::link strip()
 {
-	return [=](cmd::in& source, cmd::out& yield)
+	return [=](ch_str::in& source, ch_str::out& yield)
 	{
 		/*
 		lstrip()(source, yield);
@@ -679,25 +834,33 @@ cmd::link strip()
 		*/
 		for (auto s : source)
 		{
-			auto right = std::find_if( s.rbegin(), s.rend(), IsNotSpace() ).base();
-			auto left = std::find_if(s.begin(), right, IsNotSpace() );
-			yield( std::string( left, right ) );
+			if(s)
+			{
+				auto right = std::find_if( (*s).rbegin(), (*s).rend(), IsNotSpace() ).base();
+				auto left = std::find_if((*s).begin(), right, IsNotSpace() );
+				yield( std::string( left, right ) );
+			}
+			else
+			{
+				// propagate error
+				yield(s);
+			}
 		}
 	};
 }
 
-cmd::link run(const std::string& cmd)
+ch_str::link run(const std::string& ch_str)
 {
 	char buff[BUFSIZ];
-	return [cmd, &buff](cmd::in& source, cmd::out& yield)
+	return [ch_str, &buff](ch_str::in&, ch_str::out& yield)
 	{
 		file_redirect silence_err(stderr, stdout);
 		
 		FILE *in;
-		if(!(in = popen(cmd.c_str(), "r")))
+		if(!(in = popen(ch_str.c_str(), "r")))
 		{
 			std::stringstream ss;
-			ss << "Error executing command: " << cmd;
+			ss << "Error executing command: " << ch_str;
 			throw std::runtime_error(ss.str());
 		}
 		while(fgets(buff, BUFSIZ, in) != 0)
@@ -708,29 +871,16 @@ cmd::link run(const std::string& cmd)
 	};
 }
 
-cmd::link run()
+ch_str::link run()
 {
-	return [&](cmd::in& source, cmd::out& yield)
+	return [&](ch_str::in& source, ch_str::out& yield)
 	{
 		for (auto s : source)
 		{
-			// use run("echo $1 $2 $3")
-			run(s)(source, yield);
-		}
-	};
-}
-
-ch_str::link quot(const char* delim = "\"")
-{
-	return [=](ch_str::in& source, ch_str::out& yield)
-	{
-		for (auto& s : source)
-		{
 			if(s)
 			{
-				std::stringstream ss;
-				ss << delim << *s << delim;
-				yield(ss.str());
+				// use run("echo $1 $2 $3")
+				run(*s)(source, yield);
 			}
 			else
 			{
@@ -740,7 +890,8 @@ ch_str::link quot(const char* delim = "\"")
 		}
 	};
 }
-	
+
 }
 
 #endif
+

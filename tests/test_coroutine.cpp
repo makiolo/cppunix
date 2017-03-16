@@ -1,7 +1,6 @@
 #include <iostream>
 #include <gtest/gtest.h>
 #include <teelogging/teelogging.h>
-#include "../pipeline.h"
 #include "../channel.h"
 
 class PipelineTest : testing::Test { };
@@ -47,37 +46,6 @@ TEST(PipelineTest, Test_fibonacci_n4134)
 			break;
 	}
 }
-
-/*
-auto range(int stop)
-{
-	return cu::pull_type<int>(
-		[&](auto& yield) {
-			for(int i=0;i<stop;++i)
-				yield(i);
-		}
-	);
-}
-
-auto range(int start, int stop, int step=1)
-{
-	return cu::pull_type<int>(
-		[&](auto& yield) {
-			for(int i=start;i<stop;i+=step)
-				yield(i);
-		}
-	);
-}
-
-TEST(PipelineTest, Test_range_simple)
-{
-	LOGV("range simple");
-	for (auto v : range(100))
-		LOGV("-> %d", v);
-	for (auto v : range(10, 100, 2))
-		LOGV("-> %d", v);
-}
-*/
 
 TEST(PipelineTest, Test_recursive_n4134)
 {
