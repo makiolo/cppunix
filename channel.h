@@ -178,15 +178,11 @@ public:
 	{
 		for(;;)
 		{
-			auto data = go.get(yield);
+			auto& data = get(yield);
  			if(data)
- 			{
  				f(*data);
- 			}
  			else
-	 		{
- 				break;
- 			}
+ 				break; // detect close or exception
 		}
 	}
 
