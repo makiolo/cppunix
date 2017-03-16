@@ -24,6 +24,7 @@ TEST(CoroTest, Test_run_ls_strip_quote_grep)
 			, grep("shell_*")
 			, assert_count(1)
 			, assert_string("\"shell_exe\"")
+			, out()
 	);
 	c1("ls .");
 
@@ -37,6 +38,7 @@ TEST(CoroTest, Test_run_ls_strip_quote_grep)
 			, grep("shell_*")
 			, assert_count(1)
 			, assert_string("\"shell_exe\"")
+			, out()
 	);
 	c2(".");
 }
