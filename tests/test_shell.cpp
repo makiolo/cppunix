@@ -148,3 +148,71 @@ TEST(CoroTest, TestUpper)
 	sch_test.run_until_completed();
 	std::cout << c1.get() << std::endl;
 }
+
+TEST(CoroTest, TestScheduler)
+{
+	cu::scheduler sch1;
+	
+	cu::channel<int> c1(sch1, 5);
+	cu::channel<int> c2(sch1, 5);
+	cu::channel<int> c3(sch1, 5);
+	
+	sch.spawn([&](auto& yield) {
+		// productor1
+		for(int x=0; x<100; ++x)
+		{
+			int y = x + 5;
+			c1(yield, x + y);
+		}
+		c1.close(yield);
+	});
+	sch.spawn([&](auto& yield) {
+		// productor2
+		for(int z=0; z<100; ++z)
+		{
+			c2(yield, z + 1);
+		}
+		c2.close(yield);
+	});
+	sch.spawn([&](auto& yield) {
+		
+		/*
+		// proposal 1
+		cu::for_until_close(yield, {c1, c2}, [](auto& a, auto& b){
+			c3(yield, a - b);
+		});
+		*/
+		
+		for(;;)
+		{
+			auto a = c1.get(yield);
+ 			if(a)
+			{
+				auto b = c2.get(yield);
+				if(b)
+				{
+					c3(yield, a - b);
+				}
+				else
+				{
+					break;
+				}
+			}
+ 			else
+			{
+ 				break;
+			}
+		}
+	});
+	sch.spawn([&](auto& yield) {
+		/*
+		cu::for_until_close(yield, c3, [](auto& r){
+			std::cout << r + 1 << std::endl;
+		});
+		*/
+		c3.for_each(yield, [](auto& r) {
+			std::cout << "result = " << r + 1 << std::endl;
+		});
+	});
+	sch1.run_until_completed();
+}
