@@ -149,7 +149,7 @@ TEST(CoroTest, TestUpper)
 	std::cout << c1.get() << std::endl;
 }
 
-TEST(CoroTest, TestScheduler)
+TEST(CoroTest, TestScheduler2)
 {
 	cu::scheduler sch1;
 	
@@ -211,7 +211,7 @@ TEST(CoroTest, TestScheduler)
 		});
 		*/
 		c3.for_each(yield, [](auto& r) {
-			std::cout << "result = " << r + 1 << std::endl;
+			LOGI("result = %d", r + 1);
 		});
 	});
 	sch1.run_until_complete();
