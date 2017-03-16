@@ -142,6 +142,7 @@ public:
 	explicit channel(cu::scheduler& sch, size_t buffer = 0)
 		: _elements(sch, 0)
 		, _slots(sch, buffer + 2)
+		, _buf(buffer + 2)
 	{
 		_set_tail();
 	}
@@ -150,6 +151,7 @@ public:
 	explicit channel(cu::scheduler& sch, size_t buffer, Function&& f)
 		: _elements(sch, 0)
 		, _slots(sch, buffer + 2)
+		, _buf(buffer + 2)
 	{
 		_set_tail();
 		_add(std::forward<Function>(f));
@@ -159,6 +161,7 @@ public:
 	explicit channel(cu::scheduler& sch, size_t buffer, Function&& f, Functions&& ... fs)
 		: _elements(sch, 0)
 		, _slots(sch, buffer + 2)
+		, _buf(buffer + 2)
 	{
 		_set_tail();
 		_add(std::forward<Function>(f), std::forward<Functions>(fs)...);
