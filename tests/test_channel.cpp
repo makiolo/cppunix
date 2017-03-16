@@ -8,35 +8,35 @@
 
 class ChannelTest : testing::Test { };
 
-TEST(ChannelTest, goroutines_consumer)
-{
-	cu::scheduler sch;
-	cu::channel<std::string> go(sch, 7);
-	go.pipeline(cu::quote("<html>"), cu::quote("<head>"));
-	
-	// https://play.golang.org/
-	/*
+// https://play.golang.org/
+/*
 package main
 
 import "fmt"
 
 func worker(done chan int) {
-    for i := 0; i < 50; i++ {
-        fmt.Println("----> send ", i, " [PRE]")
-	done <- i
-        fmt.Println("----> send ", i, " [POST]")
-    }
+for i := 0; i < 50; i++ {
+fmt.Println("----> send ", i, " [PRE]")
+done <- i
+fmt.Println("----> send ", i, " [POST]")
+}
 }
 
 func main() {
-    done := make(chan int, 8)
-    go worker(done)
-    for i := 0; i < 50; i++ {
-	j := <- done
-	fmt.Println("recv ", j, "  <---- ")
-    }
+done := make(chan int, 8)
+go worker(done)
+for i := 0; i < 50; i++ {
+j := <- done
+fmt.Println("recv ", j, "  <---- ")
 }
-	*/
+}
+*/
+
+TEST(ChannelTest, goroutines_consumer)
+{
+	cu::scheduler sch;
+	cu::channel<std::string> go(sch, 7);
+	go.pipeline(cu::quote("<html>"), cu::quote("<head>"));
 	
 	sch.spawn([&](auto& yield) {
 		go.foreach(yield, [](auto& data){
@@ -46,7 +46,9 @@ func main() {
 	sch.spawn([&](auto& yield) {
 		for(int i=0; i<50; ++i)
 		{
+			std::cout << "----> send " << i << " [PRE]" << std::endl;
 			go(yield, std::to_string(i));
+			std::cout << "----> send " << i << " [POST]" << std::endl;
 		}
 		go.close(yield);
 	});
@@ -59,19 +61,9 @@ TEST(ChannelTest, goroutines_consumer_unbuffered)
 	cu::channel<std::string> go(sch);
 	go.pipeline(cu::quote("<html>"), cu::quote("<head>"));
 	sch.spawn([&](auto& yield) {
-		for(;;)
-		{
-			auto data = go.get(yield);
- 			if(data)
- 			{
- 				std::cout << "recv " << *data << " <----" << std::endl;
- 			}
- 			else
-	 		{
-			 	std::cout << "channel closed" << std::endl;
- 				break;
- 			}
-		}
+		go.foreach(yield, [](auto& data){
+			std::cout << "recv " << data << " <----" << std::endl;
+		});
 	});
 	sch.spawn([&](auto& yield) {
 		for(int i=0; i<50; ++i)
@@ -91,19 +83,9 @@ TEST(ChannelTest, goroutines_consumer_buffered_one)
 	cu::channel<std::string> go(sch, 1);
 	go.pipeline(cu::quote("<html>"), cu::quote("<head>"));
 	sch.spawn([&](auto& yield) {
-		for(;;)
-		{
-			auto data = go.get(yield);
- 			if(data)
- 			{
- 				std::cout << "recv " << *data << " <----" << std::endl;
- 			}
- 			else
-	 		{
-			 	std::cout << "channel closed" << std::endl;
- 				break;
- 			}
-		}
+		go.foreach(yield, [](auto& data){
+			std::cout << "recv " << data << " <----" << std::endl;
+		});
 	});
 	sch.spawn([&](auto& yield) {
 		for(int i=0; i<50; ++i)
@@ -123,19 +105,9 @@ TEST(ChannelTest, goroutines_consumer_buffered_two)
 	cu::channel<std::string> go(sch, 2);
 	go.pipeline(cu::quote("<html>"), cu::quote("<head>"));
 	sch.spawn([&](auto& yield) {
-		for(;;)
-		{
-			auto data = go.get(yield);
- 			if(data)
- 			{
- 				std::cout << "recv " << *data << " <----" << std::endl;
- 			}
- 			else
-	 		{
-			 	std::cout << "channel closed" << std::endl;
- 				break;
- 			}
-		}
+		go.foreach(yield, [](auto& data){
+			std::cout << "recv " << data << " <----" << std::endl;
+		});
 	});
 	sch.spawn([&](auto& yield) {
 		for(int i=0; i<50; ++i)
