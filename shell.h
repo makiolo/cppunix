@@ -806,6 +806,46 @@ ch_str::link strip()
 	};
 }
 
+ch_str::link tolower()
+{
+	return [=](ch_str::in& source, ch_str::out& yield)
+	{
+		for (auto s : source)
+		{
+			if(s)
+			{
+				auto str = *s;
+				std::transform(str.begin(), str.end(), str.begin(), ::tolower);
+				yield(str);
+			}
+			else
+			{
+				yield(s);
+			}
+		}
+	};
+}
+
+ch_str::link toupper()
+{
+	return [=](ch_str::in& source, ch_str::out& yield)
+	{
+		for (auto s : source)
+		{
+			if(s)
+			{
+				auto str = *s;
+				std::transform(str.begin(), str.end(), str.begin(), ::toupper);
+				yield(str);
+			}
+			else
+			{
+				yield(s);
+			}
+		}
+	};
+}
+
 ch_str::link run(const std::string& ch_str)
 {
 	char buff[BUFSIZ];
@@ -850,4 +890,3 @@ ch_str::link run()
 }
 
 #endif
-
