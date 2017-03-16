@@ -39,86 +39,6 @@ struct optional
 template <typename T> class channel;
 
 template <typename T>
-struct channel_iterator
-{
-	explicit channel_iterator(channel<T>& channel, bool is_begin=false)
-		: _channel(channel)
-		, _sentinel()
-	{
-		if(is_begin)
-		{
-			operator++();
-		}
-	}
-
-	channel_iterator& operator=(const channel_iterator&)
-	{
-		return *this;
-	}
-
-	channel_iterator& operator++()
-	{
-		_sentinel = _channel.get();
-	}
-
-	T operator*() const
-	{
-		return *_sentinel;
-	}
-
-	template <typename Any>
-	bool operator==(const Any&)
-	{
-		return !_sentinel;
-	}
-
-	template <typename Any>
-	bool operator!=(const Any&)
-	{
-		return _sentinel;
-	}
-protected:
-	channel<T>& _channel;
-	optional<T> _sentinel;
-};
-
-template <typename T, typename Function>
-typename channel<T>::link link_template(typename std::enable_if<(!std::is_void<typename std::result_of<Function(T)>::type>::value), Function>::type&& func)
-{
-	return [&func](typename channel<T>::in& source, typename channel<T>::out& yield)
-	{
-		for (auto& s : source)
-		{
-			if(s)
-			{
-				yield(optional<T>(func(*s)));
-			}
-			else
-			{
-				// skip func
-				yield(s);
-			}
-		}
-	};
-}
-
-template <typename T, typename Function>
-typename channel<T>::link link_template(typename std::enable_if<(std::is_void<typename std::result_of<Function(T)>::type>::value), Function>::type&& func)
-{
-	return [&func](typename channel<T>::in& source, typename channel<T>::out& yield)
-	{
-		for (auto& s : source)
-		{
-			if(s)
-			{
-				func(*s);
-			}
-			yield(s);
-		}
-	};
-}
-
-template <typename T>
 auto term_receiver(const typename channel<T>::coroutine& receiver)
 {
 	return [=](typename channel<T>::in& source)
@@ -191,7 +111,9 @@ public:
 		// producer
 		// std::unique_lock<std::mutex> lock(_w_coros);
 		_slots.wait();
+		_mutex.wait();
 		(*_coros.top())( optional<T>(data) );
+		_mutex.notify();
 		_elements.notify();
 	}
 
@@ -202,7 +124,9 @@ public:
 		// producer
 		// std::unique_lock<std::mutex> lock(_w_coros);
 		_slots.wait(yield);
+		_mutex.wait();
 		(*_coros.top())( optional<T>(data) );
+		_mutex.notify();
 		_elements.notify(yield);
 		// TODO: revisar esto
 		if(_slots.size() <= 0)
@@ -216,7 +140,9 @@ public:
 	{
 		// std::unique_lock<std::mutex> lock(_w_coros);
 		_elements.wait();
+		_mutex.wait();
 		optional<T> data = std::get<0>(_buf.get());
+		_mutex.notify();
 		_slots.notify();
 		return std::move(data);
 	}
@@ -226,7 +152,9 @@ public:
 	{
 		// std::unique_lock<std::mutex> lock(_w_coros);
 		_elements.wait(yield);
+		_mutex.wait();
 		optional<T> data = std::get<0>(_buf.get());
+		_mutex.notify();
 		_slots.notify(yield);
 		if(_elements.size() <= 0)
 		{
@@ -243,16 +171,6 @@ public:
 	void close(cu::push_type<control_type>& yield)
 	{
 		operator()<bool>(yield, true);
-	}
-
-	auto begin()
-	{
-		return channel_iterator<T>(*this, true);
-	}
-
-	auto end()
-	{
-		return channel_iterator<T>(*this);
 	}
 	
 	template <typename Function>
@@ -291,7 +209,6 @@ protected:
 	void _add(Function&& f)
 	{
 		// std::unique_lock<std::mutex> lock(_w_coros);
-		//_coros.push(cu::make_iterator< optional<T> >(boost::bind(link_template<T, Function>(f), _1, boost::ref(*_coros.top().get()))));
 		_coros.push(cu::make_iterator< optional<T> >(boost::bind(f, _1, boost::ref(*_coros.top().get()))));
 	}
 
@@ -300,7 +217,6 @@ protected:
 	{
 		// std::unique_lock<std::mutex> lock(_w_coros);
 		_add(std::forward<Functions>(fs)...);
-		//_coros.push(cu::make_iterator< optional<T> >(boost::bind(link_template<T, Function>(f), _1, boost::ref(*_coros.top().get()))));
 		_coros.push(cu::make_iterator< optional<T> >(boost::bind(f, _1, boost::ref(*_coros.top().get()))));
 	}
 protected:
@@ -308,7 +224,8 @@ protected:
 	fes::async_fast< optional<T> > _buf;
 	cu::semaphore _elements;
 	cu::semaphore _slots;
-	// std::mutex _w_coros;
+	fes::semaphore _mutex;
+	// std::mutex _mutex;
 };
 
 }
