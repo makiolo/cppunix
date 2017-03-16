@@ -63,17 +63,14 @@ using ch_str = cu::channel<std::string>;
 std::string replace_all(const std::string &str, const char *from, const char *to)
 {
     std::string result(str);
-    std::string::size_type
-        index = 0,
-        from_len = strlen(from),
-        to_len = strlen(to);
+    std::string::size_type index = 0, from_len = strlen(from), to_len = strlen(to);
     while ((index = result.find(from, index)) != std::string::npos) {
         result.replace(index, from_len, to);
         index += to_len;
     }
     return result;
 }
-	
+
 std::string translate(const char *pattern)
 {
     // from https://gist.github.com/alco/1869512
@@ -161,7 +158,6 @@ ch_str::link cat()
 			}
 			else
 			{
-				// propagate error
 				yield(s);
 			}
 		}
@@ -215,7 +211,6 @@ ch_str::link find()
 			}
 			else
 			{
-				// propagate error
 				yield(s);
 			}
 		}
@@ -259,7 +254,6 @@ ch_str::link ls()
 			}
 			else
 			{
-				// propagate error
 				yield(s);
 			}
 		}
@@ -284,7 +278,6 @@ ch_str::link grep(const char* pattern, bool exclusion = false)
 			}
 			else
 			{
-				// propagate error
 				yield(s);
 			}
 		}
@@ -315,7 +308,6 @@ ch_str::link contain(const std::string& in)
 			}
 			else
 			{
-				// propagate error
 				yield(s);
 			}
 		}
@@ -326,7 +318,6 @@ ch_str::link uniq()
 {
 	return [=](ch_str::in& source, ch_str::out& yield)
 	{
-		// TODO: use std::unique
 		std::set<std::string> unique;
 		for (auto s : source)
 		{
@@ -336,7 +327,6 @@ ch_str::link uniq()
 			}
 			else
 			{
-				// propagate error
 				yield(s);
 			}
 		}
@@ -360,7 +350,6 @@ ch_str::link sort(bool stable = false)
 			}
 			else
 			{
-				// propagate error
 				yield(s);
 			}
 		}
@@ -400,7 +389,6 @@ ch_str::link cut(int field, const char* delim = " ")
 			}
 			else
 			{
-				// propagate error
 				yield(s);
 			}
 		}
@@ -421,7 +409,6 @@ ch_str::link quote(const char* delim = "\"")
 			}
 			else
 			{
-				// propagate error
 				yield(s);
 			}
 		}
@@ -452,7 +439,6 @@ ch_str::link join(const char* delim = " ", int grouping = 0)
 			}
 			else
 			{
-				// propagate error
 				yield(s);
 			}
 		}
@@ -487,7 +473,6 @@ ch_str::link split(const char* delim = " ", bool keep_empty=true)
 			}
 			else
 			{
-				// propagate error
 				yield(s);
 			}
 		}
@@ -672,13 +657,8 @@ ch_str::link out(std::vector<std::string>& strs)
 			if(s)
 			{
 				strs.emplace_back(*s);
-				yield(s);
 			}
-			else
-			{
-				// propagate error
-				yield(s);
-			}
+			yield(s);
 		}
 	};
 }
@@ -692,13 +672,8 @@ ch_str::link out(std::string& str)
 			if(s)
 			{
 				str = *s;
-				yield(s);
 			}
-			else
-			{
-				// propagate error
-				yield(s);
-			}
+			yield(s);
 		}
 	};
 }
@@ -712,13 +687,8 @@ ch_str::link out(int& number)
 			if(s)
 			{
 				number = std::stoi(*s);
-				yield(s);
 			}
-			else
-			{
-				// propagate error
-				yield(s);
-			}
+			yield(s);
 		}
 	};
 }
@@ -732,13 +702,8 @@ ch_str::link out()
 			if(s)
 			{
 				std::cout << *s << "\n";
-				yield(s);
 			}
-			else
-			{
-				// propagate error
-				yield(s);
-			}
+			yield(s);
 		}
 	};
 }
@@ -752,13 +717,8 @@ ch_str::link err()
 			if(s)
 			{
 				std::cerr << *s << "\n";
-				yield(s);
 			}
-			else
-			{
-				// propagate error
-				yield(s);
-			}
+			yield(s);
 		}
 	};
 }
@@ -796,7 +756,6 @@ ch_str::link lstrip()
 			}
 			else
 			{
-				// propagate error
 				yield(s);
 			}
 		}
@@ -817,7 +776,6 @@ ch_str::link rstrip()
 			}
 			else
 			{
-				// propagate error
 				yield(s);
 			}
 		}
@@ -842,7 +800,6 @@ ch_str::link strip()
 			}
 			else
 			{
-				// propagate error
 				yield(s);
 			}
 		}
@@ -862,6 +819,7 @@ ch_str::link run(const std::string& ch_str)
 			std::stringstream ss;
 			ss << "Error executing command: " << ch_str;
 			throw std::runtime_error(ss.str());
+			// TODO: Yield exception in optional
 		}
 		while(fgets(buff, BUFSIZ, in) != 0)
 		{
@@ -879,12 +837,10 @@ ch_str::link run()
 		{
 			if(s)
 			{
-				// use run("echo $1 $2 $3")
 				run(*s)(source, yield);
 			}
 			else
 			{
-				// propagate error
 				yield(s);
 			}
 		}
