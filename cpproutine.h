@@ -5,9 +5,6 @@
 
 namespace cu {
 
-using pid_type = int;
-using control_type = void;
-
 class cpproutine
 {
 public:
