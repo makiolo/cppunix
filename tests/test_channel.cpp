@@ -39,13 +39,12 @@ TEST(ChannelTest, goroutines_consumer)
 	go.pipeline(cu::quote("<html>"), cu::quote("<head>"));
 	
 	sch.spawn([&](auto& yield) {
-		go.foreach(yield, [](auto& data){
+		go.for_each(yield, [](auto& data) {
 			std::cout << "recv " << data << " <----" << std::endl;
 		});
 	});
 	sch.spawn([&](auto& yield) {
-		for(int i=0; i<50; ++i)
-		{
+		for(int i=0; i<50; ++i) {
 			std::cout << "----> send " << i << " [PRE]" << std::endl;
 			go(yield, std::to_string(i));
 			std::cout << "----> send " << i << " [POST]" << std::endl;
@@ -61,13 +60,12 @@ TEST(ChannelTest, goroutines_consumer_unbuffered)
 	cu::channel<std::string> go(sch);
 	go.pipeline(cu::quote("<html>"), cu::quote("<head>"));
 	sch.spawn([&](auto& yield) {
-		go.foreach(yield, [](auto& data){
+		go.for_each(yield, [](auto& data) {
 			std::cout << "recv " << data << " <----" << std::endl;
 		});
 	});
 	sch.spawn([&](auto& yield) {
-		for(int i=0; i<50; ++i)
-		{
+		for(int i=0; i<50; ++i) {
 			std::cout << "----> send " << i << " [PRE]" << std::endl;
 			go(yield, std::to_string(i));
 			std::cout << "----> send " << i << " [POST]" << std::endl;
@@ -83,7 +81,7 @@ TEST(ChannelTest, goroutines_consumer_buffered_one)
 	cu::channel<std::string> go(sch, 1);
 	go.pipeline(cu::quote("<html>"), cu::quote("<head>"));
 	sch.spawn([&](auto& yield) {
-		go.foreach(yield, [](auto& data){
+		go.for_each(yield, [](auto& data) {
 			std::cout << "recv " << data << " <----" << std::endl;
 		});
 	});
@@ -105,13 +103,12 @@ TEST(ChannelTest, goroutines_consumer_buffered_two)
 	cu::channel<std::string> go(sch, 2);
 	go.pipeline(cu::quote("<html>"), cu::quote("<head>"));
 	sch.spawn([&](auto& yield) {
-		go.foreach(yield, [](auto& data){
+		go.for_each(yield, [](auto& data) {
 			std::cout << "recv " << data << " <----" << std::endl;
 		});
 	});
 	sch.spawn([&](auto& yield) {
-		for(int i=0; i<50; ++i)
-		{
+		for(int i=0; i<50; ++i) {
 			std::cout << "----> send " << i << " [PRE]" << std::endl;
 			go(yield, std::to_string(i));
 			std::cout << "----> send " << i << " [POST]" << std::endl;
@@ -167,4 +164,3 @@ TEST(CoroTest, TestScheduler)
 	});
 	sch.run_until_complete();
 }
-
