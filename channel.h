@@ -178,7 +178,7 @@ public:
 	{
 		for(;;)
 		{
-			auto& data = get(yield);
+			auto data = get(yield);
  			if(data)
  				f(*data);
  			else
