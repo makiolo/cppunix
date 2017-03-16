@@ -137,3 +137,14 @@ TEST(CoroTest, TestCount)
 	// ASSERT_EQ(result, 3) << "maybe count() is not working well";
 }
 
+TEST(CoroTest, TestUpper)
+{
+	cu::scheduler sch_test;
+	cu::channel<std::string> c1(sch_test, 1);
+	c1.pipeline(toupper(), out());
+	sch.spawn([&](auto& yield){
+		c1(yield, "hola mundo");
+	});
+	sch_test.run_until_completed();
+	std::cout << c1.get() << std::endl;
+}
