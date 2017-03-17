@@ -442,7 +442,8 @@ ch_str::link join(const char* delim = " ", int grouping = 0)
 				yield(s);
 			}
 		}
-		yield(ss.str());
+		if(i > 0)
+			yield(ss.str());
 	};
 }
 

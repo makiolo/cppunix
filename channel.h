@@ -99,12 +99,11 @@ public:
 		_add(std::forward<Function>(f), std::forward<Functions>(fs)...);
 	}
 
-	void pop()
-	{
-		_coros.pop();
-	}
+	// void pop()
+	// {
+	// 	_coros.pop();
+	// }
 
-	// producer
 	template <typename R>
 	void operator()(const R& data)
 	{
@@ -135,7 +134,6 @@ public:
 		}
 	}
 
-	// consumer
 	optional<T> get()
 	{
 		// std::unique_lock<std::mutex> lock(_w_coros);
@@ -163,10 +161,10 @@ public:
 		return std::move(data);
 	}
 
-	void close()
-	{
-		operator()<bool>(true);
-	}
+	// void close()
+	// {
+	// 	operator()<bool>(true);
+	// }
 
 	void close(cu::push_type<control_type>& yield)
 	{
