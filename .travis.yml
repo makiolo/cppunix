@@ -52,6 +52,7 @@ matrix:
 install:
   - pip install --user pyyaml
   - pip install --user poster
+  - pip install --user conan
 
 script:
   - ./cmaki/run.sh
