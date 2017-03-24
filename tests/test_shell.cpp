@@ -12,10 +12,11 @@ class CoroTest : testing::Test { };
 
 using namespace cu;
 
-cu::scheduler sch;
 
 TEST(CoroTest, Test_run_ls_strip_quote_grep)
 {
+	cu::scheduler sch;
+
 	cu::channel<std::string> c1(sch, 100);
 	c1.pipeline(
 			  run()
@@ -45,6 +46,8 @@ TEST(CoroTest, Test_run_ls_strip_quote_grep)
 
 TEST(CoroTest, Test_run_ls_sort_grep_uniq_join)
 {
+	cu::scheduler sch;
+
 	cu::channel<std::string> c1(sch, 100);
 	std::string out_subproces;
 	c1.pipeline(run(), strip(), sort(), grep("*fes*"), uniq(), join(), out(), out(out_subproces));
@@ -60,6 +63,8 @@ TEST(CoroTest, Test_run_ls_sort_grep_uniq_join)
 
 TEST(CoroTest, TestCut)
 {
+	cu::scheduler sch;
+
 	cu::channel<std::string> c1(sch, 100);
 	c1.pipeline(
 			  assert_count(1)
@@ -102,6 +107,8 @@ TEST(CoroTest, TestCut)
 
 TEST(CoroTest, TestGrep)
 {
+	cu::scheduler sch;
+
 	cu::channel<std::string> c1(sch, 100);
 	c1.pipeline(
 			  split("\n")
@@ -115,6 +122,8 @@ TEST(CoroTest, TestGrep)
 
 TEST(CoroTest, TestGrep2)
 {
+	cu::scheduler sch;
+
 	cu::channel<std::string> c1(sch, 100);
 	c1.pipeline(
 			  split("\n")
@@ -151,18 +160,18 @@ TEST(CoroTest, TestUpper)
 
 TEST(CoroTest, TestScheduler2)
 {
-	cu::scheduler sch1;
+	cu::scheduler sch;
 
-	cu::channel<int> c1(sch1, 5);
-	cu::channel<int> c2(sch1, 5);
-	cu::channel<int> c3(sch1, 5);
+	cu::channel<int> c1(sch, 5);
+	cu::channel<int> c2(sch, 5);
+	cu::channel<int> c3(sch, 5);
 
 	sch.spawn([&](auto& yield) {
 		LOGI("start productor 1 / 2");
 		for(int x=0; x<100; ++x)
 		{
-			LOGI("tick productor 1 / 2");
-			c1(yield, x + 5);
+			LOGI("tick productor 1 / 2: sending: %d", x);
+			c1(yield, x);
 		}
 		LOGI("closing productor 1 / 2");
 		c1.close(yield);
@@ -172,8 +181,8 @@ TEST(CoroTest, TestScheduler2)
 		LOGI("start productor 2 / 2");
 		for(int z=0; z<100; ++z)
 		{
-			LOGI("tick productor 2 / 2");
-			c2(yield, z + 1);
+			LOGI("tick productor 2 / 2: sending: %d", z);
+			c2(yield, z);
 		}
 		LOGI("closing productor 2 / 2");
 		c2.close(yield);
@@ -191,7 +200,7 @@ TEST(CoroTest, TestScheduler2)
 				auto b = c2.get(yield);
 				if(b)
 				{
-					c3(yield, a - b);
+					c3(yield, *a + *b);
 				}
 				else
 				{
@@ -203,13 +212,15 @@ TEST(CoroTest, TestScheduler2)
  				break;
 			}
 		}
+		c3.close(yield);
 	});
 	sch.spawn([&](auto& yield) {
 		LOGI("start consume final");
 		c3.for_each(yield, [](auto& r) {
-			LOGI("result = %d", r + 1);
+			LOGI("result = %d", r);
 		});
+
 	});
-	sch1.run_until_complete();
+	sch.run_until_complete();
 }
 
