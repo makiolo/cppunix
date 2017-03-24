@@ -16,4 +16,3 @@ cmaki_find_package(asyncply)
 cmaki2_gtest(coroutine tests/test_coroutine.cpp PTHREADS)
 cmaki2_gtest(shell tests/test_shell.cpp PTHREADS)
 cmaki2_gtest(channel tests/test_channel.cpp PTHREADS)
-
