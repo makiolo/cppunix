@@ -12,7 +12,6 @@ class CoroTest : testing::Test { };
 
 using namespace cu;
 
-
 TEST(CoroTest, Test_run_ls_strip_quote_grep)
 {
 	cu::scheduler sch;
@@ -132,30 +131,41 @@ TEST(CoroTest, TestGrep2)
 	c1("line1\nline2\nline3\n");
 }
 
-
-TEST(CoroTest, TestCount)
-{
-	// cu::channel<std::string> c1(sch, 100);
-	// int result;
-	// c1.pipeline(
-	// 		  split("\n")
-	// 		, count()
-	// 		, out(result)
-	// );
-	// c1("line1\nline2\nline3");
-	// ASSERT_EQ(result, 3) << "maybe count() is not working well";
-}
+// TEST(CoroTest, TestCount)
+// {
+// 	cu::scheduler sch;
+//
+// 	cu::channel<std::string> c1(sch, 100);
+// 	int result;
+// 	c1.pipeline(
+// 			  split("\n")
+// 			, count()
+// 			, out(result)
+// 	);
+// 	c1("line1\nline2\nline3");
+// 	ASSERT_EQ(result, 3) << "maybe count() is not working well";
+// }
 
 TEST(CoroTest, TestUpper)
 {
-	// cu::scheduler sch_test;
-	// cu::channel<std::string> c1(sch_test, 100);
-	// c1.pipeline(toupper(), out());
-	// sch.spawn([&](auto& yield){
-	// 	c1(yield, "hola mundo");
-	// });
-	// sch_test.run_until_complete();
-	// std::cout << c1.get() << std::endl;
+	cu::scheduler sch;
+	cu::channel<std::string> c1(sch, 5);
+	c1.pipeline( replace("mundo", "gente"), toupper(), out() );
+	sch.spawn([&](auto& yield) {
+		c1(yield, "hola mundo");
+		c1(yield, "hola mundo");
+		c1(yield, "hola mundo");
+		c1.close(yield);
+	});
+	sch.spawn([&](auto& yield) {
+		LOGI("begin");
+		c1.for_each(yield, [](auto& r) {
+			LOGI("--> %s", r.c_str());
+			ASSERT_STREQ("HOLA GENTE", r.c_str());
+		});
+		LOGI("end");
+	});
+	sch.run_until_complete();
 }
 
 TEST(CoroTest, TestScheduler2)

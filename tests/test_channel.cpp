@@ -8,34 +8,10 @@
 
 class ChannelTest : testing::Test { };
 
-// https://play.golang.org/
-/*
-package main
-
-import "fmt"
-
-func worker(done chan int) {
-for i := 0; i < 50; i++ {
-fmt.Println("----> send ", i, " [PRE]")
-done <- i
-fmt.Println("----> send ", i, " [POST]")
-}
-}
-
-func main() {
-done := make(chan int, 8)
-go worker(done)
-for i := 0; i < 50; i++ {
-j := <- done
-fmt.Println("recv ", j, "  <---- ")
-}
-}
-*/
-
 TEST(ChannelTest, goroutines_consumer)
 {
 	cu::scheduler sch;
-	cu::channel<std::string> go(sch, 7);
+	cu::channel<std::string> go(sch, 10);
 	go.pipeline(cu::quote("<html>"), cu::quote("<head>"));
 	
 	sch.spawn([&](auto& yield) {
@@ -58,49 +34,6 @@ TEST(ChannelTest, goroutines_consumer_unbuffered)
 {
 	cu::scheduler sch;
 	cu::channel<std::string> go(sch);
-	go.pipeline(cu::quote("<html>"), cu::quote("<head>"));
-	sch.spawn([&](auto& yield) {
-		go.for_each(yield, [](auto& data) {
-			std::cout << "recv " << data << " <----" << std::endl;
-		});
-	});
-	sch.spawn([&](auto& yield) {
-		for(int i=0; i<50; ++i) {
-			std::cout << "----> send " << i << " [PRE]" << std::endl;
-			go(yield, std::to_string(i));
-			std::cout << "----> send " << i << " [POST]" << std::endl;
-		}
-		go.close(yield);
-	});
-	sch.run_until_complete();
-}
-
-TEST(ChannelTest, goroutines_consumer_buffered_one)
-{
-	cu::scheduler sch;
-	cu::channel<std::string> go(sch, 1);
-	go.pipeline(cu::quote("<html>"), cu::quote("<head>"));
-	sch.spawn([&](auto& yield) {
-		go.for_each(yield, [](auto& data) {
-			std::cout << "recv " << data << " <----" << std::endl;
-		});
-	});
-	sch.spawn([&](auto& yield) {
-		for(int i=0; i<50; ++i)
-		{
-			std::cout << "----> send " << i << " [PRE]" << std::endl;
-			go(yield, std::to_string(i));
-			std::cout << "----> send " << i << " [POST]" << std::endl;
-		}
-		go.close(yield);
-	});
-	sch.run_until_complete();
-}
-
-TEST(ChannelTest, goroutines_consumer_buffered_two)
-{
-	cu::scheduler sch;
-	cu::channel<std::string> go(sch, 2);
 	go.pipeline(cu::quote("<html>"), cu::quote("<head>"));
 	sch.spawn([&](auto& yield) {
 		go.for_each(yield, [](auto& data) {

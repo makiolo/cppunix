@@ -284,6 +284,25 @@ ch_str::link grep(const char* pattern, bool exclusion = false)
 	};
 }
 
+ch_str::link replace(const char* from, const char* to)
+{
+	return [=](ch_str::in& source, ch_str::out& yield)
+	{
+		for (auto s : source)
+		{
+			if(s)
+			{
+
+				yield(replace_all(*s, from, to));
+			}
+			else
+			{
+				yield(s);
+			}
+		}
+	};
+}
+
 ch_str::link grep_v(const char* pattern)
 {
 	return [=](ch_str::in& source, ch_str::out& yield)
