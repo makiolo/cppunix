@@ -133,6 +133,22 @@ public:
 			yield();
 		}
 	}
+	
+	void send_stdin()
+	{
+		for (std::string line; std::getline(std::cin, line);)
+		{
+			operator()<std::string>(line);
+		}
+	}
+	
+	void send_stdin(cu::push_type<control_type>& yield)
+	{
+		for (std::string line; std::getline(std::cin, line);)
+		{
+			operator()<std::string>(yield, line);
+		}
+	}
 
 	optional<T> get()
 	{
