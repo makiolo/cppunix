@@ -268,22 +268,28 @@ protected:
 };
 
 template <typename T, typename... Args>
-inline int which(int n, cu::channel<T>& chan, channel<Args>&... chans)
+inline int _which(int n, const cu::channel<T>& chan, const cu::channel<Args>&... chans)
 {
-	if (chan.empty()) return which(n + 1, chans...);
+	if (chan.empty()) return cu::_which(n + 1, std::forward< cu::channel<Args> >(chans)...);
 	return n;
 }
 
 template <typename... T>
-inline int select(cu::channel<T>&... chans)
+inline int select(cu::push_type<control_type>& yield, const cu::channel<T>&... chans)
 {
 	int n = -1;
-	while (n == -1) {
-		n = which(0, chans...);
+	while(n == -1)
+	{
+		n = cu::_which(0, std::forward< cu::channel<Args> >(chans)...);
+		if(n == -1)
+		{
+			// no channels availables
+			yield();
+		}
 	}
 	return n;
 }
-	
+
 }
 
 #endif
