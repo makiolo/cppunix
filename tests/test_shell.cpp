@@ -224,6 +224,9 @@ TEST(CoroTest, TestScheduler2)
 		LOGI("start consume a - b");
 		for(;;)
 		{
+			int n = cu::select(c1, c2);
+			LOGI("select channel %d !!!", n);
+			
 			LOGI("get consume a");
 			auto a = c1.get(yield);
  			if(a)
