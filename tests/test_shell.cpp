@@ -39,7 +39,7 @@ TEST(CoroTest, Test_run_ls_strip_quote_grep)
 			, grep("shell_*")
 			, assert_count(1)
 			, assert_string("\"shell_exe\"")
-			, out()
+			, log()
 	);
 	c1("ls .");
 
@@ -53,7 +53,7 @@ TEST(CoroTest, Test_run_ls_strip_quote_grep)
 			, grep("shell_*")
 			, assert_count(1)
 			, assert_string("\"shell_exe\"")
-			, out()
+			, log()
 	);
 	c2(".");
 }
@@ -64,12 +64,12 @@ TEST(CoroTest, Test_run_ls_sort_grep_uniq_join)
 
 	cu::channel<std::string> c1(sch, 100);
 	std::string out_subproces;
-	c1.pipeline(run(), strip(), sort(), grep("*fes*"), uniq(), join(), out(), out(out_subproces));
+	c1.pipeline(run(), strip(), sort(), grep("*fes*"), uniq(), join(), log(), out(out_subproces));
 	c1("ls .");
 	//
 	cu::channel<std::string> c2(sch, 100);
 	std::string out_ls;
-	c2.pipeline(ls(), sort(), grep("*fes*"), uniq(), join(), out(), out(out_ls));
+	c2.pipeline(ls(), sort(), grep("*fes*"), uniq(), join(), log(), out(out_ls));
 	c2(".");
 	//
 	ASSERT_STREQ(out_subproces.c_str(), out_ls.c_str());
@@ -165,7 +165,7 @@ TEST(CoroTest, TestUpper)
 {
 	cu::scheduler sch;
 	cu::channel<std::string> c1(sch, 5);
-	c1.pipeline( replace("mundo", "gente"), toupper(), out() );
+	c1.pipeline( replace("mundo", "gente"), toupper(), log() );
 	sch.spawn([&](auto& yield) {
 		c1(yield, "hola mundo");
 		c1(yield, "hola mundo");
@@ -255,4 +255,3 @@ TEST(CoroTest, TestScheduler2)
 	});
 	sch.run_until_complete();
 }
-
