@@ -128,7 +128,7 @@ public:
 		// _mutex.notify();
 		_elements.notify(yield);
 		// TODO: revisar esto
-		if(_slots.size() <= 0)
+		if(full())
 		{
 			yield();
 		}
@@ -174,17 +174,27 @@ public:
 		optional<T> data = std::get<0>(_buf.get());
 		// _mutex.notify();
 		_slots.notify(yield);
-		if(_elements.size() <= 0)
+		if(empty())
 		{
 			yield();
 		}
 		return std::move(data);
 	}
+	
+	inline bool empty() const
+	{
+		return (_elements.size() <= 0);
+	}
+	
+	inline bool full() const
+	{
+		return (_slots.size() <= 0);
+	}
 
-	// void close()
-	// {
-	// 	operator()<bool>(true);
-	// }
+	void close()
+	{
+		operator()<bool>(true);
+	}
 
 	void close(cu::push_type<control_type>& yield)
 	{
@@ -257,6 +267,23 @@ protected:
 	// std::mutex _mutex;
 };
 
+template <typename T, typename... Args>
+inline int which(int n, cu::channel<T>& chan, channel<Args>&... chans)
+{
+	if (chan.empty()) return which(n + 1, chans...);
+	return n;
+}
+
+template <typename... T>
+inline int select(cu::channel<T>&... chans)
+{
+	int n = -1;
+	while (n == -1) {
+		n = which(0, chans...);
+	}
+	return n;
+}
+	
 }
 
 #endif
