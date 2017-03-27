@@ -214,6 +214,13 @@ TEST(CoroTest, TestScheduler2)
 		LOGI("closed productor 2 / 2");
 	});
 	sch.spawn([&](auto& yield) {
+		
+		/*
+		cu::for_each({c1, c2}, yield, [&](auto& c1, auto& c2) {
+			c3(c1 + c2);
+		});
+		*/
+		
 		LOGI("start consume a - b");
 		for(;;)
 		{
