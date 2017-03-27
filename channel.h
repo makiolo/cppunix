@@ -136,6 +136,8 @@ public:
 	
 	void send_stdin()
 	{
+		// TODO: if (!isatty(fileno(stdin)))
+		
 		for (std::string line; std::getline(std::cin, line);)
 		{
 			operator()<std::string>(line);
@@ -144,6 +146,8 @@ public:
 	
 	void send_stdin(cu::push_type<control_type>& yield)
 	{
+		// TODO: if (!isatty(fileno(stdin)))
+		
 		for (std::string line; std::getline(std::cin, line);)
 		{
 			operator()<std::string>(yield, line);
@@ -186,7 +190,7 @@ public:
 	{
 		operator()<bool>(yield, true);
 	}
-	
+
 	template <typename Function>
 	void for_each(cu::push_type<control_type>& yield, Function&& f)
 	{
@@ -198,6 +202,21 @@ public:
  			else
  				break; // detect close or exception
 		}
+	}
+
+	template <typename Function>
+	static void for_each(const std::vector< cu::channel<T> >& channels, cu::push_type<control_type>& yield, Function&& f)
+	{
+		/*
+		for(;;)
+		{
+			auto data = get(yield);
+ 			if(data)
+ 				f(*data);
+ 			else
+ 				break; // detect close or exception
+		}
+		*/
 	}
 
 protected:
