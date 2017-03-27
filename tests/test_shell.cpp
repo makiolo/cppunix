@@ -213,20 +213,36 @@ TEST(CoroTest, TestScheduler2)
 		c2.close(yield);
 		LOGI("closed productor 2 / 2");
 	});
-	sch.spawn([&](auto& yield) {
-		
-		/*
-		cu::for_each({c1, c2}, yield, [&](auto& c1, auto& c2) {
-			c3(c1 + c2);
-		});
-		*/
-		
+	sch.spawn([&](auto& yield)	  
+	{
 		LOGI("start consume a - b");
-		for(;;)
+		int i = 0;
+		int a, b;
+		while(true)
 		{
-			int n = cu::select(c1, c2);
-			LOGI("select channel %d !!!", n);
-			
+			switch(cu::select(yield, c1, c2)))
+			{
+				case 0:
+				{
+					a = c1.get(yield);
+					if(!a)
+						break;
+				}
+				break;
+				case 1:
+				{
+					b = c2.get(yield);
+					if(!b)
+						break;
+				}
+				break;
+			}
+			if(++i == 2)
+			{
+				c3(yield, *a + *b);
+				i = 0;
+			}
+			/*
 			LOGI("get consume a");
 			auto a = c1.get(yield);
  			if(a)
@@ -246,6 +262,7 @@ TEST(CoroTest, TestScheduler2)
 			{
  				break;
 			}
+			*/
 		}
 		c3.close(yield);
 	});
