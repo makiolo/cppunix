@@ -16,15 +16,15 @@ TEST(CoroTest, Test_find)
 {
 	cu::scheduler sch;
 
+	LOGI("---------- begin find test --------");
 	cu::channel<std::string> c1(sch, 20);
-	c1.pipeline(
-			  find()
+	c1.pipeline(	  find()
 			, grep("*.h")
 			, cat()
 			, replace("class", "object")
-			, out()
-	);
+			, log() );
 	c1("../..");
+	LOGI("---------- end find test --------");
 }
 
 TEST(CoroTest, Test_run_ls_strip_quote_grep)
