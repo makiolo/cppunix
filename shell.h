@@ -10,11 +10,12 @@
 #include <vector>
 #include <algorithm>
 #include <locale>
-
 #include <boost/tokenizer.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/regex.hpp>
 #include <boost/algorithm/string.hpp>
+//
+#include <teelogging/teelogging.h>
 
 ////
 #include <cstdio>
@@ -707,6 +708,21 @@ ch_str::link err()
 			if(s)
 			{
 				std::cerr << *s << "\n";
+			}
+			yield(s);
+		}
+	};
+}
+
+ch_str::link log()
+{
+	return [&](ch_str::in& source, ch_str::out& yield)
+	{
+		for (auto& s : source)
+		{
+			if(s)
+			{
+				LOGI("%s", (*s).c_str());
 			}
 			yield(s);
 		}
