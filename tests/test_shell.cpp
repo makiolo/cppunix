@@ -216,53 +216,31 @@ TEST(CoroTest, TestScheduler2)
 	sch.spawn([&](auto& yield)	  
 	{
 		LOGI("start consume a - b");
-		int i = 0;
-		int a, b;
-		while(true)
+		bool any_closed = false;
+		while(!any_closed)
 		{
-			switch(cu::select(yield, c1, c2)))
+			cu::optional<int> a, b;
+			for(int i=0; i<2; ++i)
 			{
-				case 0:
+				switch(cu::select(yield, c1, c2)))
 				{
-					a = c1.get(yield);
-					if(!a)
-						break;
-				}
-				break;
-				case 1:
-				{
-					b = c2.get(yield);
-					if(!b)
-						break;
-				}
-				break;
-			}
-			if(++i == 2)
-			{
-				c3(yield, *a + *b);
-				i = 0;
-			}
-			/*
-			LOGI("get consume a");
-			auto a = c1.get(yield);
- 			if(a)
-			{
-				LOGI("get consume b");
-				auto b = c2.get(yield);
-				if(b)
-				{
-					c3(yield, *a + *b);
-				}
-				else
-				{
+					case 0:
+					{
+						a = c1.get(yield);
+						if(!a)
+							any_closed = true;
+					}
+					break;
+					case 1:
+					{
+						b = c2.get(yield);
+						if(!b)
+							any_closed = true;
+					}
 					break;
 				}
 			}
- 			else
-			{
- 				break;
-			}
-			*/
+			c3(yield, *a + *b);
 		}
 		c3.close(yield);
 	});
@@ -271,7 +249,6 @@ TEST(CoroTest, TestScheduler2)
 		c3.for_each(yield, [](auto& r) {
 			LOGI("result = %d", r);
 		});
-
 	});
 	sch.run_until_complete();
 }
