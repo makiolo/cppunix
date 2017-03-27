@@ -150,7 +150,7 @@ ch_str::link cat()
 {
 	return [&](ch_str::in& source, ch_str::out& yield)
 	{
-		for (auto s : source)
+		for (auto& s : source)
 		{
 			if(s)
 			{
@@ -203,7 +203,7 @@ ch_str::link find()
 {
 	return [&](ch_str::in& source, ch_str::out& yield)
 	{
-		for (auto s : source)
+		for (auto& s : source)
 		{
 			if(s)
 			{
@@ -246,7 +246,7 @@ ch_str::link ls()
 {
 	return [&](ch_str::in& source, ch_str::out& yield)
 	{
-		for (auto s : source)
+		for (auto& s : source)
 		{
 			if(s)
 			{
@@ -265,7 +265,7 @@ ch_str::link grep(const char* pattern, bool exclusion = false)
 	return [=](ch_str::in& source, ch_str::out& yield)
 	{
 		const boost::regex re(translate(pattern));
-		for (auto s : source)
+		for (auto& s : source)
 		{
 			if(s)
 			{
@@ -288,7 +288,7 @@ ch_str::link replace(const char* from, const char* to)
 {
 	return [=](ch_str::in& source, ch_str::out& yield)
 	{
-		for (auto s : source)
+		for (auto& s : source)
 		{
 			if(s)
 			{
@@ -315,7 +315,7 @@ ch_str::link contain(const std::string& in)
 {
 	return [=](ch_str::in& source, ch_str::out& yield)
 	{
-		for (auto s : source)
+		for (auto& s : source)
 		{
 			if(s)
 			{
@@ -338,7 +338,7 @@ ch_str::link uniq()
 	return [=](ch_str::in& source, ch_str::out& yield)
 	{
 		std::set<std::string> unique;
-		for (auto s : source)
+		for (auto& s : source)
 		{
 			if(s)
 			{
@@ -361,7 +361,7 @@ ch_str::link sort(bool stable = false)
 	return [=](ch_str::in& source, ch_str::out& yield)
 	{
 		std::vector<std::string> sorted;
-		for (auto s : source)
+		for (auto& s : source)
 		{
 			if(s)
 			{
@@ -392,7 +392,7 @@ ch_str::link cut(int field, const char* delim = " ")
 	return [=](ch_str::in& source, ch_str::out& yield)
 	{
 		typedef boost::tokenizer<boost::char_separator<char>> tokenizer;
-		for (auto s : source)
+		for (auto& s : source)
 		{
 			if(s)
 			{
@@ -418,7 +418,7 @@ ch_str::link quote(const char* delim = "\"")
 {
 	return [=](ch_str::in& source, ch_str::out& yield)
 	{
-		for (auto s : source)
+		for (auto& s : source)
 		{
 			if(s)
 			{
@@ -444,7 +444,7 @@ ch_str::link join(const char* delim = " ", int grouping = 0)
 	{
 		std::stringstream ss;
 		int i = 0;
-		for (auto s : source)
+		for (auto& s : source)
 		{
 			if(s)
 			{
@@ -485,7 +485,7 @@ ch_str::link split(const char* delim = " ", bool keep_empty=true)
 {
 	return [=](ch_str::in& source, ch_str::out& yield)
 	{
-		for (auto s : source)
+		for (auto& s : source)
 		{
 			if(s)
 			{
@@ -503,7 +503,7 @@ ch_str::link assert_string(const std::string& matching)
 {
 	return [=](ch_str::in& source, ch_str::out& yield)
 	{
-		for (auto s : source)
+		for (auto& s : source)
 		{
 			if(s)
 			{
@@ -524,7 +524,7 @@ ch_str::link assert_string(const std::vector<std::string>& matches)
 	return [=](ch_str::in& source, ch_str::out& yield)
 	{
 		int i = 0;
-		for (auto s : source)
+		for (auto& s : source)
 		{
 			if(s)
 			{
@@ -546,7 +546,7 @@ ch_str::link count()
 	return [=](ch_str::in& source, ch_str::out& yield)
 	{
 		size_t total = 0;
-		for (auto s : source)
+		for (auto& s : source)
 		{
 			if(s)
 			{
@@ -562,7 +562,7 @@ ch_str::link assert_count(size_t expected)
 	return [=](ch_str::in& source, ch_str::out& yield)
 	{
 		size_t total = 0;
-		for (auto s : source)
+		for (auto& s : source)
 		{
 			if(s)
 			{
@@ -638,41 +638,11 @@ file_redirect::~file_redirect()
 	}
 }
 
-ch_str::link in()
-{
-	return [&](ch_str::in&, ch_str::out& yield)
-	{
-		for (std::string line; std::getline(std::cin, line);)
-		{
-			yield(line);
-		}
-	};
-}
-	
-ch_str::link in(const std::vector<std::string>& strs)
-{
-	return [&](ch_str::in&, ch_str::out& yield)
-	{
-		for(auto& str : strs)
-		{
-			yield(str);
-		}
-	};
-}
-
-ch_str::link in(const std::string& str)
-{
-	return [=](ch_str::in&, ch_str::out& yield)
-	{
-		yield(str);
-	};
-}
-
 ch_str::link out(std::vector<std::string>& strs)
 {
 	return [&](ch_str::in& source, ch_str::out& yield)
 	{
-		for (auto s : source)
+		for (auto& s : source)
 		{
 			if(s)
 			{
@@ -687,7 +657,7 @@ ch_str::link out(std::string& str)
 {
 	return [&](ch_str::in& source, ch_str::out& yield)
 	{
-		for (auto s : source)
+		for (auto& s : source)
 		{
 			if(s)
 			{
@@ -702,7 +672,7 @@ ch_str::link out(int& number)
 {
 	return [&](ch_str::in& source, ch_str::out& yield)
 	{
-		for (auto s : source)
+		for (auto& s : source)
 		{
 			if(s)
 			{
@@ -717,7 +687,7 @@ ch_str::link out()
 {
 	return [&](ch_str::in& source, ch_str::out& yield)
 	{
-		for (auto s : source)
+		for (auto& s : source)
 		{
 			if(s)
 			{
@@ -732,7 +702,7 @@ ch_str::link err()
 {
 	return [&](ch_str::in& source, ch_str::out& yield)
 	{
-		for (auto s : source)
+		for (auto& s : source)
 		{
 			if(s)
 			{
@@ -766,7 +736,7 @@ ch_str::link lstrip()
 {
 	return [&](ch_str::in& source, ch_str::out& yield)
 	{
-		for (auto s : source)
+		for (auto& s : source)
 		{
 			if(s)
 			{
@@ -786,7 +756,7 @@ ch_str::link rstrip()
 {
 	return [&](ch_str::in& source, ch_str::out& yield)
 	{
-		for (auto s : source)
+		for (auto& s : source)
 		{
 			if(s)
 			{
@@ -810,7 +780,7 @@ ch_str::link strip()
 		lstrip()(source, yield);
 		rstrip()(source, yield);
 		*/
-		for (auto s : source)
+		for (auto& s : source)
 		{
 			if(s)
 			{
@@ -830,7 +800,7 @@ ch_str::link tolower()
 {
 	return [=](ch_str::in& source, ch_str::out& yield)
 	{
-		for (auto s : source)
+		for (auto& s : source)
 		{
 			if(s)
 			{
@@ -850,7 +820,7 @@ ch_str::link toupper()
 {
 	return [=](ch_str::in& source, ch_str::out& yield)
 	{
-		for (auto s : source)
+		for (auto& s : source)
 		{
 			if(s)
 			{
@@ -893,7 +863,7 @@ ch_str::link run()
 {
 	return [&](ch_str::in& source, ch_str::out& yield)
 	{
-		for (auto s : source)
+		for (auto& s : source)
 		{
 			if(s)
 			{
