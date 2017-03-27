@@ -12,6 +12,21 @@ class CoroTest : testing::Test { };
 
 using namespace cu;
 
+TEST(CoroTest, Test_find)
+{
+	cu::scheduler sch;
+
+	cu::channel<std::string> c1(sch, 20);
+	c1.pipeline(
+			  find()
+			, grep("*.h")
+			, cat()
+			, replace("class", "object")
+			, out()
+	);
+	c1("../..");
+}
+
 TEST(CoroTest, Test_run_ls_strip_quote_grep)
 {
 	cu::scheduler sch;
