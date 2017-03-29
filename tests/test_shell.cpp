@@ -198,9 +198,7 @@ TEST(CoroTest, TestScheduler2)
 			LOGI("tick productor 1 / 2: sending: %d", x);
 			c1(yield, x);
 		}
-		LOGI("closing productor 1 / 2");
 		c1.close(yield);
-		LOGI("closed productor 1 / 2");
 	});
 	sch.spawn([&](auto& yield) {
 		LOGI("start productor 2 / 2");
@@ -209,9 +207,7 @@ TEST(CoroTest, TestScheduler2)
 			LOGI("tick productor 2 / 2: sending: %d", z);
 			c2(yield, z);
 		}
-		LOGI("closing productor 2 / 2");
 		c2.close(yield);
-		LOGI("closed productor 2 / 2");
 	});
 	sch.spawn([&](auto& yield)	  
 	{
@@ -220,22 +216,43 @@ TEST(CoroTest, TestScheduler2)
 		while(!any_closed)
 		{
 			cu::optional<int> a, b;
+			std::vector<bool> marks;
 			for(int i=0; i<2; ++i)
 			{
-				switch(cu::select(yield, c1, c2)))
+				marks.push_back(false);
+			}
+			for(int i=0; i<2; ++i)
+			{
+				switch(cu::select(yield, c1, c2))
 				{
 					case 0:
 					{
-						a = c1.get(yield);
-						if(!a)
-							any_closed = true;
+						if(!marks[0])
+						{
+							a = c1.get(yield);
+							if(!a)
+								any_closed = true;
+							marks[0] = true;
+						}
+						else
+						{
+							yield();
+						}
 					}
 					break;
 					case 1:
 					{
-						b = c2.get(yield);
-						if(!b)
-							any_closed = true;
+						if(!marks[1])
+						{
+							b = c2.get(yield);
+							if(!b)
+								any_closed = true;
+							marks[1] = true;
+						}
+						else
+						{
+							yield();
+						}
 					}
 					break;
 				}
