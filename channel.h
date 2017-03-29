@@ -271,14 +271,14 @@ template <typename T, typename... Args>
 inline int _which(int n, const cu::channel<T>& chan, const cu::channel<Args>&... chans)
 {
 	if (chan.empty())
-		return cu::_which(n + 1, std::forward< cu::channel<Args> >(chans)...);
+		return cu::_which(n + 1, chans...);
 	return n;
 }
 	
 template <typename... Args>
 inline int select_nonblock(cu::push_type<control_type>& yield, const cu::channel<Args>&... chans)
 {
-	int n = cu::_which(0, std::forward< cu::channel<Args> >(chans)...);
+	int n = cu::_which(0, chans...);
 	if(n == -1)
 	{
 		yield();
@@ -294,7 +294,7 @@ inline int select(cu::push_type<control_type>& yield, const cu::channel<Args>&..
 	int n;
 	do
 	{
-		n = select_nonblock(yield, std::forward< cu::channel<Args> >(chans)...);
+		n = select_nonblock(yield, chans...);
 	} while(n == -1);
 	return n;
 }
