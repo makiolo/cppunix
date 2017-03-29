@@ -267,25 +267,32 @@ protected:
 	// std::mutex _mutex;
 };
 
+template <typename T>
+inline int _which(int n, const cu::channel<T>& chan)
+{
+	if (chan.empty())
+		return -1;
+	else
+		return n;
+}
+
 template <typename T, typename... Args>
 inline int _which(int n, const cu::channel<T>& chan, const cu::channel<Args>&... chans)
 {
 	if (chan.empty())
 		return cu::_which(n + 1, chans...);
-	return n;
+	else
+		return n;
 }
-	
+
 template <typename... Args>
 inline int select_nonblock(cu::push_type<control_type>& yield, const cu::channel<Args>&... chans)
 {
 	int n = cu::_which(0, chans...);
 	if(n == -1)
-	{
 		yield();
-	}
 	return n;
 }
-	
 
 template <typename... Args>
 inline int select(cu::push_type<control_type>& yield, const cu::channel<Args>&... chans)
