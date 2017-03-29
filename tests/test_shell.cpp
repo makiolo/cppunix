@@ -12,6 +12,12 @@ class CoroTest : testing::Test { };
 
 using namespace cu;
 
+void* operator new(std::size_t n)
+{
+    std::cout << "[allocating " << n << " bytes]\n";
+    return malloc(n);
+}
+
 TEST(CoroTest, Test_find)
 {
 	cu::scheduler sch;
