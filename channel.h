@@ -288,20 +288,18 @@ inline int _which(int n, const cu::channel<T>& chan, const cu::channel<Args>&...
 template <typename... Args>
 inline int select_nonblock(cu::push_type<control_type>& yield, const cu::channel<Args>&... chans)
 {
-	int n = cu::_which(0, chans...);
-	if(n == -1)
-		yield();
-	return n;
+	return cu::_which(0, chans...);
 }
 
 template <typename... Args>
 inline int select(cu::push_type<control_type>& yield, const cu::channel<Args>&... chans)
 {
-	// block version
 	int n;
 	do
 	{
 		n = select_nonblock(yield, chans...);
+		if(n == -1)
+			yield();
 	} while(n == -1);
 	return n;
 }
