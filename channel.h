@@ -275,8 +275,8 @@ inline int _which(int n, const cu::channel<T>& chan, const cu::channel<Args>&...
 	return n;
 }
 	
-template <typename... T>
-inline int select_nonblock(cu::push_type<control_type>& yield, const cu::channel<T>&... chans)
+template <typename... Args>
+inline int select_nonblock(cu::push_type<control_type>& yield, const cu::channel<Args>&... chans)
 {
 	int n = cu::_which(0, std::forward< cu::channel<Args> >(chans)...);
 	if(n == -1)
@@ -287,8 +287,8 @@ inline int select_nonblock(cu::push_type<control_type>& yield, const cu::channel
 }
 	
 
-template <typename... T>
-inline int select(cu::push_type<control_type>& yield, const cu::channel<T>&... chans)
+template <typename... Args>
+inline int select(cu::push_type<control_type>& yield, const cu::channel<Args>&... chans)
 {
 	// block version
 	int n;
