@@ -211,31 +211,35 @@ TEST(CoroTest, TestScheduler2)
 	});
 	sch.spawn([&](auto& yield)	  
 	{
-		LOGI("start consume a - b");
-		bool any_closed = false;
-		while(!any_closed)
+		LOGI("start consume");
+		for(;;)
 		{
-			cu::optional<int> a, b;
+			cu::optional<int> a;
 			switch(cu::select(yield, c1))
 			{
 				case 0:
 				{
 					a = c1.get(yield);
 					if(!a)
-						any_closed = true;
+						break;
 				}
 				break;
+				default:
 			}
+			
+			cu::optional<int> b;
 			switch(cu::select(yield, c2))
 			{
 				case 0:
 				{
 					b = c2.get(yield);
 					if(!b)
-						any_closed = true;
+						break;
 				}
 				break;
+				default:
 			}
+			
 			c3(yield, *a + *b);
 		}
 		c3.close(yield);
