@@ -211,34 +211,34 @@ TEST(CoroTest, TestScheduler2)
 	});
 	sch.spawn([&](auto& yield)	  
 	{
+		/*
+		for(auto& e : cu::range(yield, c1))
+		{
+			// e is int
+		}
+		
+		for(auto& t : cu::range(yield, c1, c2))
+		{
+			// t is tuple< int, int >
+		}
+		*/
+		
 		LOGI("start consume");
 		for(;;)
 		{
-			cu::optional<int> a;
-			switch(cu::select(yield, c1))
+			auto data = cu::barrier(yield, c1, c2);
+			if(data)
 			{
-				case 0:
-				{
-					a = c1.get(yield);
-					if(!a)
-						break;
-				}
+				// TODO: use std::apply in lambda
+				auto a = std::get<0>(*data);
+				auto b = std::get<1>(*data);
+				c3(yield, a + b);
+			}
+			else
+			{
+				// any channel is closed
 				break;
 			}
-			
-			cu::optional<int> b;
-			switch(cu::select(yield, c2))
-			{
-				case 0:
-				{
-					b = c2.get(yield);
-					if(!b)
-						break;
-				}
-				break;
-			}
-			
-			c3(yield, *a + *b);
 		}
 		c3.close(yield);
 	});
