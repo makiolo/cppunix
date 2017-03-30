@@ -216,46 +216,25 @@ TEST(CoroTest, TestScheduler2)
 		while(!any_closed)
 		{
 			cu::optional<int> a, b;
-			std::vector<bool> marks;
-			for(int i=0; i<2; ++i)
+			switch(cu::select(yield, c1))
 			{
-				marks.push_back(false);
-			}
-			for(int i=0; i<2; ++i)
-			{
-				switch(cu::select(yield, c1, c2))
+				case 0:
 				{
-					case 0:
-					{
-						if(!marks[0])
-						{
-							a = c1.get(yield);
-							if(!a)
-								any_closed = true;
-							marks[0] = true;
-						}
-						else
-						{
-							yield();
-						}
-					}
-					break;
-					case 1:
-					{
-						if(!marks[1])
-						{
-							b = c2.get(yield);
-							if(!b)
-								any_closed = true;
-							marks[1] = true;
-						}
-						else
-						{
-							yield();
-						}
-					}
-					break;
+					a = c1.get(yield);
+					if(!a)
+						any_closed = true;
 				}
+				break;
+			}
+			switch(cu::select(yield, c2))
+			{
+				case 0:
+				{
+					b = c2.get(yield);
+					if(!b)
+						any_closed = true;
+				}
+				break;
 			}
 			c3(yield, *a + *b);
 		}
