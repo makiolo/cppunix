@@ -211,9 +211,9 @@ TEST(CoroTest, TestScheduler2)
 	});
 	sch.spawn([&](auto& yield)	  
 	{
+		int a, b;
 		for(auto& t : cu::range(yield, c1, c2))
 		{
-			int a, b;
 			std::tie(a, b) = t;
 			LOGI("merge %d + %d = %d", a, b, a+b);
 			c3(yield, a + b);
