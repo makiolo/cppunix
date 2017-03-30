@@ -27,6 +27,11 @@ struct optional
 		return _data;
 	}
 
+	T& operator*()
+	{
+		return _data;
+	}
+
 	operator bool() const
 	{
 		return !_invalid;
@@ -99,20 +104,11 @@ public:
 		_add(std::forward<Function>(f), std::forward<Functions>(fs)...);
 	}
 
-	// void pop()
-	// {
-	// 	_coros.pop();
-	// }
-
 	template <typename R>
 	void operator()(const R& data)
 	{
-		// producer
-		// std::unique_lock<std::mutex> lock(_w_coros);
 		_slots.wait();
-		// _mutex.wait();
 		(*_coros.top())( optional<T>(data) );
-		// _mutex.notify();
 		_elements.notify();
 	}
 
@@ -120,14 +116,9 @@ public:
 	template <typename R>
 	void operator()(cu::push_type<control_type>& yield, const R& data)
 	{
-		// producer
-		// std::unique_lock<std::mutex> lock(_w_coros);
 		_slots.wait(yield);
-		// _mutex.wait();
 		(*_coros.top())( optional<T>(data) );
-		// _mutex.notify();
 		_elements.notify(yield);
-		// TODO: revisar esto
 		if(full())
 		{
 			yield();
@@ -136,8 +127,6 @@ public:
 	
 	void send_stdin()
 	{
-		// TODO: if (!isatty(fileno(stdin)))
-		
 		for (std::string line; std::getline(std::cin, line);)
 		{
 			operator()<std::string>(line);
@@ -146,8 +135,6 @@ public:
 	
 	void send_stdin(cu::push_type<control_type>& yield)
 	{
-		// TODO: if (!isatty(fileno(stdin)))
-		
 		for (std::string line; std::getline(std::cin, line);)
 		{
 			operator()<std::string>(yield, line);
@@ -156,11 +143,8 @@ public:
 
 	optional<T> get()
 	{
-		// std::unique_lock<std::mutex> lock(_w_coros);
 		_elements.wait();
-		// _mutex.wait();
 		optional<T> data = std::get<0>(_buf.get());
-		// _mutex.notify();
 		_slots.notify();
 		return std::move(data);
 	}
@@ -168,11 +152,8 @@ public:
 	// consumer
 	optional<T> get(cu::push_type<control_type>& yield)
 	{
-		// std::unique_lock<std::mutex> lock(_w_coros);
 		_elements.wait(yield);
-		// _mutex.wait();
 		optional<T> data = std::get<0>(_buf.get());
-		// _mutex.notify();
 		_slots.notify(yield);
 		if(empty())
 		{
@@ -201,6 +182,7 @@ public:
 		operator()<bool>(yield, true);
 	}
 
+	// DEPRECATED
 	template <typename Function>
 	void for_each(cu::push_type<control_type>& yield, Function&& f)
 	{
@@ -214,25 +196,9 @@ public:
 		}
 	}
 
-	template <typename Function>
-	static void for_each(const std::vector< cu::channel<T> >& channels, cu::push_type<control_type>& yield, Function&& f)
-	{
-		/*
-		for(;;)
-		{
-			auto data = get(yield);
- 			if(data)
- 				f(*data);
- 			else
- 				break; // detect close or exception
-		}
-		*/
-	}
-
 protected:
 	void _set_tail()
 	{
-		// std::unique_lock<std::mutex> lock(_w_coros);
 		auto r = cu::make_iterator< optional<T> >(
 			[this](auto& source) {
 				for (auto& s : source)
@@ -247,14 +213,12 @@ protected:
 	template <typename Function>
 	void _add(Function&& f)
 	{
-		// std::unique_lock<std::mutex> lock(_w_coros);
 		_coros.push(cu::make_iterator< optional<T> >(boost::bind(f, _1, boost::ref(*_coros.top().get()))));
 	}
 
 	template <typename Function, typename ... Functions>
 	void _add(Function&& f, Functions&& ... fs)
 	{
-		// std::unique_lock<std::mutex> lock(_w_coros);
 		_add(std::forward<Functions>(fs)...);
 		_coros.push(cu::make_iterator< optional<T> >(boost::bind(f, _1, boost::ref(*_coros.top().get()))));
 	}
@@ -263,8 +227,6 @@ protected:
 	fes::async_fast< optional<T> > _buf;
 	cu::semaphore _elements;
 	cu::semaphore _slots;
-	// fes::semaphore _mutex;
-	// std::mutex _mutex;
 };
 
 template <typename T>
@@ -305,14 +267,14 @@ inline int select(cu::push_type<control_type>& yield, const cu::channel<Args>&..
 }
 
 template <size_t N, typename T, typename ... STUFF>
-bool _barrier(cu::optional< std::tuple<STUFF...> >& tpl, const cu::channel<T>& chan)
+bool _barrier(cu::push_type<control_type>& yield, cu::optional< std::tuple<STUFF...> >& tpl, const cu::channel<T>& chan)
 {
 	cu::optional<T> a;
-	switch(cu::select(chan))
+	switch(cu::select(yield, chan))
 	{
 		case 0:
 		{
-			a = chan.get();
+			a = chan.get(yield);
 			if(a)
 			{
 			    std::get<N>(*tpl) = *a;
@@ -328,14 +290,14 @@ bool _barrier(cu::optional< std::tuple<STUFF...> >& tpl, const cu::channel<T>& c
 }
 
 template <size_t N, typename T, typename ... Args, typename ... STUFF>
-bool _barrier(cu::optional< std::tuple<STUFF...> >& tpl, const cu::channel<T>& chan, const cu::channel<Args>&... chans)
+bool _barrier(cu::push_type<control_type>& yield, cu::optional< std::tuple<STUFF...> >& tpl, const cu::channel<T>& chan, const cu::channel<Args>&... chans)
 {
 	cu::optional<T> a;
-	switch(cu::select(chan))
+	switch(cu::select(yield, chan))
 	{
 		case 0:
 		{
-			a = chan.get();
+			a = chan.get(yield);
 			if(a)
 			{
 				std::get<N>(*tpl) = *a;
@@ -347,20 +309,50 @@ bool _barrier(cu::optional< std::tuple<STUFF...> >& tpl, const cu::channel<T>& c
 		}
 		break;
 	}
-	return _barrier<N+1>(tpl, chans...);
+	return _barrier<N+1>(yield, tpl, chans...);
 }
 
 template <typename ... Args>
-cu::optional< std::tuple<Args...> > barrier(const cu::channel<Args>&... chans)
+cu::optional< std::tuple<Args...> > barrier(cu::push_type<control_type>& yield, const cu::channel<Args>&... chans)
 {
 	cu::optional< std::tuple<Args...> > tpl(false);
-	bool ok = _barrier<0>(tpl, chans...);
+	bool ok = _barrier<0>(yield, tpl, chans...);
 	if(!ok)
 	{
 	    return cu::optional< std::tuple<Args...> >();
 	}
 	return tpl;
 }
+
+auto range = [](cu::push_type<control_type>& yield, const cu::channel<int>& chan) {
+	return cu::pull_type<int>(
+		[&](cu::push_type<int>& own_yield) {
+			for(;;)
+			{
+				auto data = chan.get(yield);
+				if(data)
+					own_yield(*data);
+				else
+					break; // detect close or exception
+			}
+		}
+	);
+};
+
+auto range = [](cu::push_type<control_type>& yield, const cu::channel<int>&... chans) {
+	return cu::pull_type<int>(
+		[&](cu::push_type<int>& own_yield) {
+			for(;;)
+			{
+				auto data = cu::barrier(yield, chans...);
+				if(data)
+					own_yield(*data);
+				else
+					break; // detect close or exception
+			}
+		}
+	);
+};
 
 }
 
