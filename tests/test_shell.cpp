@@ -191,8 +191,8 @@ TEST(CoroTest, TestScheduler2)
 	cu::channel<int> c2(sch, 5);
 	cu::channel<int> c3(sch, 5);
 
-	sch.spawn([&](auto& yield) {
-		LOGI("start productor 1 / 2");
+	sch.spawn([&](auto& yield)
+	{
 		for(int x=0; x<100; ++x)
 		{
 			LOGI("tick productor 1 / 2: sending: %d", x);
@@ -200,53 +200,32 @@ TEST(CoroTest, TestScheduler2)
 		}
 		c1.close(yield);
 	});
-	sch.spawn([&](auto& yield) {
-		LOGI("start productor 2 / 2");
-		for(int z=0; z<100; ++z)
+	sch.spawn([&](auto& yield)
+	{
+		for(int y=0; y<100; ++y)
 		{
-			LOGI("tick productor 2 / 2: sending: %d", z);
-			c2(yield, z);
+			LOGI("tick productor 2 / 2: sending: %d", y);
+			c2(yield, y);
 		}
 		c2.close(yield);
 	});
 	sch.spawn([&](auto& yield)	  
 	{
-		/*
-		for(auto& e : cu::range(yield, c1))
-		{
-			// e is int
-		}
-		
 		for(auto& t : cu::range(yield, c1, c2))
 		{
-			// t is tuple< int, int >
-		}
-		*/
-		
-		LOGI("start consume");
-		for(;;)
-		{
-			auto data = cu::barrier(yield, c1, c2);
-			if(data)
-			{
-				// TODO: use std::apply in lambda
-				auto a = std::get<0>(*data);
-				auto b = std::get<1>(*data);
-				c3(yield, a + b);
-			}
-			else
-			{
-				// any channel is closed
-				break;
-			}
+			int a, b;
+			std::tie(a, b) = t;
+			LOGI("merge %d + %d = %d", a, b, a+b);
+			c3(yield, a + b);
 		}
 		c3.close(yield);
 	});
-	sch.spawn([&](auto& yield) {
-		LOGI("start consume final");
-		c3.for_each(yield, [](auto& r) {
+	sch.spawn([&](auto& yield)
+	{
+		for(auto& r : cu::range(yield, c3))
+		{
 			LOGI("result = %d", r);
-		});
+		}
 	});
 	sch.run_until_complete();
 }
