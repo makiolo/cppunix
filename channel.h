@@ -304,6 +304,64 @@ inline int select(cu::push_type<control_type>& yield, const cu::channel<Args>&..
 	return n;
 }
 
+template <size_t N, typename T, typename ... STUFF>
+bool _barrier(cu::optional< std::tuple<STUFF...> >& tpl, const cu::channel<T>& chan)
+{
+	cu::optional<T> a;
+	switch(cu::select(chan))
+	{
+		case 0:
+		{
+			a = chan.get();
+			if(a)
+			{
+			    std::get<N>(*tpl) = *a;
+			}
+			else
+			{
+				return false;
+			}
+		}
+		break;
+	}
+	return true;
+}
+
+template <size_t N, typename T, typename ... Args, typename ... STUFF>
+bool _barrier(cu::optional< std::tuple<STUFF...> >& tpl, const cu::channel<T>& chan, const cu::channel<Args>&... chans)
+{
+	cu::optional<T> a;
+	switch(cu::select(chan))
+	{
+		case 0:
+		{
+			a = chan.get();
+			if(a)
+			{
+				std::get<N>(*tpl) = *a;
+			}
+			else
+			{
+				return false;
+			}
+		}
+		break;
+	}
+	return _barrier<N+1>(tpl, chans...);
+}
+
+template <typename ... Args>
+cu::optional< std::tuple<Args...> > barrier(const cu::channel<Args>&... chans)
+{
+	cu::optional< std::tuple<Args...> > tpl(false);
+	bool ok = _barrier<0>(tpl, chans...);
+	if(!ok)
+	{
+	    return cu::optional< std::tuple<Args...> >();
+	}
+	return tpl;
+}
+
 }
 
 #endif
