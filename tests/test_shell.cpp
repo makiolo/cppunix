@@ -224,7 +224,6 @@ TEST(CoroTest, TestScheduler2)
 						break;
 				}
 				break;
-				default:
 			}
 			
 			cu::optional<int> b;
@@ -237,7 +236,6 @@ TEST(CoroTest, TestScheduler2)
 						break;
 				}
 				break;
-				default:
 			}
 			
 			c3(yield, *a + *b);
