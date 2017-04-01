@@ -182,19 +182,19 @@ public:
 		operator()<bool>(yield, true);
 	}
 
-	// DEPRECATED
-	template <typename Function>
-	void for_each(cu::push_type<control_type>& yield, Function&& f)
-	{
-		for(;;)
-		{
-			auto data = get(yield);
- 			if(data)
- 				f(*data);
- 			else
- 				break; // detect close or exception
-		}
-	}
+	// // DEPRECATED
+	// template <typename Function>
+	// void for_each(cu::push_type<control_type>& yield, Function&& f)
+	// {
+	// 	for(;;)
+	// 	{
+	// 		auto data = get(yield);
+ 	// 		if(data)
+ 	// 			f(*data);
+ 	// 		else
+ 	// 			break; // detect close or exception
+	// 	}
+	// }
 
 protected:
 	void _set_tail()
@@ -261,13 +261,15 @@ inline int select(cu::push_type<control_type>& yield, const cu::channel<Args>&..
 	{
 		n = select_nonblock(yield, chans...);
 		if(n == -1)
+		{
 			yield();
+		}
 	} while(n == -1);
 	return n;
 }
 
 template <size_t N, typename T, typename ... STUFF>
-bool _barrier(cu::push_type<control_type>& yield, cu::optional< std::tuple<STUFF...> >& tpl, const cu::channel<T>& chan)
+bool _barrier(cu::push_type<control_type>& yield, cu::optional< std::tuple<STUFF...> >& tpl, cu::channel<T>& chan)
 {
 	cu::optional<T> a;
 	switch(cu::select(yield, chan))
@@ -290,7 +292,7 @@ bool _barrier(cu::push_type<control_type>& yield, cu::optional< std::tuple<STUFF
 }
 
 template <size_t N, typename T, typename ... Args, typename ... STUFF>
-bool _barrier(cu::push_type<control_type>& yield, cu::optional< std::tuple<STUFF...> >& tpl, const cu::channel<T>& chan, const cu::channel<Args>&... chans)
+bool _barrier(cu::push_type<control_type>& yield, cu::optional< std::tuple<STUFF...> >& tpl, cu::channel<T>& chan, cu::channel<Args>&... chans)
 {
 	cu::optional<T> a;
 	switch(cu::select(yield, chan))
@@ -313,20 +315,22 @@ bool _barrier(cu::push_type<control_type>& yield, cu::optional< std::tuple<STUFF
 }
 
 template <typename ... Args>
-cu::optional< std::tuple<Args...> > barrier(cu::push_type<control_type>& yield, const cu::channel<Args>&... chans)
+cu::optional< std::tuple<Args...> > barrier(cu::push_type<control_type>& yield, cu::channel<Args>&... chans)
 {
 	cu::optional< std::tuple<Args...> > tpl(false);
 	bool ok = _barrier<0>(yield, tpl, chans...);
 	if(!ok)
 	{
-	    return cu::optional< std::tuple<Args...> >();
+	    return cu::optional< std::tuple<Args...> >(true);
 	}
 	return tpl;
 }
 
-auto range = [](cu::push_type<control_type>& yield, const cu::channel<int>& chan) {
-	return cu::pull_type<int>(
-		[&](cu::push_type<int>& own_yield) {
+template <typename T>
+auto range(cu::push_type<control_type>& yield, cu::channel<T>& chan)
+{
+	return cu::pull_type<T>(
+		[&](cu::push_type<T>& own_yield) {
 			for(;;)
 			{
 				auto data = chan.get(yield);
@@ -339,9 +343,11 @@ auto range = [](cu::push_type<control_type>& yield, const cu::channel<int>& chan
 	);
 };
 
-auto range = [](cu::push_type<control_type>& yield, const cu::channel<int>&... chans) {
-	return cu::pull_type<int>(
-		[&](cu::push_type<int>& own_yield) {
+template <typename ... Args>
+auto join(cu::push_type<control_type>& yield, cu::channel<Args>&... chans)
+{
+	return cu::pull_type< std::tuple<Args...> >(
+		[&](cu::push_type< std::tuple<Args...> >& own_yield) {
 			for(;;)
 			{
 				auto data = cu::barrier(yield, chans...);
@@ -352,8 +358,9 @@ auto range = [](cu::push_type<control_type>& yield, const cu::channel<int>&... c
 			}
 		}
 	);
-};
+}
 
 }
 
 #endif
+

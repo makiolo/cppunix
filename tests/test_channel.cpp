@@ -11,13 +11,14 @@ class ChannelTest : testing::Test { };
 TEST(ChannelTest, goroutines_consumer)
 {
 	cu::scheduler sch;
-	cu::channel<std::string> go(sch, 10);
+	cu::channel<std::string> go(sch);
 	go.pipeline(cu::quote("<html>"), cu::quote("<head>"));
 	
 	sch.spawn([&](auto& yield) {
-		go.for_each(yield, [](auto& data) {
+		for(auto& data : cu::range(yield, go))
+		{
 			std::cout << "recv " << data << " <----" << std::endl;
-		});
+		}
 	});
 	sch.spawn([&](auto& yield) {
 		for(int i=0; i<50; ++i) {
@@ -36,9 +37,10 @@ TEST(ChannelTest, goroutines_consumer_unbuffered)
 	cu::channel<std::string> go(sch);
 	go.pipeline(cu::quote("<html>"), cu::quote("<head>"));
 	sch.spawn([&](auto& yield) {
-		go.for_each(yield, [](auto& data) {
+		for(auto& data : cu::range(yield, go))
+		{
 			std::cout << "recv " << data << " <----" << std::endl;
-		});
+		}
 	});
 	sch.spawn([&](auto& yield) {
 		for(int i=0; i<50; ++i) {
