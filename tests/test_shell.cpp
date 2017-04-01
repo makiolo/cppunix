@@ -189,8 +189,6 @@ TEST(CoroTest, TestUpper)
 TEST(CoroTest, TestScheduler2)
 {
 	cu::scheduler sch;
-	
-	const int N = 100;
 
 	cu::channel<int> c1(sch, 10);
 	cu::channel<int> c2(sch, 10);
@@ -198,7 +196,7 @@ TEST(CoroTest, TestScheduler2)
 
 	sch.spawn([&](auto& yield)
 	{
-		for(int x=1; x<=N; ++x)
+		for(int x=1; x<=100; ++x)
 		{
 			LOGI("1. send %d", x);
 			c1(yield, x);
@@ -207,7 +205,7 @@ TEST(CoroTest, TestScheduler2)
 	});
 	sch.spawn([&](auto& yield)
 	{
-		for(int y=1; y<=N; ++y)
+		for(int y=1; y<=100; ++y)
 		{
 			LOGI("2. send %d", y);
 			c2(yield, y);
