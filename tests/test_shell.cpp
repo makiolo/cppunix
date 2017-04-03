@@ -194,8 +194,9 @@ TEST(CoroTest, TestScheduler2)
 	cu::channel<int> c2(sch, 10);
 	cu::channel<int> c3(sch, 10);
 
-	c1.pipeline(	cu::link<int>(
-				[](auto&& source, auto&& yield)
+	c1.pipeline(	[]() -> cu::link<int>
+		    	{
+				return [](auto&& source, auto&& yield)
 				{
 					for (auto& s : source)
 					{
@@ -205,9 +206,9 @@ TEST(CoroTest, TestScheduler2)
 							yield(s);
 					}
 				} 
-			)
+			}()
 	);
-	
+	/*
 	c2.pipeline(	cu::link<int>(
 				[](auto&& source, auto&& yield)
 				{
@@ -241,6 +242,7 @@ TEST(CoroTest, TestScheduler2)
 				}
 			)
 	);
+	*/
 	
 	sch.spawn([&](auto& yield)
 	{
