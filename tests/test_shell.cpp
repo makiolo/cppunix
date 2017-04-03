@@ -192,7 +192,7 @@ TEST(CoroTest, TestScheduler2)
 
 	cu::channel<int> c1(sch, 10);
 	cu::channel<int> c2(sch, 10);
-	cu::channel<int> c3(sch, 10);
+	cu::channel<int> c3(sch, 4);
 
 	c1.pipeline(
 		[]() -> cu::channel<int>::link
@@ -237,6 +237,7 @@ TEST(CoroTest, TestScheduler2)
 					{
 						total += *s;
 						++count;
+						yield(*s);
 					}
 					else
 						yield(s);
