@@ -112,7 +112,6 @@ public:
 		_elements.notify();
 	}
 
-	// producer
 	template <typename R>
 	void operator()(cu::push_type<control_type>& yield, const R& data)
 	{
@@ -150,7 +149,6 @@ public:
 		return std::move(data);
 	}
 
-	// consumer
 	optional<T> get(cu::push_type<control_type>& yield)
 	{
 		_elements.wait(yield);
@@ -176,14 +174,14 @@ public:
 
 	void close()
 	{
-		flush();
 		operator()<bool>(true);
+		flush();
 	}
 
 	void close(cu::push_type<control_type>& yield)
 	{
-		flush();
 		operator()<bool>(yield, true);
+		flush();
 	}
 	
 protected:
