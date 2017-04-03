@@ -343,8 +343,8 @@ auto range(cu::push_type<control_type>& yield, cu::channel<Args>&... chans)
 	);
 }
 
-template <>
 template <typename T>
+template <>
 auto range<T>(cu::push_type<control_type>& yield, cu::channel<T>& chan)
 {
 	return cu::pull_type<T>(
