@@ -205,12 +205,12 @@ TEST(CoroTest, TestScheduler2)
 						else
 							yield(s);
 					}
-				} 
+				};
 			}()
 	);
-	/*
-	c2.pipeline(	cu::link<int>(
-				[](auto&& source, auto&& yield)
+	c2.pipeline(	[]() -> cu::link<int>
+		    	{
+				return [](auto&& source, auto&& yield)
 				{
 					for (auto& s : source)
 					{
@@ -219,12 +219,12 @@ TEST(CoroTest, TestScheduler2)
 						else
 							yield(s);
 					}
-				}
-			)
+				};
+			}()
 	);
-	
-	c3.pipeline(	cu::link<int>(
-				[](auto&& source, auto&& yield)
+	c3.pipeline(	[]() -> cu::link<int>
+		    	{
+				return [](auto&& source, auto&& yield)
 				{
 					int total = 0;
 					int count = 0;
@@ -239,10 +239,9 @@ TEST(CoroTest, TestScheduler2)
 							yield(s);
 					}
 					yield( int(total / count) );
-				}
-			)
+				};
+			}()
 	);
-	*/
 	
 	sch.spawn([&](auto& yield)
 	{
