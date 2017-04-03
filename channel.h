@@ -326,6 +326,24 @@ cu::optional< std::tuple<Args...> > barrier(cu::push_type<control_type>& yield, 
 	return tpl;
 }
 
+template <typename ... Args>
+auto range(cu::push_type<control_type>& yield, cu::channel<Args>&... chans)
+{
+	return cu::pull_type< std::tuple<Args...> >(
+		[&](cu::push_type< std::tuple<Args...> >& own_yield) {
+			for(;;)
+			{
+				auto data = cu::barrier(yield, chans...);
+				if(data)
+					own_yield(*data);
+				else
+					break; // detect close or exception
+			}
+		}
+	);
+}
+
+template <>
 template <typename T>
 auto range(cu::push_type<control_type>& yield, cu::channel<T>& chan)
 {
@@ -342,23 +360,6 @@ auto range(cu::push_type<control_type>& yield, cu::channel<T>& chan)
 		}
 	);
 };
-
-template <typename ... Args>
-auto join(cu::push_type<control_type>& yield, cu::channel<Args>&... chans)
-{
-	return cu::pull_type< std::tuple<Args...> >(
-		[&](cu::push_type< std::tuple<Args...> >& own_yield) {
-			for(;;)
-			{
-				auto data = cu::barrier(yield, chans...);
-				if(data)
-					own_yield(*data);
-				else
-					break; // detect close or exception
-			}
-		}
-	);
-}
 
 }
 
