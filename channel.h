@@ -121,6 +121,7 @@ public:
 		_elements.notify(yield);
 		if(full())
 		{
+			flush();
 			yield();
 		}
 	}
@@ -157,6 +158,7 @@ public:
 		_slots.notify(yield);
 		if(empty())
 		{
+			flush();
 			yield();
 		}
 		return std::move(data);
@@ -174,18 +176,34 @@ public:
 
 	void close()
 	{
+		flush();
 		operator()<bool>(true);
 	}
 
 	void close(cu::push_type<control_type>& yield)
 	{
+		flush();
 		operator()<bool>(yield, true);
 	}
 	
 protected:
 	void flush()
 	{
-		
+		std::stack< coroutine > coros;
+		auto r = cu::make_iterator< optional<T> >(
+			[this](auto& source) {
+				for (auto& s : source)
+				{
+					this->_buf(s);
+				}
+			}
+		);
+		coros.push( cu::make_iterator< optional<T> >( term_receiver<T>(r) ) );
+		for (auto& flink : _links)
+		{
+			coros.push(cu::make_iterator< optional<T> >(boost::bind(flink, _1, boost::ref(*coros.top().get()))));
+		}
+		_coros.swap(coros);
 	}
 
 protected:
