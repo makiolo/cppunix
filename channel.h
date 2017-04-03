@@ -91,7 +91,7 @@ public:
 		_set_tail();
 		_add(std::forward<Function>(f), std::forward<Functions>(fs)...);
 	}
-	
+
 	template <typename Function>
 	void pipeline(Function&& f)
 	{
@@ -103,7 +103,7 @@ public:
 	{
 		_add(std::forward<Function>(f), std::forward<Functions>(fs)...);
 	}
-	
+
 	template <typename R>
 	void operator()(const R& data)
 	{
@@ -124,7 +124,7 @@ public:
 			yield();
 		}
 	}
-	
+
 	void send_stdin()
 	{
 		for (std::string line; std::getline(std::cin, line);)
@@ -132,7 +132,7 @@ public:
 			operator()<std::string>(line);
 		}
 	}
-	
+
 	void send_stdin(cu::push_type<control_type>& yield)
 	{
 		for (std::string line; std::getline(std::cin, line);)
@@ -161,12 +161,12 @@ public:
 		}
 		return std::move(data);
 	}
-	
+
 	inline bool empty() const
 	{
 		return (_elements.size() <= 0);
 	}
-	
+
 	inline bool full() const
 	{
 		return (_slots.size() <= 0);
@@ -183,7 +183,7 @@ public:
 		operator()<bool>(yield, true);
 		flush();
 	}
-	
+
 	void flush()
 	{
 		std::stack< coroutine > coros;
@@ -221,7 +221,8 @@ protected:
 	void _add(Function&& f)
 	{
 		_coros.push(cu::make_iterator< optional<T> >(boost::bind(f, _1, boost::ref(*_coros.top().get()))));
-		_links.emplace(_links.begin(), std::forward<Function>(f));
+		//_links.emplace(_links.begin(), std::forward<Function>(f));
+		_links.emplace_back(std::forward<Function>(f));
 	}
 
 	template <typename Function, typename ... Functions>
@@ -229,7 +230,8 @@ protected:
 	{
 		_add(std::forward<Functions>(fs)...);
 		_coros.push(cu::make_iterator< optional<T> >(boost::bind(f, _1, boost::ref(*_coros.top().get()))));
-		_links.emplace(_links.begin(), std::forward<Function>(f));
+		//_links.emplace(_links.begin(), std::forward<Function>(f));
+		_links.emplace_back(std::forward<Function>(f));
 	}
 protected:
 	std::stack< coroutine > _coros;
