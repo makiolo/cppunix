@@ -184,7 +184,6 @@ public:
 		flush();
 	}
 	
-protected:
 	void flush()
 	{
 		std::stack< coroutine > coros;
@@ -222,7 +221,7 @@ protected:
 	void _add(Function&& f)
 	{
 		_coros.push(cu::make_iterator< optional<T> >(boost::bind(f, _1, boost::ref(*_coros.top().get()))));
-		_links.emplace_back(std::forward<Function>(f));
+		_links.emplace(_links.begin(), std::forward<Function>(f));
 	}
 
 	template <typename Function, typename ... Functions>
@@ -230,7 +229,7 @@ protected:
 	{
 		_add(std::forward<Functions>(fs)...);
 		_coros.push(cu::make_iterator< optional<T> >(boost::bind(f, _1, boost::ref(*_coros.top().get()))));
-		_links.emplace_back(std::forward<Function>(f));
+		_links.emplace(_links.begin(), std::forward<Function>(f));
 	}
 protected:
 	std::stack< coroutine > _coros;
