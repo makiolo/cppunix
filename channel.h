@@ -103,7 +103,7 @@ public:
 	{
 		_add(std::forward<Function>(f), std::forward<Functions>(fs)...);
 	}
-
+	
 	template <typename R>
 	void operator()(const R& data)
 	{
@@ -181,6 +181,12 @@ public:
 	{
 		operator()<bool>(yield, true);
 	}
+	
+protected:
+	void flush()
+	{
+		
+	}
 
 protected:
 	void _set_tail()
@@ -200,6 +206,7 @@ protected:
 	void _add(Function&& f)
 	{
 		_coros.push(cu::make_iterator< optional<T> >(boost::bind(f, _1, boost::ref(*_coros.top().get()))));
+		_links.emplace_back(std::forward<Function>(f));
 	}
 
 	template <typename Function, typename ... Functions>
@@ -207,12 +214,14 @@ protected:
 	{
 		_add(std::forward<Functions>(fs)...);
 		_coros.push(cu::make_iterator< optional<T> >(boost::bind(f, _1, boost::ref(*_coros.top().get()))));
+		_links.emplace_back(std::forward<Function>(f));
 	}
 protected:
 	std::stack< coroutine > _coros;
 	fes::async_fast< optional<T> > _buf;
 	cu::semaphore _elements;
 	cu::semaphore _slots;
+	std::vector<link> _links;
 };
 
 template <typename T>
