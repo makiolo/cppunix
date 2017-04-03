@@ -202,13 +202,9 @@ TEST(CoroTest, TestScheduler2)
 				for (auto& s : source)
 				{
 					if(s)
-					{
-						yield(*s - 256);
-					}
+						yield(*s);
 					else
-					{
 						yield(s);
-					}
 				}
 			};
 		}()
@@ -221,7 +217,7 @@ TEST(CoroTest, TestScheduler2)
 				for (auto& s : source)
 				{
 					if(s)
-						yield(*s + 4096);
+						yield(*s);
 					else
 						yield(s);
 				}
@@ -241,20 +237,19 @@ TEST(CoroTest, TestScheduler2)
 					{
 						total += *s;
 						++count;
-						yield(*s);
 					}
 					else
 						yield(s);
 				}
 				LOGI("---> media es %f", float(total) / count);
-				//yield( int(total / count) );
+				yield( int(total / count) );
 			};
 		}()
 	);	
 	
 	sch.spawn([&](auto& yield)
 	{
-		for(int x=1; x<=100; ++x)
+		for(int x=1; x<=106; ++x)
 		{
 			LOGI("1. send %d", x);
 			c1(yield, x);
@@ -263,7 +258,7 @@ TEST(CoroTest, TestScheduler2)
 	});
 	sch.spawn([&](auto& yield)
 	{
-		for(int y=1; y<=100; ++y)
+		for(int y=1; y<=106; ++y)
 		{
 			LOGI("2. send %d", y);
 			c2(yield, y);
