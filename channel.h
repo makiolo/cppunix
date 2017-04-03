@@ -182,20 +182,6 @@ public:
 		operator()<bool>(yield, true);
 	}
 
-	// // DEPRECATED
-	// template <typename Function>
-	// void for_each(cu::push_type<control_type>& yield, Function&& f)
-	// {
-	// 	for(;;)
-	// 	{
-	// 		auto data = get(yield);
- 	// 		if(data)
- 	// 			f(*data);
- 	// 		else
- 	// 			break; // detect close or exception
-	// 	}
-	// }
-
 protected:
 	void _set_tail()
 	{
@@ -343,9 +329,9 @@ auto range(cu::push_type<control_type>& yield, cu::channel<Args>&... chans)
 	);
 }
 
-template <typename T>
 template <>
-auto range<T>(cu::push_type<control_type>& yield, cu::channel<T>& chan)
+template <typename T>
+auto range<>(cu::push_type<control_type>& yield, cu::channel<T>& chan)
 {
 	return cu::pull_type<T>(
 		[&](cu::push_type<T>& own_yield) {
@@ -364,4 +350,3 @@ auto range<T>(cu::push_type<control_type>& yield, cu::channel<T>& chan)
 }
 
 #endif
-
