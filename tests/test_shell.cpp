@@ -194,6 +194,26 @@ TEST(CoroTest, TestScheduler2)
 	cu::channel<int> c2(sch, 10);
 	cu::channel<int> c3(sch, 10);
 
+	c1.pipeline(
+		[]() -> cu::channel<int>::link
+		{
+			return [=](auto&& source, auto&& yield)
+			{
+				for (auto& s : source)
+				{
+					if(s)
+					{
+						yield(*s - 256);
+					}
+					else
+					{
+						yield(s);
+					}
+				}
+			};
+		}()
+	);
+	
 	sch.spawn([&](auto& yield)
 	{
 		for(int x=1; x<=100; ++x)
@@ -232,4 +252,3 @@ TEST(CoroTest, TestScheduler2)
 	});
 	sch.run_until_complete();
 }
-
