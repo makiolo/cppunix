@@ -199,14 +199,14 @@ protected:
 	template <typename Function>
 	void _add(Function&& f)
 	{
-		_coros.push(cu::make_iterator< optional<T> >(cu::link<T>(boost::bind(f, _1, boost::ref(*_coros.top().get())))));
+		_coros.push(cu::make_iterator< optional<T> >(boost::bind(f, _1, boost::ref(*_coros.top().get()))));
 	}
 
 	template <typename Function, typename ... Functions>
 	void _add(Function&& f, Functions&& ... fs)
 	{
 		_add(std::forward<Functions>(fs)...);
-		_coros.push(cu::make_iterator< optional<T> >(cu::link<T>(boost::bind(f, _1, boost::ref(*_coros.top().get())))));
+		_coros.push(cu::make_iterator< optional<T> >(boost::bind(f, _1, boost::ref(*_coros.top().get()))));
 	}
 protected:
 	std::stack< coroutine > _coros;
