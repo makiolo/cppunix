@@ -228,7 +228,6 @@ TEST(CoroTest, TestScheduler2)
 			};
 		}()
 	);
-	/*
 	c3.pipeline(
 		[]() -> cu::channel<int>::link
 		{
@@ -242,15 +241,16 @@ TEST(CoroTest, TestScheduler2)
 					{
 						total += *s;
 						++count;
+						yield(s);
 					}
 					else
 						yield(s);
 				}
-				yield( int(total / count) );
+				LOGI("---> media es %f", float(total) / count);
+				//yield( int(total / count) );
 			};
 		}()
 	);	
-	*/
 	
 	sch.spawn([&](auto& yield)
 	{
