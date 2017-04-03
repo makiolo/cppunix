@@ -215,7 +215,7 @@ TEST(CoroTest, TestScheduler2)
 	sch.spawn([&](auto& yield)
 	{
 		int a, b;
-		for(auto& t : cu::join(yield, c1, c2))
+		for(auto& t : cu::range(yield, c1, c2))
 		{
 			std::tie(a, b) = t;
 			LOGI("3. recv and resend %d", a+b);
