@@ -242,11 +242,6 @@ TEST(CoroTest, TestScheduler2)
 						total += *s;
 						++count;
 						yield(*s);
-						yield(*s);
-						yield(*s);
-						yield(*s);
-						yield(*s);
-						yield(*s);
 					}
 					else
 						yield(s);
