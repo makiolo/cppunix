@@ -121,7 +121,7 @@ public:
 		if(full())
 		{
 			yield();
-			flush();
+			// flush();
 		}
 	}
 
@@ -157,7 +157,7 @@ public:
 		if(empty())
 		{
 			yield();
-			flush();
+			// flush();
 		}
 		return std::move(data);
 	}
