@@ -110,6 +110,10 @@ public:
 		_slots.wait();
 		(*_coros.top())( optional<T>(data) );
 		_elements.notify();
+		if(full())
+		{
+			flush();
+		}
 	}
 
 	template <typename R>
@@ -120,8 +124,8 @@ public:
 		_elements.notify(yield);
 		if(full())
 		{
+			flush();
 			yield();
-			// flush();
 		}
 	}
 
@@ -146,6 +150,10 @@ public:
 		_elements.wait();
 		optional<T> data = std::get<0>(_buf.get());
 		_slots.notify();
+		if(empty())
+		{
+			flush();
+		}
 		return std::move(data);
 	}
 
@@ -157,7 +165,7 @@ public:
 		if(empty())
 		{
 			yield();
-			// flush();
+			flush();
 		}
 		return std::move(data);
 	}
@@ -221,8 +229,8 @@ protected:
 	void _add(Function&& f)
 	{
 		_coros.push(cu::make_iterator< optional<T> >(boost::bind(f, _1, boost::ref(*_coros.top().get()))));
-		//_links.emplace(_links.begin(), std::forward<Function>(f));
-		_links.emplace_back(std::forward<Function>(f));
+		_links.emplace(_links.begin(), std::forward<Function>(f));
+		//_links.emplace_back(std::forward<Function>(f));
 	}
 
 	template <typename Function, typename ... Functions>
@@ -230,8 +238,8 @@ protected:
 	{
 		_add(std::forward<Functions>(fs)...);
 		_coros.push(cu::make_iterator< optional<T> >(boost::bind(f, _1, boost::ref(*_coros.top().get()))));
-		//_links.emplace(_links.begin(), std::forward<Function>(f));
-		_links.emplace_back(std::forward<Function>(f));
+		_links.emplace(_links.begin(), std::forward<Function>(f));
+		//_links.emplace_back(std::forward<Function>(f));
 	}
 protected:
 	std::stack< coroutine > _coros;
