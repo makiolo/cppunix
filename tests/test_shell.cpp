@@ -192,17 +192,17 @@ TEST(CoroTest, TestScheduler2)
 
 	cu::channel<int> c1(sch, 10);
 	cu::channel<int> c2(sch, 10);
-	cu::channel<int> c3(sch, 4);
+	cu::channel<int> c3(sch, 10);
 
 	c1.pipeline(
 		[]() -> cu::channel<int>::link
 		{
-			return [](auto&& source, auto&& yield)
+			return [](auto& source, auto& yield)
 			{
 				for (auto& s : source)
 				{
 					if(s)
-						yield(*s);
+						yield(*s + 1);
 					else
 						yield(s);
 				}
@@ -212,12 +212,12 @@ TEST(CoroTest, TestScheduler2)
 	c2.pipeline(
 		[]() -> cu::channel<int>::link
 		{
-			return [](auto&& source, auto&& yield)
+			return [](auto& source, auto& yield)
 			{
 				for (auto& s : source)
 				{
 					if(s)
-						yield(*s);
+						yield(*s - 1);
 					else
 						yield(s);
 				}
@@ -227,7 +227,7 @@ TEST(CoroTest, TestScheduler2)
 	c3.pipeline(
 		[]() -> cu::channel<int>::link
 		{
-			return [](auto&& source, auto&& yield)
+			return [](auto& source, auto& yield)
 			{
 				int total = 0;
 				int count = 0;
