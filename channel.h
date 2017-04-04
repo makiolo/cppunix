@@ -292,21 +292,13 @@ template <size_t N, typename T, typename ... STUFF>
 bool _barrier(cu::push_type<control_type>& yield, cu::optional< std::tuple<STUFF...> >& tpl, cu::channel<T>& chan)
 {
 	cu::optional<T> a;
-	switch(cu::select(yield, chan))
+	if(cu::select(yield, chan) == 0)
 	{
-		case 0:
-		{
-			a = chan.get(yield);
-			if(a)
-			{
-			    std::get<N>(*tpl) = *a;
-			}
-			else
-			{
-				return false;
-			}
-		}
-		break;
+		a = chan.get(yield);
+		if(a)
+			std::get<N>(*tpl) = *a;
+		else
+			return false;
 	}
 	return true;
 }
@@ -315,21 +307,13 @@ template <size_t N, typename T, typename ... Args, typename ... STUFF>
 bool _barrier(cu::push_type<control_type>& yield, cu::optional< std::tuple<STUFF...> >& tpl, cu::channel<T>& chan, cu::channel<Args>&... chans)
 {
 	cu::optional<T> a;
-	switch(cu::select(yield, chan))
+	if(cu::select(yield, chan) == 0)
 	{
-		case 0:
-		{
-			a = chan.get(yield);
-			if(a)
-			{
-				std::get<N>(*tpl) = *a;
-			}
-			else
-			{
-				return false;
-			}
-		}
-		break;
+		a = chan.get(yield);
+		if(a)
+			std::get<N>(*tpl) = *a;
+		else
+			return false;
 	}
 	return _barrier<N+1>(yield, tpl, chans...);
 }
