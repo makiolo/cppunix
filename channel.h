@@ -120,8 +120,8 @@ public:
 		_elements.notify(yield);
 		if(full())
 		{
-			flush();
 			yield();
+			flush();
 		}
 	}
 
@@ -156,8 +156,8 @@ public:
 		_slots.notify(yield);
 		if(empty())
 		{
-			flush();
 			yield();
+			flush();
 		}
 		return std::move(data);
 	}
