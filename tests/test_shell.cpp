@@ -285,3 +285,98 @@ TEST(CoroTest, TestScheduler2)
 	});
 	sch.run_until_complete();
 }
+
+TEST(CoroTest, Test_Finite_Machine_States)
+{
+	cu::scheduler sch;
+
+	cu::channel<int> sensor_cerca(sch, 10);
+	cu::channel<int> sensor_lejos(sch, 10);
+	cu::channel<int> action_hablarle(sch, 10);
+	cu::channel<int> action_gritarle(sch, 10);
+	
+	sch.spawn([&](auto& yield)
+	{
+		// sensor code
+		//for(;;)
+		{
+			// check sensor
+			sensor_cerca(yield, 1);
+			sensor_cerca(yield, 1);
+			sensor_cerca(yield, 1);
+			sensor_cerca(yield, 1);
+			sensor_cerca(yield, 1);
+			sensor_lejos(yield, 1);
+			sensor_lejos(yield, 1);
+			sensor_lejos(yield, 1);
+			sensor_lejos(yield, 1);
+			sensor_cerca(yield, 1);
+			sensor_cerca(yield, 1);
+		}
+	});
+	sch.spawn([&](auto& yield)
+	{
+		// finite machine state
+		// TODO: can generate this code with metaprogramation ?
+		// proposal:
+		// cu::fsm(yield, 	sensor_cerca, action_hablarle,
+		// 			sensor_lejos, action_gritarle);
+		int state = -1;
+		int prev_state = -1;
+		for(;;)
+		{
+			prev_state = state;
+			state = cu::select(yield, sensor_cerca, sensor_lejos);
+			if(prev_state == state)
+			{
+				continue;
+			}
+			else
+			{
+				// prev_state -> onFinish() ?
+				// state -> onStart() ?
+			}
+			switch(state)
+			{
+				case 0: // cerca
+				{
+					auto data = sensor_cerca.get(yield);
+					if(data)
+						action_hablarle(yield, *data);
+				}
+				break;
+				case 1: // lejos
+				{
+					auto data = sensor_lejos.get(yield);
+					if(data)
+						action_gritarle(yield, *data);
+				}
+				break;
+				default:
+			}
+		}
+	});
+	sch.spawn([&](auto& yield)
+	{
+		// action hablarle
+		for(auto& e : cu::range(yield, action_hablarle))
+		{
+			std::cout << "hablando ..." << std::endl;
+		}
+	});
+	sch.spawn([&](auto& yield)
+	{
+		// action gritarle
+		for(auto& e : cu::range(yield, action_gritarle))
+		{
+			std::cout << "gritando ..." << std::endl;
+		}
+	});
+	// run in slides
+	sch.run();
+	sch.run();
+	sch.run();
+	sch.run();
+	sch.run();
+	sch.run();
+}
