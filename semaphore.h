@@ -78,7 +78,6 @@ public:
 		return _count;
 	}
 	
-protected:
 	cu::scheduler& _sche;
 	int _count;
 	int _id;

@@ -30,6 +30,8 @@ using link = boost::function<void(cu::pull_type<T>&, cu::push_type<T>&)>;
 template <typename T, typename Function>
 pull_type_ptr<T> make_generator(Function&& f)
 {
+	// return std::make_shared< pull_type<T> >(boost::coroutines2::fixedsize_stack(), std::forward<Function>(f));
+	// return std::make_shared< pull_type<T> >(boost::coroutines2::segmented_stack(), std::forward<Function>(f));
 	return std::make_shared< pull_type<T> >(std::forward<Function>(f));
 }
 

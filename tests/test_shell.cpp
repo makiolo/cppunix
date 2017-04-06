@@ -190,21 +190,26 @@ TEST(CoroTest, TestScheduler2)
 {
 	cu::scheduler sch;
 
-	cu::channel<int> c1(sch, 10);
-	cu::channel<int> c2(sch, 10);
-	cu::channel<int> c3(sch, 10);
+	cu::channel<int> c1(sch, 20);
+	cu::channel<int> c2(sch, 20);
+	cu::channel<int> c3(sch, 20);
 
 	c1.pipeline(
 		[]() -> cu::channel<int>::link
 		{
 			return [](auto& source, auto& yield)
 			{
+				int i = 0;
 				for (auto& s : source)
 				{
-					if(s)
-						yield(*s + 1);
-					else
-						yield(s);
+					// if(i % 2 == 0)
+					{
+						if(s)
+							yield(*s);
+						else
+							yield(s);
+					}
+					++i;
 				}
 			};
 		}()
@@ -217,7 +222,7 @@ TEST(CoroTest, TestScheduler2)
 				for (auto& s : source)
 				{
 					if(s)
-						yield(*s - 1);
+						yield(*s);
 					else
 						yield(s);
 				}
@@ -231,18 +236,26 @@ TEST(CoroTest, TestScheduler2)
 			{
 				int total = 0;
 				int count = 0;
-				for (auto& s : source)
+				for(;;)
 				{
+					if(!source && (count > 0))
+					{
+						std::cout << "break!! " << (total / count) << std::endl;
+						yield(total / count);
+						break;
+					}
+					else
+					{
+						yield(999);
+					}
+					auto s = source.get();
 					if(s)
 					{
 						total += *s;
 						++count;
 					}
-					else
-						yield(s);
+					source();
 				}
-				LOGI("---> media es %d", total / count);
-				yield( int(total / count) );
 			};
 		}()
 	);	
@@ -286,7 +299,7 @@ TEST(CoroTest, TestScheduler2)
 	sch.run_until_complete();
 }
 
-TEST(CoroTest, Test_Finite_Machine_States)
+TEST(CoroTest, DISABLED_Test_Finite_Machine_States)
 {
 	cu::scheduler sch;
 
@@ -352,7 +365,6 @@ TEST(CoroTest, Test_Finite_Machine_States)
 						action_gritarle(yield, *data);
 				}
 				break;
-				default:
 			}
 		}
 	});
@@ -380,3 +392,4 @@ TEST(CoroTest, Test_Finite_Machine_States)
 	sch.run();
 	sch.run();
 }
+

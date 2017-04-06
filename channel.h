@@ -8,7 +8,7 @@
 #include "coroutine.h"
 #include "semaphore.h"
 #include <fast-event-system/sem.h>
-#include <fast-event-system/async_fast.h>
+#include <fast-event-system/async_delay.h>
 #include <assert.h>
 #include <mutex>
 
@@ -48,10 +48,17 @@ auto term_receiver(const typename channel<T>::coroutine& receiver)
 {
 	return [=](typename channel<T>::in& source)
 	{
-		for (auto& s : source)
+		for(;;)
 		{
+			if(!source) break;
+			auto s = std::move(source.get());
 			(*receiver)(s);
+			source();
 		}
+		// for(auto& s : source)
+		// {	
+		// 	(*receiver)(s);
+		// }
 	};
 }
 
@@ -65,18 +72,20 @@ public:
 	using coroutine = push_type_ptr< optional<T> >;
 
 	explicit channel(cu::scheduler& sch, size_t buffer = 0)
-		: _elements(sch, 0)
+		: _sch(sch)
+		, _buffer(buffer)
+		, _elements(sch, 0)
 		, _slots(sch, buffer + 2)
-		, _buf(buffer + 2)
 	{
 		_set_tail();
 	}
 
 	template <typename Function>
 	explicit channel(cu::scheduler& sch, size_t buffer, Function&& f)
-		: _elements(sch, 0)
+		: _sch(sch)
+		, _buffer(buffer)
+		, _elements(sch, 0)
 		, _slots(sch, buffer + 2)
-		, _buf(buffer + 2)
 	{
 		_set_tail();
 		_add(std::forward<Function>(f));
@@ -84,9 +93,10 @@ public:
 
 	template <typename Function, typename ... Functions>
 	explicit channel(cu::scheduler& sch, size_t buffer, Function&& f, Functions&& ... fs)
-		: _elements(sch, 0)
+		: _sch(sch)
+		, _buffer(buffer)
+		, _elements(sch, 0)
 		, _slots(sch, buffer + 2)
-		, _buf(buffer + 2)
 	{
 		_set_tail();
 		_add(std::forward<Function>(f), std::forward<Functions>(fs)...);
@@ -160,12 +170,17 @@ public:
 	optional<T> get(cu::push_type<control_type>& yield)
 	{
 		_elements.wait(yield);
+		if(_buf.empty())
+		{
+			flush();
+			yield();
+		}
 		optional<T> data = std::get<0>(_buf.get());
 		_slots.notify(yield);
 		if(empty())
 		{
-			yield();
 			flush();
+			yield();
 		}
 		return std::move(data);
 	}
@@ -194,21 +209,30 @@ public:
 
 	void flush()
 	{
-		std::stack< coroutine > coros;
+		std::cout << "flush!! pre " << _buf.size() << std::endl;
 		auto r = cu::make_iterator< optional<T> >(
 			[this](auto& source) {
-				for (auto& s : source)
+				for(;;)
 				{
-					this->_buf(s);
+					if(!source) return;
+					auto s = std::move(source.get());
+					this->_buf(0, fes::deltatime(0), s);
+					source();
 				}
+				// for(auto& s : source)
+				// {
+				// 	this->_buf(0, fes::deltatime(0), s);
+				// }
 			}
 		);
+		std::stack< coroutine > coros;
 		coros.push( cu::make_iterator< optional<T> >( term_receiver<T>(r) ) );
 		for (auto& flink : _links)
 		{
 			coros.push(cu::make_iterator< optional<T> >(boost::bind(flink, _1, boost::ref(*coros.top().get()))));
 		}
 		_coros.swap(coros);
+		std::cout << "flush!! post " << _buf.size() << std::endl;
 	}
 
 protected:
@@ -216,10 +240,17 @@ protected:
 	{
 		auto r = cu::make_iterator< optional<T> >(
 			[this](auto& source) {
-				for (auto& s : source)
+				for(;;)
 				{
-					this->_buf(s);
+					if(!source) return;
+					auto s = std::move(source.get());
+					this->_buf(0, fes::deltatime(0), s);
+					source();
 				}
+				// for(auto& s : source)
+				// {
+				// 	this->_buf(0, fes::deltatime(0), s);
+				// }
 			}
 		);
 		_coros.push( cu::make_iterator< optional<T> >( term_receiver<T>(r) ) );
@@ -230,7 +261,7 @@ protected:
 	{
 		_coros.push(cu::make_iterator< optional<T> >(boost::bind(f, _1, boost::ref(*_coros.top().get()))));
 		_links.emplace(_links.begin(), std::forward<Function>(f));
-		//_links.emplace_back(std::forward<Function>(f));
+		// _links.emplace_back(std::forward<Function>(f));
 	}
 
 	template <typename Function, typename ... Functions>
@@ -239,11 +270,13 @@ protected:
 		_add(std::forward<Functions>(fs)...);
 		_coros.push(cu::make_iterator< optional<T> >(boost::bind(f, _1, boost::ref(*_coros.top().get()))));
 		_links.emplace(_links.begin(), std::forward<Function>(f));
-		//_links.emplace_back(std::forward<Function>(f));
+		// _links.emplace_back(std::forward<Function>(f));
 	}
 protected:
+	cu::scheduler& _sch;
+	size_t _buffer;
 	std::stack< coroutine > _coros;
-	fes::async_fast< optional<T> > _buf;
+	fes::async_delay< optional<T> > _buf;
 	cu::semaphore _elements;
 	cu::semaphore _slots;
 	std::vector<link> _links;
