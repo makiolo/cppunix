@@ -299,89 +299,136 @@ TEST(CoroTest, TestScheduler2)
 	sch.run_until_complete();
 }
 
-TEST(CoroTest, DISABLED_Test_Finite_Machine_States)
+TEST(CoroTest, Test_Finite_Machine_States)
 {
 	cu::scheduler sch;
 
-	cu::channel<int> sensor_cerca(sch, 10);
-	cu::channel<int> sensor_lejos(sch, 10);
-	cu::channel<int> action_hablarle(sch, 10);
-	cu::channel<int> action_gritarle(sch, 10);
-	
+	cu::channel<float> sensor_cerca(sch, 10);
+	cu::channel<float> sensor_lejos(sch, 10);
+	//
+	cu::channel<bool> on_change_hablarle(sch, 10);
+	cu::channel<bool> on_change_gritarle(sch, 10);
+	//
+	cu::channel<float> update_hablarle(sch, 10);
+	cu::channel<float> update_gritarle(sch, 10);
+
 	sch.spawn([&](auto& yield)
 	{
-		// sensor code
+		// perception code (arduino)
+		// auto x = enemy.get_position();
+		// bool is_far = x.distance(me) > threshold;
 		//for(;;)
 		{
 			// check sensor
-			sensor_cerca(yield, 1);
-			sensor_cerca(yield, 1);
-			sensor_cerca(yield, 1);
-			sensor_cerca(yield, 1);
-			sensor_cerca(yield, 1);
-			sensor_lejos(yield, 1);
-			sensor_lejos(yield, 1);
-			sensor_lejos(yield, 1);
-			sensor_lejos(yield, 1);
-			sensor_cerca(yield, 1);
-			sensor_cerca(yield, 1);
+			sensor_cerca(yield, 1.0);
+			sensor_cerca(yield, 1.0);
+			sensor_cerca(yield, 1.0);
+			sensor_cerca(yield, 1.0);
+			sensor_cerca(yield, 1.0);
+			sensor_lejos(yield, 1.0);
+			sensor_lejos(yield, 1.0);
+			sensor_lejos(yield, 1.0);
+			sensor_lejos(yield, 1.0);
+			sensor_cerca(yield, 1.0);
+			sensor_cerca(yield, 1.0);
 		}
 	});
 	sch.spawn([&](auto& yield)
 	{
-		// finite machine state
+		// decisions code (raspberry)
 		// TODO: can generate this code with metaprogramation ?
 		// proposal:
-		// cu::fsm(yield, 	sensor_cerca, action_hablarle,
-		// 			sensor_lejos, action_gritarle);
+		// cu::fsm(yield, 	std::make_tuple(sensor_cerca, on_change_hablarle, update_hablarle),
+		// 			std::make_tuple(sensor_lejos, on_change_gritarle, update_gritarle)
+		//		);
+		auto tpl = std::make_tuple(std::make_tuple(sensor_cerca, on_change_hablarle, update_hablarle),
+					   std::make_tuple(sensor_lejos, on_change_gritarle, update_gritarle));
+		auto& ref_tuple = std::get<0>(tpl);
+		auto& sensor_prev = std::get<0>(ref_tuple);
+		auto& change_prev = std::get<1>(ref_tuple);
+		auto& update_prev = std::get<2>(ref_tuple);
+		auto& sensor = std::get<0>(ref_tuple);
+		auto& change = std::get<1>(ref_tuple);
+		auto& update = std::get<2>(ref_tuple);
 		int state = -1;
 		int prev_state = -1;
+		// TODO:
+		// while(!sch.forcce_close())
 		for(;;)
 		{
 			prev_state = state;
-			state = cu::select(yield, sensor_cerca, sensor_lejos);
-			if(prev_state == state)
+			sensor_prev = sensor;
+			change_prev = change;
+			update_prev = update;
 			{
-				continue;
-			}
-			else
-			{
-				// prev_state -> onFinish() ?
-				// state -> onStart() ?
-			}
-			switch(state)
-			{
-				case 0: // cerca
+				auto& tuple_channels = std::get<0>(tpl);
+				sensor = std::get<0>(tuple_channels);
+				change = std::get<1>(tuple_channels);
+				update = std::get<2>(tuple_channels);
+				state = cu::select_nonblock(yield, sensor);
+				if(state == 0)
 				{
-					auto data = sensor_cerca.get(yield);
+					auto data = sensor.get(yield);
 					if(data)
-						action_hablarle(yield, *data);
+					{
+						state = state + 0;
+						if(prev_state != state)
+						{
+							if(prev_state > -1)
+								change_prev(yield, false);  // prev
+							change(yield, true);  // state
+						}
+						update(yield, *data);
+					}
 				}
-				break;
-				case 1: // lejos
+			}
+			{
+				auto& tuple_channels = std::get<1>(tpl);
+				sensor = std::get<0>(tuple_channels);
+				change = std::get<1>(tuple_channels);
+				update = std::get<2>(tuple_channels);
+				state = cu::select_nonblock(yield, sensor);
+				if(state == 0)
 				{
-					auto data = sensor_lejos.get(yield);
+					auto data = sensor.get(yield);
 					if(data)
-						action_gritarle(yield, *data);
+					{
+						state = state + 1;
+						if(prev_state != state)
+						{
+							if(prev_state > -1)
+								change_prev(yield, false);  // prev
+							change(yield, true);  // state
+						}
+						update(yield, *data);
+					}
 				}
-				break;
 			}
 		}
 	});
 	sch.spawn([&](auto& yield)
 	{
-		// action hablarle
-		for(auto& e : cu::range(yield, action_hablarle))
+		// action code
+		//
+		// while(!sch.forcce_close())
+		for(;;)
 		{
-			std::cout << "hablando ..." << std::endl;
-		}
-	});
-	sch.spawn([&](auto& yield)
-	{
-		// action gritarle
-		for(auto& e : cu::range(yield, action_gritarle))
-		{
-			std::cout << "gritando ..." << std::endl;
+			/*
+			// proposal
+			cu::selector(yield, 
+				     on_change_hablarle, [](auto& activation){
+				     	;
+				     }, 
+				     update_hablarle, [](auto& value){
+				     	std::cout << "hablando ..." << std::endl;
+				     },
+				     on_change_gritarle, [](auto& activation){
+				     	;
+				     }, 
+				     update_gritarle, [](auto& value){
+				     	std::cout << "gritando ..." << std::endl;
+				     });
+			*/
 		}
 	});
 	// run in slides
@@ -392,4 +439,3 @@ TEST(CoroTest, DISABLED_Test_Finite_Machine_States)
 	sch.run();
 	sch.run();
 }
-
