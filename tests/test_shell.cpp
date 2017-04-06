@@ -299,6 +299,11 @@ TEST(CoroTest, TestScheduler2)
 	sch.run_until_complete();
 }
 
+void func1() {}
+void func2() {}
+void foo() {}
+void bar() {}
+
 TEST(CoroTest, Test_Finite_Machine_States)
 {
 	cu::scheduler sch;
@@ -312,6 +317,146 @@ TEST(CoroTest, Test_Finite_Machine_States)
 	cu::channel<float> update_hablarle(sch, 10);
 	cu::channel<float> update_gritarle(sch, 10);
 
+	bool near = true;
+	
+	// selector
+	sch.spawn([&](auto& yield)
+	{
+		for(;;)
+		{
+			if(near)
+				if(near)
+					func1();
+				else
+					foo();
+			else
+				bar();
+			yield();
+		}
+	});
+	
+	// sequence
+	sch.spawn([&](auto& yield)
+	{
+		for(;;)
+		{
+			func1();
+			yield();
+			foo();
+			yield();
+			bar();
+			yield();
+		}
+	});
+	
+	
+	// selector + sequence
+	sch.spawn([&](auto& yield)
+	{
+		for(;;)
+		{
+			if(near)
+			{
+				if(near)
+				{
+					func1();
+					yield();
+					foo();
+					yield();
+					bar();
+					yield();
+				}
+				else
+				{
+					func1();
+					yield();
+					foo();
+					yield();
+					bar();
+					yield();
+				}
+			}
+			else
+				bar();
+			yield();
+		}
+	});
+	
+	// parallel in subtree
+	sch.spawn([&](auto& yield)
+	{
+		for(;;)
+		{
+			if(near)
+			{
+				cu::scheduler subsch;
+				subsch.spawn([&](auto& subyield) {
+					// thread 1
+					if(near)
+					{
+						if(near)
+						{
+							func1();
+							subyield();
+							foo();
+							subyield();
+							bar();
+							subyield();
+						}
+						else
+							foo();
+					}
+					else if(near)
+						foo();
+					else
+						bar();
+					subyield();
+				});
+
+				subsch.spawn([&](auto& subyield) {
+					// thread 2
+					if(near)
+					{
+						func1();
+						subyield();
+						foo();
+						subyield();
+						bar();
+						subyield();
+					}
+					subyield();
+				});
+				// subsch.run_until_complete(yield);
+				subsch.run_until_complete();
+			}
+			else
+			{
+				bar();
+				yield();
+			}
+		}
+	});
+	
+	// for
+	sch.spawn([&](auto& yield)
+	{
+		for(;;)
+		{
+			for(int i=0;i<10;++i)
+			{
+				// go_work(yield);
+				yield();
+				// go_eat_something(yield);
+				yield();
+				// go_home(yield);
+				yield();
+				// go_sleep(yield);
+				yield();
+			}
+			yield();
+		}
+	});
+	
 	sch.spawn([&](auto& yield)
 	{
 		// perception code (arduino)
