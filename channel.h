@@ -48,6 +48,7 @@ auto term_receiver(const typename channel<T>::coroutine& receiver)
 {
 	return [=](typename channel<T>::in& source)
 	{
+		/*
 		for(;;)
 		{
 			if(!source) break;
@@ -55,10 +56,11 @@ auto term_receiver(const typename channel<T>::coroutine& receiver)
 			(*receiver)(s);
 			source();
 		}
-		// for(auto& s : source)
-		// {	
-		// 	(*receiver)(s);
-		// }
+		*/
+		for(auto& s : source)
+		{	
+			(*receiver)(s);
+		}
 	};
 }
 
@@ -209,9 +211,9 @@ public:
 
 	void flush()
 	{
-		std::cout << "flush!! pre " << _buf.size() << std::endl;
 		auto r = cu::make_iterator< optional<T> >(
 			[this](auto& source) {
+				/*
 				for(;;)
 				{
 					if(!source) return;
@@ -219,10 +221,11 @@ public:
 					this->_buf(0, fes::deltatime(0), s);
 					source();
 				}
-				// for(auto& s : source)
-				// {
-				// 	this->_buf(0, fes::deltatime(0), s);
-				// }
+				*/
+				for(auto& s : source)
+				{
+					this->_buf(0, fes::deltatime(0), s);
+				}
 			}
 		);
 		std::stack< coroutine > coros;
@@ -232,7 +235,6 @@ public:
 			coros.push(cu::make_iterator< optional<T> >(boost::bind(flink, _1, boost::ref(*coros.top().get()))));
 		}
 		_coros.swap(coros);
-		std::cout << "flush!! post " << _buf.size() << std::endl;
 	}
 
 protected:
@@ -240,6 +242,7 @@ protected:
 	{
 		auto r = cu::make_iterator< optional<T> >(
 			[this](auto& source) {
+				/*
 				for(;;)
 				{
 					if(!source) return;
@@ -247,10 +250,11 @@ protected:
 					this->_buf(0, fes::deltatime(0), s);
 					source();
 				}
-				// for(auto& s : source)
-				// {
-				// 	this->_buf(0, fes::deltatime(0), s);
-				// }
+				*/
+				for(auto& s : source)
+				{
+					this->_buf(0, fes::deltatime(0), s);
+				}
 			}
 		);
 		_coros.push( cu::make_iterator< optional<T> >( term_receiver<T>(r) ) );
