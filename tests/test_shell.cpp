@@ -379,6 +379,7 @@ TEST(CoroTest, Test_Finite_Machine_States)
 							change(yield, true);  // state
 						}
 						update(yield, *data);
+						continue;
 					}
 				}
 			}
@@ -401,8 +402,14 @@ TEST(CoroTest, Test_Finite_Machine_States)
 							change(yield, true);  // state
 						}
 						update(yield, *data);
+						continue;
 					}
 				}
+			}
+			if(state == -1)
+			{
+				// nothing changed
+				state = prev_state;
 			}
 		}
 	});
