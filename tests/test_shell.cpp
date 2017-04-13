@@ -299,295 +299,295 @@ TEST(CoroTest, TestScheduler2)
 	sch.run_until_complete();
 }
 
-void func1() {}
-void func2() {}
-void foo() {}
-void bar() {}
-
-TEST(CoroTest, Test_Finite_Machine_States)
-{
-	cu::scheduler sch;
-
-	cu::channel<float> sensor_cerca(sch, 10);
-	cu::channel<float> sensor_lejos(sch, 10);
-	//
-	cu::channel<bool> on_change_hablarle(sch, 10);
-	cu::channel<bool> on_change_gritarle(sch, 10);
-	//
-	cu::channel<float> update_hablarle(sch, 10);
-	cu::channel<float> update_gritarle(sch, 10);
-
-	bool near = true;
-	
-	// selector
-	sch.spawn([&](auto& yield)
-	{
-		for(;;)
-		{
-			if(near)
-				if(near)
-					func1();
-				else
-					foo();
-			else
-				bar();
-			yield();
-		}
-	});
-	
-	// sequence
-	sch.spawn([&](auto& yield)
-	{
-		for(;;)
-		{
-			func1();
-			yield();
-			foo();
-			yield();
-			bar();
-			yield();
-		}
-	});
-	
-	
-	// selector + sequence
-	sch.spawn([&](auto& yield)
-	{
-		for(;;)
-		{
-			if(near)
-			{
-				if(near)
-				{
-					func1();
-					yield();
-					foo();
-					yield();
-					bar();
-					yield();
-				}
-				else
-				{
-					func1();
-					yield();
-					foo();
-					yield();
-					bar();
-					yield();
-				}
-			}
-			else
-				bar();
-			yield();
-		}
-	});
-	
-	// parallel in subtree
-	sch.spawn([&](auto& yield)
-	{
-		for(;;)
-		{
-			if(near)
-			{
-				cu::scheduler subsch;
-				subsch.spawn([&](auto& subyield) {
-					// thread 1
-					if(near)
-					{
-						if(near)
-						{
-							func1();
-							subyield();
-							foo();
-							subyield();
-							bar();
-							subyield();
-						}
-						else
-							foo();
-					}
-					else if(near)
-						foo();
-					else
-						bar();
-					subyield();
-				});
-
-				subsch.spawn([&](auto& subyield) {
-					// thread 2
-					if(near)
-					{
-						func1();
-						subyield();
-						foo();
-						subyield();
-						bar();
-						subyield();
-					}
-					subyield();
-				});
-				// subsch.run_until_complete(yield);
-				subsch.run_until_complete();
-			}
-			else
-			{
-				bar();
-				yield();
-			}
-		}
-	});
-	
-	// for
-	sch.spawn([&](auto& yield)
-	{
-		for(;;)
-		{
-			for(int i=0;i<10;++i)
-			{
-				// go_work(yield);
-				yield();
-				// go_eat_something(yield);
-				yield();
-				// go_home(yield);
-				yield();
-				// go_sleep(yield);
-				yield();
-			}
-			yield();
-		}
-	});
-	
-	sch.spawn([&](auto& yield)
-	{
-		// perception code (arduino)
-		// auto x = enemy.get_position();
-		// bool is_far = x.distance(me) > threshold;
-		//for(;;)
-		{
-			// check sensor
-			sensor_cerca(yield, 1.0);
-			sensor_cerca(yield, 1.0);
-			sensor_cerca(yield, 1.0);
-			sensor_cerca(yield, 1.0);
-			sensor_cerca(yield, 1.0);
-			sensor_lejos(yield, 1.0);
-			sensor_lejos(yield, 1.0);
-			sensor_lejos(yield, 1.0);
-			sensor_lejos(yield, 1.0);
-			sensor_cerca(yield, 1.0);
-			sensor_cerca(yield, 1.0);
-		}
-	});
-	sch.spawn([&](auto& yield)
-	{
-		// decisions code (raspberry)
-		// TODO: can generate this code with metaprogramation ?
-		// proposal:
-		// cu::fsm(yield, 	std::make_tuple(sensor_cerca, on_change_hablarle, update_hablarle),
-		// 			std::make_tuple(sensor_lejos, on_change_gritarle, update_gritarle)
-		//		);
-		auto tpl = std::make_tuple(std::make_tuple(sensor_cerca, on_change_hablarle, update_hablarle),
-					   std::make_tuple(sensor_lejos, on_change_gritarle, update_gritarle));
-		auto& ref_tuple = std::get<0>(tpl);
-		auto& sensor_prev = std::get<0>(ref_tuple);
-		auto& change_prev = std::get<1>(ref_tuple);
-		auto& update_prev = std::get<2>(ref_tuple);
-		auto& sensor = std::get<0>(ref_tuple);
-		auto& change = std::get<1>(ref_tuple);
-		auto& update = std::get<2>(ref_tuple);
-		int state = -1;
-		int prev_state = -1;
-		// TODO:
-		// while(!sch.forcce_close())
-		for(;;)
-		{
-			prev_state = state;
-			sensor_prev = sensor;
-			change_prev = change;
-			update_prev = update;
-			{
-				auto& tuple_channels = std::get<0>(tpl);
-				sensor = std::get<0>(tuple_channels);
-				change = std::get<1>(tuple_channels);
-				update = std::get<2>(tuple_channels);
-				state = cu::select_nonblock(yield, sensor);
-				if(state == 0)
-				{
-					auto data = sensor.get(yield);
-					if(data)
-					{
-						state = state + 0;
-						if(prev_state != state)
-						{
-							if(prev_state > -1)
-								change_prev(yield, false);  // prev
-							change(yield, true);  // state
-						}
-						update(yield, *data);
-						continue;
-					}
-				}
-			}
-			{
-				auto& tuple_channels = std::get<1>(tpl);
-				sensor = std::get<0>(tuple_channels);
-				change = std::get<1>(tuple_channels);
-				update = std::get<2>(tuple_channels);
-				state = cu::select_nonblock(yield, sensor);
-				if(state == 0)
-				{
-					auto data = sensor.get(yield);
-					if(data)
-					{
-						state = state + 1;
-						if(prev_state != state)
-						{
-							if(prev_state > -1)
-								change_prev(yield, false);  // prev
-							change(yield, true);  // state
-						}
-						update(yield, *data);
-						continue;
-					}
-				}
-			}
-			if(state == -1)
-			{
-				// nothing changed
-				state = prev_state;
-			}
-		}
-	});
-	sch.spawn([&](auto& yield)
-	{
-		// action code
-		//
-		// while(!sch.forcce_close())
-		for(;;)
-		{
-			/*
-			// proposal
-			cu::selector(yield, 
-				     on_change_hablarle, [](auto& activation){
-				     	;
-				     }, 
-				     update_hablarle, [](auto& value){
-				     	std::cout << "hablando ..." << std::endl;
-				     },
-				     on_change_gritarle, [](auto& activation){
-				     	;
-				     }, 
-				     update_gritarle, [](auto& value){
-				     	std::cout << "gritando ..." << std::endl;
-				     });
-			*/
-		}
-	});
-	// run in slides
-	sch.run();
-	sch.run();
-	sch.run();
-	sch.run();
-	sch.run();
-	sch.run();
-}
+// void func1() {}
+// void func2() {}
+// void foo() {}
+// void bar() {}
+//
+// TEST(CoroTest, Test_Finite_Machine_States)
+// {
+// 	cu::scheduler sch;
+//
+// 	cu::channel<float> sensor_cerca(sch, 10);
+// 	cu::channel<float> sensor_lejos(sch, 10);
+// 	//
+// 	cu::channel<bool> on_change_hablarle(sch, 10);
+// 	cu::channel<bool> on_change_gritarle(sch, 10);
+// 	//
+// 	cu::channel<float> update_hablarle(sch, 10);
+// 	cu::channel<float> update_gritarle(sch, 10);
+//
+// 	bool near = true;
+// 	
+// 	// selector
+// 	sch.spawn([&](auto& yield)
+// 	{
+// 		for(;;)
+// 		{
+// 			if(near)
+// 				if(near)
+// 					func1();
+// 				else
+// 					foo();
+// 			else
+// 				bar();
+// 			yield();
+// 		}
+// 	});
+// 	
+// 	// sequence
+// 	sch.spawn([&](auto& yield)
+// 	{
+// 		for(;;)
+// 		{
+// 			func1();
+// 			yield();
+// 			foo();
+// 			yield();
+// 			bar();
+// 			yield();
+// 		}
+// 	});
+// 	
+// 	
+// 	// selector + sequence
+// 	sch.spawn([&](auto& yield)
+// 	{
+// 		for(;;)
+// 		{
+// 			if(near)
+// 			{
+// 				if(near)
+// 				{
+// 					func1();
+// 					yield();
+// 					foo();
+// 					yield();
+// 					bar();
+// 					yield();
+// 				}
+// 				else
+// 				{
+// 					func1();
+// 					yield();
+// 					foo();
+// 					yield();
+// 					bar();
+// 					yield();
+// 				}
+// 			}
+// 			else
+// 				bar();
+// 			yield();
+// 		}
+// 	});
+// 	
+// 	// parallel in subtree
+// 	sch.spawn([&](auto& yield)
+// 	{
+// 		for(;;)
+// 		{
+// 			if(near)
+// 			{
+// 				cu::scheduler subsch;
+// 				subsch.spawn([&](auto& subyield) {
+// 					// thread 1
+// 					if(near)
+// 					{
+// 						if(near)
+// 						{
+// 							func1();
+// 							subyield();
+// 							foo();
+// 							subyield();
+// 							bar();
+// 							subyield();
+// 						}
+// 						else
+// 							foo();
+// 					}
+// 					else if(near)
+// 						foo();
+// 					else
+// 						bar();
+// 					subyield();
+// 				});
+//
+// 				subsch.spawn([&](auto& subyield) {
+// 					// thread 2
+// 					if(near)
+// 					{
+// 						func1();
+// 						subyield();
+// 						foo();
+// 						subyield();
+// 						bar();
+// 						subyield();
+// 					}
+// 					subyield();
+// 				});
+// 				// subsch.run_until_complete(yield);
+// 				subsch.run_until_complete();
+// 			}
+// 			else
+// 			{
+// 				bar();
+// 				yield();
+// 			}
+// 		}
+// 	});
+// 	
+// 	// for
+// 	sch.spawn([&](auto& yield)
+// 	{
+// 		for(;;)
+// 		{
+// 			for(int i=0;i<10;++i)
+// 			{
+// 				// go_work(yield);
+// 				yield();
+// 				// go_eat_something(yield);
+// 				yield();
+// 				// go_home(yield);
+// 				yield();
+// 				// go_sleep(yield);
+// 				yield();
+// 			}
+// 			yield();
+// 		}
+// 	});
+// 	
+// 	sch.spawn([&](auto& yield)
+// 	{
+// 		// perception code (arduino)
+// 		// auto x = enemy.get_position();
+// 		// bool is_far = x.distance(me) > threshold;
+// 		//for(;;)
+// 		{
+// 			// check sensor
+// 			sensor_cerca(yield, 1.0);
+// 			sensor_cerca(yield, 1.0);
+// 			sensor_cerca(yield, 1.0);
+// 			sensor_cerca(yield, 1.0);
+// 			sensor_cerca(yield, 1.0);
+// 			sensor_lejos(yield, 1.0);
+// 			sensor_lejos(yield, 1.0);
+// 			sensor_lejos(yield, 1.0);
+// 			sensor_lejos(yield, 1.0);
+// 			sensor_cerca(yield, 1.0);
+// 			sensor_cerca(yield, 1.0);
+// 		}
+// 	});
+// 	sch.spawn([&](auto& yield)
+// 	{
+// 		// decisions code (raspberry)
+// 		// TODO: can generate this code with metaprogramation ?
+// 		// proposal:
+// 		// cu::fsm(yield, 	std::make_tuple(sensor_cerca, on_change_hablarle, update_hablarle),
+// 		// 			std::make_tuple(sensor_lejos, on_change_gritarle, update_gritarle)
+// 		//		);
+// 		auto tpl = std::make_tuple(std::make_tuple(sensor_cerca, on_change_hablarle, update_hablarle),
+// 					   std::make_tuple(sensor_lejos, on_change_gritarle, update_gritarle));
+// 		auto& ref_tuple = std::get<0>(tpl);
+// 		auto& sensor_prev = std::get<0>(ref_tuple);
+// 		auto& change_prev = std::get<1>(ref_tuple);
+// 		auto& update_prev = std::get<2>(ref_tuple);
+// 		auto& sensor = std::get<0>(ref_tuple);
+// 		auto& change = std::get<1>(ref_tuple);
+// 		auto& update = std::get<2>(ref_tuple);
+// 		int state = -1;
+// 		int prev_state = -1;
+// 		// TODO:
+// 		// while(!sch.forcce_close())
+// 		for(;;)
+// 		{
+// 			prev_state = state;
+// 			sensor_prev = sensor;
+// 			change_prev = change;
+// 			update_prev = update;
+// 			{
+// 				auto& tuple_channels = std::get<0>(tpl);
+// 				sensor = std::get<0>(tuple_channels);
+// 				change = std::get<1>(tuple_channels);
+// 				update = std::get<2>(tuple_channels);
+// 				state = cu::select_nonblock(yield, sensor);
+// 				if(state == 0)
+// 				{
+// 					auto data = sensor.get(yield);
+// 					if(data)
+// 					{
+// 						state = state + 0;
+// 						if(prev_state != state)
+// 						{
+// 							if(prev_state > -1)
+// 								change_prev(yield, false);  // prev
+// 							change(yield, true);  // state
+// 						}
+// 						update(yield, *data);
+// 						continue;
+// 					}
+// 				}
+// 			}
+// 			{
+// 				auto& tuple_channels = std::get<1>(tpl);
+// 				sensor = std::get<0>(tuple_channels);
+// 				change = std::get<1>(tuple_channels);
+// 				update = std::get<2>(tuple_channels);
+// 				state = cu::select_nonblock(yield, sensor);
+// 				if(state == 0)
+// 				{
+// 					auto data = sensor.get(yield);
+// 					if(data)
+// 					{
+// 						state = state + 1;
+// 						if(prev_state != state)
+// 						{
+// 							if(prev_state > -1)
+// 								change_prev(yield, false);  // prev
+// 							change(yield, true);  // state
+// 						}
+// 						update(yield, *data);
+// 						continue;
+// 					}
+// 				}
+// 			}
+// 			if(state == -1)
+// 			{
+// 				// nothing changed
+// 				state = prev_state;
+// 			}
+// 		}
+// 	});
+// 	sch.spawn([&](auto& yield)
+// 	{
+// 		// action code
+// 		//
+// 		// while(!sch.forcce_close())
+// 		for(;;)
+// 		{
+// 			#<{(|
+// 			// proposal
+// 			cu::selector(yield, 
+// 				     on_change_hablarle, [](auto& activation){
+// 				     	;
+// 				     }, 
+// 				     update_hablarle, [](auto& value){
+// 				     	std::cout << "hablando ..." << std::endl;
+// 				     },
+// 				     on_change_gritarle, [](auto& activation){
+// 				     	;
+// 				     }, 
+// 				     update_gritarle, [](auto& value){
+// 				     	std::cout << "gritando ..." << std::endl;
+// 				     });
+// 			|)}>#
+// 		}
+// 	});
+// 	// run in slides
+// 	sch.run();
+// 	sch.run();
+// 	sch.run();
+// 	sch.run();
+// 	sch.run();
+// 	sch.run();
+// }

@@ -211,30 +211,30 @@ public:
 
 	void flush()
 	{
-		auto r = cu::make_iterator< optional<T> >(
-			[this](auto& source) {
-				/*
-				for(;;)
-				{
-					if(!source) return;
-					auto s = std::move(source.get());
-					this->_buf(0, fes::deltatime(0), s);
-					source();
-				}
-				*/
-				for(auto& s : source)
-				{
-					this->_buf(0, fes::deltatime(0), s);
-				}
-			}
-		);
-		std::stack< coroutine > coros;
-		coros.push( cu::make_iterator< optional<T> >( term_receiver<T>(r) ) );
-		for (auto& flink : _links)
-		{
-			coros.push(cu::make_iterator< optional<T> >(boost::bind(flink, _1, boost::ref(*coros.top().get()))));
-		}
-		_coros.swap(coros);
+		// auto r = cu::make_iterator< optional<T> >(
+		// 	[this](auto& source) {
+		// 		#<{(|
+		// 		for(;;)
+		// 		{
+		// 			if(!source) return;
+		// 			auto s = std::move(source.get());
+		// 			this->_buf(0, fes::deltatime(0), s);
+		// 			source();
+		// 		}
+		// 		|)}>#
+		// 		for(auto& s : source)
+		// 		{
+		// 			this->_buf(0, fes::deltatime(0), s);
+		// 		}
+		// 	}
+		// );
+		// std::stack< coroutine > coros;
+		// coros.push( cu::make_iterator< optional<T> >( term_receiver<T>(r) ) );
+		// for (auto& flink : _links)
+		// {
+		// 	coros.push(cu::make_iterator< optional<T> >(boost::bind(flink, _1, boost::ref(*coros.top().get()))));
+		// }
+		// _coros.swap(coros);
 	}
 
 protected:
