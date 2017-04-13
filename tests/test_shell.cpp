@@ -7,6 +7,10 @@
 #include "../scheduler.h"
 #include "../semaphore.h"
 #include "../channel.h"
+//
+// http://articles.emptycrate.com/2007/06/26/boostspirit_a_bnf_parser_generator.html
+#include <boost/spirit.hpp>
+#include <boost/spirit/actor/clear_actor.hpp>
 
 class CoroTest : testing::Test { };
 
