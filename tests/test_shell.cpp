@@ -150,20 +150,19 @@ TEST(CoroTest, TestGrep2)
 	c1("line1\nline2\nline3\n");
 }
 
-// TEST(CoroTest, TestCount)
-// {
-// 	cu::scheduler sch;
-//
-// 	cu::channel<std::string> c1(sch, 100);
-// 	int result;
-// 	c1.pipeline(
-// 			  split("\n")
-// 			, count()
-// 			, out(result)
-// 	);
-// 	c1("line1\nline2\nline3");
-// 	ASSERT_EQ(result, 3) << "maybe count() is not working well";
-// }
+TEST(CoroTest, TestCount)
+{
+	cu::scheduler sch;
+	cu::channel<std::string> c1(sch, 100);
+	int result;
+	c1.pipeline(
+			  split("\n")
+ 			, count()
+			, out(result)
+	);
+	c1("line1\nline2\nline3");
+	ASSERT_EQ(result, 3) << "maybe count() is not working well";
+}
 
 TEST(CoroTest, TestUpper)
 {
