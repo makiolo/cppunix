@@ -1,0 +1,35 @@
+{
+  "name": "cppunix",
+  "version": "1.0.0",
+  "description": "gnu commands implemmented in cpp based in pipelines",
+  "main": "index.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/makiolo/cppunix.git"
+  },
+  "keywords": [
+    "c++",
+    "pipe",
+    "gnu"
+  ],
+  "author": "Ricardo Marmolejo García",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/makiolo/cppunix/issues"
+  },
+  "homepage": "https://github.com/makiolo/cppunix#readme",
+  "dependencies": {
+	"fast-event-system": "github:makiolo/fast-event-system",
+	"asyncply": "github:makiolo/asyncply"
+  },
+  "devDependencies": {
+    "cmaki": "github:makiolo/cmaki",
+    "cmaki_generator": "github:makiolo/cmaki_generator"
+  }
+}
