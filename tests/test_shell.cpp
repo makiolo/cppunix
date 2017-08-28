@@ -22,11 +22,13 @@ TEST(CoroTest, Test_find)
 
 	LOGI("---------- begin find test --------");
 	cu::channel<std::string> c1(sch, 20);
-	c1.pipeline(	  find()
+	c1.pipeline(
+			  find()
 			, grep("*.h")
 			, cat()
 			, replace("class", "object")
-			, log() );
+			, log()
+	);
 	c1("../..");
 	LOGI("---------- end find test --------");
 }

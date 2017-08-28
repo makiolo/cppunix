@@ -71,8 +71,8 @@ public:
 	using in = cu::pull_type< optional<T> >;
 	using out = cu::push_type< optional<T> >;
 	using link = cu::link< optional<T> >;
-	// using coroutine = push_type_ptr< optional<T> >;
-	using coroutine = pull_type_ptr< optional<T> >;
+	using coroutine = push_type_ptr< optional<T> >;
+	// using coroutine = pull_type_ptr< optional<T> >;
 
 	explicit channel(cu::scheduler& sch, size_t buffer = 0)
 		: _sch(sch)
@@ -258,23 +258,24 @@ protected:
 				}
 			}
 		);
-		_coros.push( cu::make_generator< optional<T> >( term_receiver<T>(r) ) );
+		_coros.push( cu::make_iterator< optional<T> >( term_receiver<T>(r) ) );
 	}
 
 	template <typename Function>
 	void _add(Function&& f)
 	{
-		_coros.push(cu::make_generator< optional<T> >(boost::bind(f, boost::ref(*_coros.back().get()), _1)));
-		//_links.emplace(_links.begin(), std::forward<Function>(f));
+		_coros.push(cu::make_iterator< optional<T> >(boost::bind(f, _1, boost::ref(*_coros.top().get()))));
+		_links.emplace(_links.begin(), std::forward<Function>(f));
 	}
 
 	template <typename Function, typename ... Functions>
 	void _add(Function&& f, Functions&& ... fs)
 	{
-		_coros.push(cu::make_generator< optional<T> >(boost::bind(f, boost::ref(*_coros.back().get()), _1)));
 		_add(std::forward<Functions>(fs)...);
-		//_links.emplace(_links.begin(), std::forward<Function>(f));
+		_coros.push(cu::make_iterator< optional<T> >(boost::bind(f, _1, boost::ref(*_coros.top().get()))));
+		 _links.emplace(_links.begin(), std::forward<Function>(f));
 	}
+
 protected:
 	cu::scheduler& _sch;
 	size_t _buffer;
@@ -282,7 +283,7 @@ protected:
 	fes::async_delay< optional<T> > _buf;
 	cu::semaphore _elements;
 	cu::semaphore _slots;
-	//std::vector<link> _links;
+	std::vector<link> _links;
 };
 
 template <typename T>
