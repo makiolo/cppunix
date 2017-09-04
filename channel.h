@@ -5,7 +5,7 @@
 #include <vector>
 #include <stack>
 #include <boost/bind.hpp>
-#include "coroutine.h"
+#include <coroutine/coroutine.h>
 #include "semaphore.h"
 #include <fast-event-system/sem.h>
 #include <fast-event-system/async_delay.h>
