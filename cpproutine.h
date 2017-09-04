@@ -1,7 +1,7 @@
 #ifndef _CU_CPROUTINE_H_
 #define _CU_CPROUTINE_H_
 
-#include "coroutine.h"
+#include <coroutine/coroutine.h>
 
 namespace cu {
 
