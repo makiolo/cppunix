@@ -192,118 +192,117 @@ TEST(CoroTest, TestUpper)
 	sch.run_until_complete();
 }
 
-// TEST(CoroTest, TestScheduler2)
-// {
-// 	cu::scheduler sch;
-//
-// 	cu::channel<int> c1(sch, 20);
-// 	cu::channel<int> c2(sch, 20);
-// 	cu::channel<int> c3(sch, 20);
-//
-// 	c1.pipeline(
-// 		[]() -> cu::channel<int>::link
-// 		{
-// 			return [](auto& source, auto& yield)
-// 			{
-// 				int i = 0;
-// 				for (auto& s : source)
-// 				{
-// 					// if(i % 2 == 0)
-// 					{
-// 						if(s)
-// 							yield(*s);
-// 						else
-// 							yield(s);
-// 					}
-// 					++i;
-// 				}
-// 			};
-// 		}()
-// 	);
-// 	c2.pipeline(
-// 		[]() -> cu::channel<int>::link
-// 		{
-// 			return [](auto& source, auto& yield)
-// 			{
-// 				for (auto& s : source)
-// 				{
-// 					if(s)
-// 						yield(*s);
-// 					else
-// 						yield(s);
-// 				}
-// 			};
-// 		}()
-// 	);
-// 	c3.pipeline(
-// 		[]() -> cu::channel<int>::link
-// 		{
-// 			return [](auto& source, auto& yield)
-// 			{
-// 				int total = 0;
-// 				int count = 0;
-// 				for(;;)
-// 				{
-// 					if(!source && (count > 0))
-// 					{
-// 						std::cout << "break!! " << (total / count) << std::endl;
-// 						yield(total / count);
-// 						break;
-// 					}
-// 					else
-// 					{
-// 						yield(999);
-// 					}
-// 					auto s = source.get();
-// 					if(s)
-// 					{
-// 						total += *s;
-// 						++count;
-// 					}
-// 					source();
-// 				}
-// 			};
-// 		}()
-// 	);	
-// 	
-// 	sch.spawn([&](auto& yield)
-// 	{
-// 		for(int x=1; x<=50; ++x)
-// 		{
-// 			LOGI("1. send %d", x);
-// 			c1(yield, x);
-// 		}
-// 		c1.close(yield);
-// 	});
-// 	sch.spawn([&](auto& yield)
-// 	{
-// 		for(int y=1; y<=50; ++y)
-// 		{
-// 			LOGI("2. send %d", y);
-// 			c2(yield, y);
-// 		}
-// 		c2.close(yield);
-// 	});
-// 	sch.spawn([&](auto& yield)
-// 	{
-// 		int a, b;
-// 		for(auto& t : cu::range(yield, c1, c2))
-// 		{
-// 			std::tie(a, b) = t;
-// 			LOGI("3. recv and resend %d", a+b);
-// 			c3(yield, a + b);
-// 		}
-// 		c3.close(yield);
-// 	});
-// 	sch.spawn([&](auto& yield)
-// 	{
-// 		for(auto& r : cu::range(yield, c3))
-// 		{
-// 			LOGI("4. result = %d", r);
-// 		}
-// 	});
-// 	sch.run_until_complete();
-// }
+TEST(CoroTest, TestScheduler2)
+{
+	cu::scheduler sch;
+
+	cu::channel<int> c1(sch, 20);
+	cu::channel<int> c2(sch, 20);
+	cu::channel<int> c3(sch, 20);
+	c1.pipeline(
+		[]() -> cu::channel<int>::link
+		{
+			return [](auto& source, auto& yield)
+			{
+				int i = 0;
+				for (auto& s : source)
+				{
+					// if(i % 2 == 0)
+					{
+						if(s)
+							yield(*s);
+						else
+							yield(s);
+					}
+					++i;
+				}
+			};
+		}()
+	);
+	c2.pipeline(
+		[]() -> cu::channel<int>::link
+		{
+			return [](auto& source, auto& yield)
+			{
+				for (auto& s : source)
+				{
+ 					if(s)
+						yield(*s);
+					else
+ 						yield(s);
+				}
+			};
+		}()
+	);
+	c3.pipeline(
+		[]() -> cu::channel<int>::link
+		{
+			return [](auto& source, auto& yield)
+			{
+				int total = 0;
+				int count = 0;
+				for(;;)
+				{
+					if(!source && (count > 0))
+					{
+						std::cout << "break!! " << (total / count) << std::endl;
+						yield(total / count);
+						break;
+					}
+					else
+					{
+						yield(999);
+					}
+					auto s = source.get();
+					if(s)
+					{
+						total += *s;
+						++count;
+					}
+					source();
+				}
+			};
+		}()
+	);	
+	
+	sch.spawn([&](auto& yield)
+	{
+		for(int x=1; x<=50; ++x)
+		{
+			LOGI("1. send %d", x);
+			c1(yield, x);
+		}
+		c1.close(yield);
+	});
+	sch.spawn([&](auto& yield)
+	{
+		for(int y=1; y<=50; ++y)
+		{
+			LOGI("2. send %d", y);
+			c2(yield, y);
+		}
+		c2.close(yield);
+	});
+	sch.spawn([&](auto& yield)
+	{
+		int a, b;
+		for(auto& t : cu::range(yield, c1, c2))
+		{
+			std::tie(a, b) = t;
+			LOGI("3. recv and resend %d", a+b);
+			c3(yield, a + b);
+		}
+		c3.close(yield);
+	});
+	sch.spawn([&](auto& yield)
+	{
+		for(auto& r : cu::range(yield, c3))
+		{
+			LOGI("4. result = %d", r);
+		}
+	});
+	sch.run_until_complete();
+}
 
 // void func1() {}
 // void func2() {}
