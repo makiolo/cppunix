@@ -30,7 +30,7 @@ public:
 		}
 	}
 
-	void notify(cu::push_type<control_type>& yield)
+	void notify(cu::yield_type& yield)
 	{
 		++_count;
 		LOGV("<%d> increase semaphore from %d to %d", _id, _count-1, _count);
@@ -56,7 +56,7 @@ public:
 		}
 	}
 
-	void wait(cu::push_type<control_type>& yield)
+	void wait(cu::yield_type& yield)
 	{
 		--_count;
 		LOGV("<%d> decrease semaphore from %d to %d", _id, _count+1, _count);
