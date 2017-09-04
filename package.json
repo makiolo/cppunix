@@ -26,7 +26,8 @@
   "homepage": "https://github.com/makiolo/cppunix#readme",
   "dependencies": {
 	"fast-event-system": "github:makiolo/fast-event-system",
-	"asyncply": "github:makiolo/asyncply"
+	"asyncply": "github:makiolo/asyncply",
+	"coroutine": "makiolo/coroutine"
   },
   "devDependencies": {
     "cmaki": "github:makiolo/cmaki",
