@@ -2,11 +2,12 @@
 #include <string>
 #include <gtest/gtest.h>
 #include <teelogging/teelogging.h>
+#include <coroutine/coroutine.h>
 #include "../shell.h"
-#include "../coroutine.h"
 #include "../scheduler.h"
 #include "../semaphore.h"
 #include "../channel.h"
+
 //
 // http://articles.emptycrate.com/2007/06/26/boostspirit_a_bnf_parser_generator.html
 // #include <boost/spirit.hpp>
