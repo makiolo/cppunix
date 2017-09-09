@@ -7,7 +7,13 @@
     "test": "tests"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "ci": "cmaki ci",
+    "clean": "cmaki clean",
+    "setup": "cmaki setup",
+    "compile": "cmaki compile",
+    "install": "cmaki install",
+    "test": "cmaki tests",
+    "upload": "cmaki upload"
   },
   "repository": {
     "type": "git",
@@ -31,6 +37,13 @@
   },
   "devDependencies": {
     "cmaki": "github:makiolo/cmaki",
-    "cmaki_generator": "github:makiolo/cmaki_generator"
+    "cmaki_generator": "github:makiolo/cmaki_generator",
+    "cmaki_scripts": "github:makiolo/cmaki_scripts",
+    "cmaki_identifier": "github:makiolo/cmaki_identifier"
+  },
+  "dependencies": {
+	"metacommon": "github:makiolo/metacommon",
+	"coroutine": "github:makiolo/coroutine"
   }
 }
+
