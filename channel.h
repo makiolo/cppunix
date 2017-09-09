@@ -48,6 +48,7 @@ auto term_receiver(const typename channel<T>::coroutine& receiver)
 {
 	return [=](typename channel<T>::in& source)
 	{
+		/*
 		for(;;)
 		{
 			if(!source) break;
@@ -55,12 +56,12 @@ auto term_receiver(const typename channel<T>::coroutine& receiver)
 			(*receiver)(s);
 			source();
 		}
-		/*
+		*/
+		
 		for(auto& s : source)
 		{	
 			(*receiver)(s);
 		}
-		*/
 	};
 }
 
@@ -243,6 +244,7 @@ protected:
 	{
 		auto r = cu::make_iterator< optional<T> >(
 			[this](auto& source) {
+				/*
 				for(;;)
 				{
 					if(!source) return;
@@ -250,12 +252,13 @@ protected:
 					this->_buf(0, fes::deltatime(0), s);
 					source();
 				}
-				/*
+				*/
+				
 				for(auto& s : source)
 				{
 					this->_buf(0, fes::deltatime(0), s);
 				}
-				*/
+				
 			}
 		);
 		_coros.push( cu::make_iterator< optional<T> >( term_receiver<T>(r) ) );
@@ -404,3 +407,4 @@ auto range(cu::yield_type& yield, cu::channel<T>& chan)
 }
 
 #endif
+

@@ -8,11 +8,6 @@
 #include "../semaphore.h"
 #include "../channel.h"
 
-//
-// http://articles.emptycrate.com/2007/06/26/boostspirit_a_bnf_parser_generator.html
-// #include <boost/spirit.hpp>
-// #include <boost/spirit/actor/clear_actor.hpp>
-
 class CoroTest : testing::Test { };
 
 using namespace cu;
@@ -20,19 +15,31 @@ using namespace cu;
 TEST(CoroTest, Test_find)
 {
 	cu::scheduler sch;
-
-	LOGI("---------- begin find test --------");
 	cu::channel<std::string> c1(sch, 20);
-	c1.pipeline(
-			  find()
-			, grep("*.h")
-			, cat()
-			, replace("class", "object")
-			, log()
-	);
-	c1("../..");
-	LOGI("---------- end find test --------");
+	// c1.pipeline(
+	// 		  find()
+	// 		, grep("*.h")
+	// 		, cat()
+	// 		, replace("class", "object")
+	// 		, log()
+	// );
+	sch.spawn([&](auto& yield) {
+		for(int i=0; i<100; ++i)
+		{
+			c1(yield, "../..");
+		}
+		c1.close(yield);
+	});
+	sch.spawn([&](auto& yield) {
+		for(auto& r : cu::range(yield, c1))
+		{
+			LOGI("recv %s", r.c_str());
+		}
+	});
+	sch.run_until_complete();
 }
+
+/*
 
 TEST(CoroTest, Test_run_ls_strip_quote_grep)
 {
@@ -596,3 +603,6 @@ TEST(CoroTest, TestScheduler2)
 // 	sch.run();
 // 	sch.run();
 // }
+
+*/
+
