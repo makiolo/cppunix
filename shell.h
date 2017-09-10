@@ -512,6 +512,7 @@ ch_str::link assert_string(const std::string& matching)
 				{
 					std::stringstream ss;
 					ss << "error in string: " << *s << ", expected value: " << matching << std::endl;
+					LOGE("%s", ss.str().c_str());
 					throw std::runtime_error(ss.str());
 				}
 			}
@@ -533,6 +534,7 @@ ch_str::link assert_string(const std::vector<std::string>& matches)
 				{
 					std::stringstream ss;
 					ss << "error in string: " << *s << ", expected value: " << matches[i] << std::endl;
+					LOGE("%s", ss.str().c_str());
 					throw std::runtime_error(ss.str());
 				}
 				++i;
@@ -557,6 +559,51 @@ ch_str::link count()
 		yield(std::to_string(total));
 	};
 }
+
+ch_str::link clear()
+{
+	return [=](ch_str::in& source, ch_str::out& yield)
+	{
+		for (auto& s : source)
+		{
+			;
+		}
+	};
+}
+
+ch_str::link pwd()
+{
+	return [=](ch_str::in& source, ch_str::out& yield)
+	{
+		for (auto& s : source)
+		{
+			yield(s);
+		}
+		yield( boost::filesystem::path( boost::filesystem::current_path() ).string() );
+	};
+}
+
+ch_str::link nl(size_t starting = 1)
+{
+	return [=](ch_str::in& source, ch_str::out& yield)
+	{
+		size_t lineno = starting;
+		for (auto& s : source)
+		{
+			if(s)
+			{
+				std::stringstream ss;
+				ss << lineno << "\t" << *s;
+				yield(ss.str());
+				++lineno;
+			}
+			else
+			{
+				yield(s);
+			}
+		}
+	};
+}
 	
 ch_str::link assert_count(size_t expected)
 {
@@ -575,6 +622,7 @@ ch_str::link assert_count(size_t expected)
 		{
 			std::stringstream ss;
 			ss << "<assert_count> error count: " << total << ", but expected value: " << expected << std::endl;
+			LOGE("%s", ss.str().c_str());
 			throw std::runtime_error(ss.str());
 		}
 	};

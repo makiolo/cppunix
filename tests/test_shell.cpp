@@ -12,19 +12,19 @@ class CoroTest : testing::Test { };
 
 using namespace cu;
 
+
 TEST(CoroTest, Test_find)
 {
 	cu::scheduler sch;
-	cu::channel<std::string> c1(sch, 20);
-	// c1.pipeline(
-	// 		  find()
-	// 		, grep("*.h")
-	// 		, cat()
-	// 		, replace("class", "object")
-	// 		, log()
-	// );
+	cu::channel<std::string> c1(sch, 10);
+	c1.pipeline(
+			find(),
+			grep("channel.h"),
+			cat(),
+			count()
+	);
 	sch.spawn([&](auto& yield) {
-		for(int i=0; i<100; ++i)
+		for(int x=0; x<1; ++x)
 		{
 			c1(yield, "../..");
 		}
@@ -37,9 +37,8 @@ TEST(CoroTest, Test_find)
 		}
 	});
 	sch.run_until_complete();
-}
 
-/*
+}
 
 TEST(CoroTest, Test_run_ls_strip_quote_grep)
 {
@@ -66,6 +65,7 @@ TEST(CoroTest, Test_run_ls_strip_quote_grep)
 			, quote()
 			, grep("shell_*")
 			, assert_count(1)
+			, replace("./", "")
 			, assert_string("\"shell_exe\"")
 			, log()
 	);
@@ -83,7 +83,7 @@ TEST(CoroTest, Test_run_ls_sort_grep_uniq_join)
 	//
 	cu::channel<std::string> c2(sch, 100);
 	std::string out_ls;
-	c2.pipeline(ls(), sort(), grep("*fes*"), uniq(), join(), log(), out(out_ls));
+	c2.pipeline(ls(), sort(), grep("*fes*"), uniq(), join(), log(), replace("./", ""), out(out_ls));
 	c2(".");
 	//
 	ASSERT_STREQ(out_subproces.c_str(), out_ls.c_str());
@@ -103,6 +103,7 @@ TEST(CoroTest, TestCut)
 			, cut(0)
 			, assert_count(1)
 			, assert_string("hello")
+			, log()
 	);
 	c1("hello big world");
 
@@ -116,6 +117,7 @@ TEST(CoroTest, TestCut)
 			, cut(1)
 			, assert_count(1)
 			, assert_string("big")
+			, log()
 	);
 	c2("hello big world");
 
@@ -129,6 +131,7 @@ TEST(CoroTest, TestCut)
 			, cut(2)
 			, assert_count(1)
 			, assert_string("world")
+			, log()
 	);
 	c3("hello big world");
 }
@@ -144,6 +147,7 @@ TEST(CoroTest, TestGrep)
 			, grep("line2")
 			, assert_count(1)
 			, assert_string("line2")
+			, log()
 	);
 	c1("line1\nline2\nline3");
 }
@@ -156,6 +160,7 @@ TEST(CoroTest, TestGrep2)
 	c1.pipeline(
 			  split("\n")
 			, assert_count(4)
+			, log()
 	);
 	c1("line1\nline2\nline3\n");
 }
@@ -188,13 +193,11 @@ TEST(CoroTest, TestUpper)
 		c1.close(yield);
 	});
 	sch.spawn([&](auto& yield) {
-		LOGI("begin");
 		for(auto& r : cu::range(yield, c1))
 		{
 			LOGI("recv %s", r.c_str());
-			// ASSERT_STREQ("HOLA GENTE", r.c_str());
+			ASSERT_STREQ("HOLA GENTE", r.c_str());
 		}
-		LOGI("end");
 	});
 	sch.run_until_complete();
 }
@@ -211,17 +214,9 @@ TEST(CoroTest, TestScheduler2)
 		{
 			return [](auto& source, auto& yield)
 			{
-				int i = 0;
 				for (auto& s : source)
 				{
-					// if(i % 2 == 0)
-					{
-						if(s)
-							yield(*s);
-						else
-							yield(s);
-					}
-					++i;
+ 					yield(s);
 				}
 			};
 		}()
@@ -233,10 +228,7 @@ TEST(CoroTest, TestScheduler2)
 			{
 				for (auto& s : source)
 				{
- 					if(s)
-						yield(*s);
-					else
- 						yield(s);
+ 					yield(s);
 				}
 			};
 		}()
@@ -246,27 +238,14 @@ TEST(CoroTest, TestScheduler2)
 		{
 			return [](auto& source, auto& yield)
 			{
-				int total = 0;
-				int count = 0;
-				for(;;)
+				for (auto& s : source)
 				{
-					if(!source && (count > 0))
-					{
-						std::cout << "break!! " << (total / count) << std::endl;
-						yield(total / count);
-						break;
-					}
-					else
-					{
-						yield(999);
-					}
-					auto s = source.get();
 					if(s)
 					{
-						total += *s;
-						++count;
+						yield((*s) * (*s));
 					}
-					source();
+					else
+	 					yield(s);
 				}
 			};
 		}()
@@ -311,6 +290,9 @@ TEST(CoroTest, TestScheduler2)
 	sch.run_until_complete();
 }
 
+//
+// TODO: porque channel<T> no es copiable ?
+//
 // void func1() {}
 // void func2() {}
 // void foo() {}
@@ -330,7 +312,7 @@ TEST(CoroTest, TestScheduler2)
 // 	cu::channel<float> update_gritarle(sch, 10);
 //
 // 	bool near = true;
-// 	
+//
 // 	// selector
 // 	sch.spawn([&](auto& yield)
 // 	{
@@ -346,7 +328,7 @@ TEST(CoroTest, TestScheduler2)
 // 			yield();
 // 		}
 // 	});
-// 	
+//
 // 	// sequence
 // 	sch.spawn([&](auto& yield)
 // 	{
@@ -360,8 +342,8 @@ TEST(CoroTest, TestScheduler2)
 // 			yield();
 // 		}
 // 	});
-// 	
-// 	
+//
+//
 // 	// selector + sequence
 // 	sch.spawn([&](auto& yield)
 // 	{
@@ -393,7 +375,7 @@ TEST(CoroTest, TestScheduler2)
 // 			yield();
 // 		}
 // 	});
-// 	
+//
 // 	// parallel in subtree
 // 	sch.spawn([&](auto& yield)
 // 	{
@@ -448,7 +430,7 @@ TEST(CoroTest, TestScheduler2)
 // 			}
 // 		}
 // 	});
-// 	
+//
 // 	// for
 // 	sch.spawn([&](auto& yield)
 // 	{
@@ -468,7 +450,7 @@ TEST(CoroTest, TestScheduler2)
 // 			yield();
 // 		}
 // 	});
-// 	
+//
 // 	sch.spawn([&](auto& yield)
 // 	{
 // 		// perception code (arduino)
@@ -604,5 +586,5 @@ TEST(CoroTest, TestScheduler2)
 // 	sch.run();
 // }
 
-*/
+
 

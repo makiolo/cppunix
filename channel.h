@@ -14,6 +14,45 @@
 
 namespace cu {
 
+template <typename T> class channel;
+template <typename T> struct optional;
+
+namespace detail {
+
+	template <typename R>
+	static auto _pipe(std::vector< typename cu::link< optional<R> > >& links, R input)
+	{
+		std::vector<R> output;
+		std::vector< typename cu::channel<R>::generator > coros;
+		coros.emplace_back( cu::make_generator< optional<R> >( [&](auto& yield) { yield(input); }) );
+		for (auto& f : links)
+		{
+			coros.emplace_back( cu::make_generator< optional<R> >(boost::bind(f, boost::ref(*coros.back().get()), _1) ) );
+		}
+		auto pipeline = {
+			[&output]() -> typename cu::channel<R>::link
+			{
+				return [&output](auto& source, auto& yield)
+				{
+					for (auto& s : source)
+					{
+						if(s)
+						{
+							output.emplace_back(*s);
+						}
+					}
+
+				};
+			}()
+		};
+		for (auto& f : pipeline)
+		{
+			coros.emplace_back( cu::make_generator< optional<R> >(boost::bind(f, boost::ref(*coros.back().get()), _1) ) );
+		}
+		return output;
+	}
+}
+
 template <typename T>
 struct optional
 {
@@ -41,23 +80,11 @@ struct optional
 	bool _invalid;
 };
 
-template <typename T> class channel;
-
 template <typename T>
 auto term_receiver(const typename channel<T>::coroutine& receiver)
 {
 	return [=](typename channel<T>::in& source)
 	{
-		/*
-		for(;;)
-		{
-			if(!source) break;
-			auto s = std::move(source.get());
-			(*receiver)(s);
-			source();
-		}
-		*/
-		
 		for(auto& s : source)
 		{	
 			(*receiver)(s);
@@ -73,13 +100,13 @@ public:
 	using out = cu::push_type< optional<T> >;
 	using link = cu::link< optional<T> >;
 	using coroutine = push_type_ptr< optional<T> >;
-	// using coroutine = pull_type_ptr< optional<T> >;
+	using generator = pull_type_ptr< optional<T> >;
 
 	explicit channel(cu::scheduler& sch, size_t buffer = 0)
 		: _sch(sch)
 		, _buffer(buffer)
 		, _elements(sch, 0)
-		, _slots(sch, buffer + 2)
+		, _slots(sch, buffer + 1)
 	{
 		_set_tail();
 	}
@@ -89,7 +116,7 @@ public:
 		: _sch(sch)
 		, _buffer(buffer)
 		, _elements(sch, 0)
-		, _slots(sch, buffer + 2)
+		, _slots(sch, buffer + 1)
 	{
 		_set_tail();
 		_add(std::forward<Function>(f));
@@ -100,7 +127,7 @@ public:
 		: _sch(sch)
 		, _buffer(buffer)
 		, _elements(sch, 0)
-		, _slots(sch, buffer + 2)
+		, _slots(sch, buffer + 1)
 	{
 		_set_tail();
 		_add(std::forward<Function>(f), std::forward<Functions>(fs)...);
@@ -119,27 +146,34 @@ public:
 	}
 
 	template <typename R>
+	auto pipe(const R& input)
+	{
+		return cu::detail::_pipe<R>(_links, input);
+	}
+
+	template <typename R>
 	void operator()(const R& data)
 	{
-		_slots.wait();
-		(*_coros.top())( optional<T>(data) );
-		_elements.notify();
-		if(full())
+		for(auto& e : pipe(T(data)))
 		{
-			flush();
+			_slots.wait();
+			(*_coros.top())( optional<T>(e) );
+			_elements.notify();
 		}
 	}
 
 	template <typename R>
 	void operator()(cu::yield_type& yield, const R& data)
 	{
-		_slots.wait(yield);
-		(*_coros.top())( optional<T>(data) );
-		_elements.notify(yield);
-		if(full())
+		for(auto& e : pipe(T(data)))
 		{
-			flush();
-			yield();
+			_slots.wait(yield);
+			(*_coros.top())( optional<T>(e) );
+			_elements.notify(yield);
+			if(full())
+			{
+				yield();
+			}
 		}
 	}
 
@@ -164,28 +198,22 @@ public:
 		_elements.wait();
 		optional<T> data = std::get<0>(_buf.get());
 		_slots.notify();
-		if(empty())
-		{
-			flush();
-		}
 		return std::move(data);
 	}
 
 	optional<T> get(cu::yield_type& yield)
 	{
-		_elements.wait(yield);
 		if(_buf.empty())
 		{
-			flush();
 			yield();
 		}
+		_elements.wait(yield);
 		optional<T> data = std::get<0>(_buf.get(yield));
 		_slots.notify(yield);
-		if(empty())
-		{
-			flush();
-			yield();
-		}
+		// if(empty())
+		// {
+		// 	yield();
+		// }
 		return std::move(data);
 	}
 
@@ -201,42 +229,17 @@ public:
 
 	void close()
 	{
-		operator()<bool>(true);
-		flush();
+		_slots.wait();
+		(*_coros.top())( optional<T>(true) );
+		_elements.notify();
 	}
 
 	void close(cu::yield_type& yield)
 	{
-		operator()<bool>(yield, true);
-		flush();
-	}
-
-	void flush()
-	{
-		// auto r = cu::make_iterator< optional<T> >(
-		// 	[this](auto& source) {
-		// 		#<{(|
-		// 		for(;;)
-		// 		{
-		// 			if(!source) return;
-		// 			auto s = std::move(source.get());
-		// 			this->_buf(0, fes::deltatime(0), s);
-		// 			source();
-		// 		}
-		// 		|)}>#
-		// 		for(auto& s : source)
-		// 		{
-		// 			this->_buf(0, fes::deltatime(0), s);
-		// 		}
-		// 	}
-		// );
-		// std::stack< coroutine > coros;
-		// coros.push( cu::make_iterator< optional<T> >( term_receiver<T>(r) ) );
-		// for (auto& flink : _links)
-		// {
-		// 	coros.push(cu::make_iterator< optional<T> >(boost::bind(flink, _1, boost::ref(*coros.top().get()))));
-		// }
-		// _coros.swap(coros);
+		_slots.wait(yield);
+		(*_coros.top())( optional<T>(true) );
+		_elements.notify(yield);
+		yield();
 	}
 
 protected:
@@ -244,16 +247,6 @@ protected:
 	{
 		auto r = cu::make_iterator< optional<T> >(
 			[this](auto& source) {
-				/*
-				for(;;)
-				{
-					if(!source) return;
-					auto s = std::move(source.get());
-					this->_buf(0, fes::deltatime(0), s);
-					source();
-				}
-				*/
-				
 				for(auto& s : source)
 				{
 					this->_buf(0, fes::deltatime(0), s);
@@ -267,7 +260,7 @@ protected:
 	template <typename Function>
 	void _add(Function&& f)
 	{
-		_coros.push(cu::make_iterator< optional<T> >(boost::bind(f, _1, boost::ref(*_coros.top().get()))));
+		// _coros.push(cu::make_iterator< optional<T> >(boost::bind(f, _1, boost::ref(*_coros.top().get()))));
 		_links.emplace(_links.begin(), std::forward<Function>(f));
 	}
 
@@ -275,8 +268,8 @@ protected:
 	void _add(Function&& f, Functions&& ... fs)
 	{
 		_add(std::forward<Functions>(fs)...);
-		_coros.push(cu::make_iterator< optional<T> >(boost::bind(f, _1, boost::ref(*_coros.top().get()))));
-		 _links.emplace(_links.begin(), std::forward<Function>(f));
+		// _coros.push(cu::make_iterator< optional<T> >(boost::bind(f, _1, boost::ref(*_coros.top().get()))));
+		_links.emplace(_links.begin(), std::forward<Function>(f));
 	}
 
 protected:
