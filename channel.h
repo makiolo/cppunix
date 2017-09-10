@@ -146,12 +146,6 @@ public:
 	}
 
 	template <typename R>
-	auto pipe(const R& input)
-	{
-		return cu::detail::_pipe<R>(_links, input);
-	}
-
-	template <typename R>
 	void operator()(const R& data)
 	{
 		for(auto& e : pipe(T(data)))
@@ -243,6 +237,13 @@ public:
 	}
 
 protected:
+
+	template <typename R>
+	auto pipe(const R& input)
+	{
+		return cu::detail::_pipe<R>(_links, input);
+	}
+
 	void _set_tail()
 	{
 		auto r = cu::make_iterator< optional<T> >(
@@ -260,7 +261,6 @@ protected:
 	template <typename Function>
 	void _add(Function&& f)
 	{
-		// _coros.push(cu::make_iterator< optional<T> >(boost::bind(f, _1, boost::ref(*_coros.top().get()))));
 		_links.emplace(_links.begin(), std::forward<Function>(f));
 	}
 
@@ -268,7 +268,6 @@ protected:
 	void _add(Function&& f, Functions&& ... fs)
 	{
 		_add(std::forward<Functions>(fs)...);
-		// _coros.push(cu::make_iterator< optional<T> >(boost::bind(f, _1, boost::ref(*_coros.top().get()))));
 		_links.emplace(_links.begin(), std::forward<Function>(f));
 	}
 

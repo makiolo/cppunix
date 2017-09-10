@@ -588,3 +588,50 @@ TEST(CoroTest, TestScheduler2)
 
 
 
+TEST(CoroTest, TestMultiConsumer)
+{
+	cu::scheduler sch;
+
+	cu::channel<int> c1(sch, 10);
+	cu::channel<int> c2(sch, 10);
+	cu::channel<int> c3(sch, 10);
+	
+	sch.spawn([&](auto& yield)
+	{
+		for(int x=1; x<=50; ++x)
+		{
+			LOGI("1. send %d", x);
+			c1(yield, x);
+		}
+		c1.close(yield);
+	});
+	sch.spawn([&](auto& yield)
+	{
+		for(int y=51; y<=100; ++y)
+		{
+			LOGI("2. send %d", y);
+			c2(yield, y);
+		}
+		c2.close(yield);
+	});
+	sch.spawn([&](auto& yield)
+	{
+		for(int z=101; z<=150; ++z)
+		{
+			LOGI("3. send %d", z);
+			c3(yield, z);
+		}
+		c3.close(yield);
+	});
+	sch.spawn([&](auto& yield)
+	{
+		int a, b, c;
+		for(auto& t : cu::range(yield, c1, c2, c3))
+		{
+			std::tie(a, b, c) = t;
+			LOGI("multiconsume as tuple: a=%d, b=%d, c=%d", a, b, c);
+		}
+	});
+	sch.run_until_complete();
+}
+
