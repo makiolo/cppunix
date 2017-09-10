@@ -7,6 +7,9 @@
 #include "../scheduler.h"
 #include "../semaphore.h"
 #include "../channel.h"
+#include <asyncply/run.h>
+#include <mqtt/client.h>
+#include <fast-event-system/async_fast.h>
 
 class CoroTest : testing::Test { };
 
@@ -632,6 +635,128 @@ TEST(CoroTest, TestMultiConsumer)
 			LOGI("multiconsume as tuple: a=%d, b=%d, c=%d", a, b, c);
 		}
 	});
-	sch.run_until_complete();
+	auto task = asyncply::async(
+		[&](){
+			sch.run_until_complete();;
+		}
+	);
+	while(!task->is_ready())
+	{
+		std::cout << "waiting ..." << std::endl;
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+	}
+	std::cout << "task is complete ..." << std::endl;
+}
+
+bool try_reconnect(mqtt::client& cli)
+{
+	constexpr int N_ATTEMPT = 30;
+
+	for (int i=0; i<N_ATTEMPT && !cli.is_connected(); ++i) {
+		try {
+			cli.reconnect();
+			return true;
+		}
+		catch (const mqtt::exception&) {
+			std::this_thread::sleep_for(std::chrono::seconds(1));
+		}
+	}
+	return false;
+}
+
+
+TEST(CoroTest, TestMQTTCPP)
+{
+	cu::scheduler sch;
+	//
+	cu::channel<std::string> habita_light_changed_channel(sch);
+	fes::async_fast<fes::marktime, bool> habita_light_changed_event;
+	const std::string HABITA_TOPIC_SUB 			{ "/comando/habita/light/changed" };
+	const std::string HABITA_TOPIC_PUB 			{ "/comando/habita/light" };
+	//
+	fes::async_fast<fes::marktime, bool> armario_light_changed_event;
+	cu::channel<std::string> armario_light_changed_channel(sch);
+	const std::string ARMARIO_TOPIC_SUB 			{ "/comando/armario/light/changed" };
+	const std::string ARMARIO_TOPIC_PUB 			{ "/comando/armario/light" };
+	//
+	const std::string SERVER_ADDRESS	{ "tcp://192.168.1.4:1883" };
+	const std::string CLIENT_ID		{ "consumer" };
+	const int  QOS = 1;
+
+	mqtt::connect_options connOpts;
+	connOpts.set_keep_alive_interval(60);
+	connOpts.set_clean_session(false);
+	connOpts.set_automatic_reconnect(true);
+	mqtt::client cli(SERVER_ADDRESS, CLIENT_ID);
+
+	// CONTROLLERS
+	habita_light_changed_event.connect([&](auto marktime, auto state) {
+		if(!state)
+		{
+			auto pubmsg = mqtt::make_message(HABITA_TOPIC_PUB, "true");
+			pubmsg->set_qos(QOS);
+			cli.publish(pubmsg);
+		}
+		if(state)
+		{
+			auto pubmsg = mqtt::make_message(HABITA_TOPIC_PUB, "false");
+			pubmsg->set_qos(QOS);
+			cli.publish(pubmsg);
+		}
+	});
+	// VIEW
+	habita_light_changed_event.connect([](auto marktime, auto state) {
+		if(!state)
+			std::cout << " <OFF> " << std::endl;
+		else
+			std::cout << " <ON> " << std::endl;
+	});
+
+	try
+	{
+		cli.connect(connOpts);
+		cli.subscribe(HABITA_TOPIC_SUB, QOS);
+		std::cout << "OK" << std::endl;
+
+		sch.spawn([&](auto& yield)
+		{
+			while (true)
+			{
+				// mqtt -> channel
+				auto msg = cli.consume_message();
+				if (!msg)
+				{
+					yield();
+				}
+				else if(msg->get_topic() == HABITA_TOPIC_SUB)
+				{
+					habita_light_changed_channel(yield, msg->to_string());
+				}
+			}
+		});
+		sch.spawn([&](auto& yield)
+		{
+			// channel -> event (se le asigna tiempo)
+			for(auto& payload : cu::range(yield, habita_light_changed_channel))
+			{
+				habita_light_changed_event(fes::high_resolution_clock(), payload == "true");
+			}
+		});
+		sch.spawn([&](auto& yield)
+		{
+			// actualizar eventos
+			while(true)
+			{
+				habita_light_changed_event.update();
+				yield();
+			}
+		});
+		sch.run_until_complete();
+		cli.disconnect();
+	}
+	catch (const mqtt::exception& exc)
+	{
+		std::cerr << exc.what() << std::endl;
+	}
 }
 

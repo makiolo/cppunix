@@ -53,13 +53,14 @@ namespace detail {
 	}
 }
 
+// problema: no es posible tener: channel<bool> por las ambiguedades en el constructor
 template <typename T>
 struct optional
 {
-	optional(const T& data) : _data(data), _invalid(false) { ; }
+	optional(T data) : _data(std::move(data)), _invalid(false) { ; }
+	explicit optional(T&& data) : _data(data), _invalid(false) { ; }
 	explicit optional() : _data(), _invalid(false) { ; }
 	explicit optional(bool close) : _data(), _invalid(close) { ; }
-	explicit optional(T&& data) : _data(std::move(data)), _invalid(false) { ; }
 
 	const T& operator*() const
 	{
