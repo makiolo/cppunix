@@ -544,6 +544,10 @@ ch_str::link assert_string(const std::vector<std::string>& matches)
 	};
 }
 
+// TODO: implment, max, min and reduce
+// aplicar funcion a cada elemento que pasa, map(x -> 10 * x)
+// implementar repeat(3)
+
 ch_str::link count()
 {
 	return [=](ch_str::in& source, ch_str::out& yield)
