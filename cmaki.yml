@@ -8,6 +8,8 @@
         - boost-filesystem
         - boost-regex
         - teelogging
+        - coroutine
+        - metacommon
     post_install:
         - ./*.h include/cppunix/
     mode: dr
@@ -16,4 +18,3 @@
         - dummy:
             info:
                 <<: *library_dynamic
-
