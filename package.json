@@ -30,18 +30,16 @@
     "url": "https://github.com/makiolo/cppunix/issues"
   },
   "homepage": "https://github.com/makiolo/cppunix#readme",
+  "dependencies": {
+	"fast-event-system": "github:makiolo/fast-event-system",
+	"asyncply": "github:makiolo/asyncply",
+	"metacommon": "github:makiolo/metacommon",
+	"coroutine": "github:makiolo/coroutine"
+  },
   "devDependencies": {
     "cmaki": "github:makiolo/cmaki",
     "cmaki_generator": "github:makiolo/cmaki_generator",
     "cmaki_scripts": "github:makiolo/cmaki_scripts",
     "cmaki_identifier": "github:makiolo/cmaki_identifier"
-  },
-  "dependencies": {
-	"metacommon": "github:makiolo/metacommon",
-	"teelogging": "github:makiolo/teelogging",
-	"fast-event-system": "github:makiolo/fast-event-system",
-	"asyncply": "github:makiolo/asyncply",
-	"coroutine": "github:makiolo/coroutine"
   }
 }
-

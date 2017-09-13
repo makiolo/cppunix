@@ -648,23 +648,7 @@ TEST(CoroTest, TestMultiConsumer)
 	std::cout << "task is complete ..." << std::endl;
 }
 
-bool try_reconnect(mqtt::client& cli)
-{
-	constexpr int N_ATTEMPT = 30;
-
-	for (int i=0; i<N_ATTEMPT && !cli.is_connected(); ++i) {
-		try {
-			cli.reconnect();
-			return true;
-		}
-		catch (const mqtt::exception&) {
-			std::this_thread::sleep_for(std::chrono::seconds(1));
-		}
-	}
-	return false;
-}
-
-
+/*
 TEST(CoroTest, TestMQTTCPP)
 {
 	cu::scheduler sch;
@@ -759,4 +743,4 @@ TEST(CoroTest, TestMQTTCPP)
 		std::cerr << exc.what() << std::endl;
 	}
 }
-
+*/

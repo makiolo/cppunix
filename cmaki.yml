@@ -8,12 +8,18 @@
         - boost-filesystem
         - boost-regex
         - teelogging
+        - coroutine
+        - metacommon
     post_install:
         - ./*.h include/cppunix/
     mode: dr
     source: https://github.com/makiolo/cppunix
+    build:
+        |
+            #!/bin/bash
+            source find.script
+            CMAKI_PWD=$(pwd) CMAKI_INSTALL=$SELFHOME/.. npm install
     targets:
         - dummy:
             info:
                 <<: *library_dynamic
-
