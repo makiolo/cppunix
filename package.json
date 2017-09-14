@@ -31,14 +31,15 @@
   },
   "homepage": "https://github.com/makiolo/cppunix#readme",
   "devDependencies": {
-    "cmaki": "github:makiolo/cmaki",
-    "cmaki_generator": "github:makiolo/cmaki_generator",
-    "cmaki_scripts": "github:makiolo/cmaki_scripts",
-    "cmaki_identifier": "github:makiolo/cmaki_identifier"
+	"cmaki": "github:makiolo/cmaki",
+	"cmaki_generator": "github:makiolo/cmaki_generator",
+	"cmaki_scripts": "github:makiolo/cmaki_scripts",
+	"cmaki_identifier": "github:makiolo/cmaki_identifier"
   },
   "dependencies": {
 	"fast-event-system": "github:makiolo/fast-event-system",
 	"asyncply": "github:makiolo/asyncply",
+	"teelogging": "github:makiolo/teelogging",
 	"metacommon": "github:makiolo/metacommon",
 	"coroutine": "github:makiolo/coroutine"
   }
