@@ -19,7 +19,7 @@
         |
             #!/bin/bash
             source find.script
-            CMAKI_PWD=$(pwd) CMAKI_INSTALL=$SELFHOME/.. npm install
+            CMAKI_INSTALL=$SELFHOME/.. npm install
     targets:
         - dummy:
             info:
