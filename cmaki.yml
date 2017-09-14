@@ -8,6 +8,7 @@
         - boost-filesystem
         - boost-regex
         - teelogging
+        - fast-event-system
         - coroutine
         - metacommon
     post_install:
