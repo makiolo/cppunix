@@ -1,8 +1,5 @@
 - cppunix:
     <<: *thirdparty_defaults
-    version: 0.0.0.0
-    version_manager: git
-    cmake_target: null
     depends:
         - boost-coroutine2
         - boost-filesystem
@@ -13,13 +10,12 @@
         - metacommon
     post_install:
         - ./*.h include/cppunix/
-    mode: dr
     source: https://github.com/makiolo/cppunix
     build:
         |
             #!/bin/bash
             source find.script
-            CMAKI_INSTALL=$SELFHOME/.. npm install
+            CMAKI_INSTALL=$SELFHOME npm install
     targets:
         - dummy:
             info:
