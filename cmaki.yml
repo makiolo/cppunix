@@ -14,7 +14,6 @@
     build:
         |
             #!/bin/bash
-            source find.script
             CMAKI_INSTALL=$SELFHOME npm install
     targets:
         - dummy:
