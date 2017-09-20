@@ -2,10 +2,6 @@
   "name": "cppunix",
   "version": "1.0.0",
   "description": "gnu commands implemmented in cpp based in pipelines",
-  "main": "index.js",
-  "directories": {
-    "test": "tests"
-  },
   "scripts": {
     "ci": "curl -s https://raw.githubusercontent.com/makiolo/cmaki_scripts/master/ci.sh | bash",
     "docker": "curl -s https://raw.githubusercontent.com/makiolo/cmaki_scripts/master/docker.sh | bash",
@@ -38,10 +34,10 @@
 	"cmaki_scripts": "https://github.com/makiolo/cmaki_scripts.git"
   },
   "dependencies": {
-	"fast-event-system": "github:makiolo/fast-event-system",
-	"asyncply": "github:makiolo/asyncply",
-	"teelogging": "github:makiolo/teelogging",
-	"metacommon": "github:makiolo/metacommon",
-	"coroutine": "github:makiolo/coroutine"
+	"fast-event-system": "https://github.com/makiolo/fast-event-system.git",
+	"asyncply": "https://github.com/makiolo/asyncply.git",
+	"teelogging": "https://github.com/makiolo/teelogging.git",
+	"metacommon": "https://github.com/makiolo/metacommon.git",
+	"coroutine": "https://github.com/makiolo/coroutine.git"
   }
 }
