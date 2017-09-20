@@ -7,12 +7,13 @@
     "test": "tests"
   },
   "scripts": {
-    "ci": "cmaki ci",
+    "ci": "curl -s https://raw.githubusercontent.com/makiolo/cmaki_scripts/master/ci.sh | bash",
+    "docker": "curl -s https://raw.githubusercontent.com/makiolo/cmaki_scripts/master/docker.sh | bash",
     "clean": "cmaki clean",
     "setup": "cmaki setup",
     "compile": "cmaki compile",
-    "install": "cmaki install",
-    "test": "cmaki tests",
+    "install": "cmaki setup && cmaki compile",
+    "test": "cmaki test",
     "upload": "cmaki upload"
   },
   "repository": {
@@ -31,10 +32,10 @@
   },
   "homepage": "https://github.com/makiolo/cppunix#readme",
   "devDependencies": {
-	"cmaki": "github:makiolo/cmaki",
-	"cmaki_generator": "github:makiolo/cmaki_generator",
-	"cmaki_scripts": "github:makiolo/cmaki_scripts",
-	"cmaki_identifier": "github:makiolo/cmaki_identifier"
+	"cmaki": "https://github.com/makiolo/cmaki.git",
+	"cmaki_generator": "https://github.com/makiolo/cmaki_generator.git",
+	"cmaki_identifier": "https://github.com/makiolo/cmaki_identifier.git",
+	"cmaki_scripts": "https://github.com/makiolo/cmaki_scripts.git"
   },
   "dependencies": {
 	"fast-event-system": "github:makiolo/fast-event-system",
