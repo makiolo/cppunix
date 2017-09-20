@@ -28,16 +28,16 @@
   },
   "homepage": "https://github.com/makiolo/cppunix#readme",
   "devDependencies": {
-	"cmaki": "https://github.com/makiolo/cmaki.git",
-	"cmaki_generator": "https://github.com/makiolo/cmaki_generator.git",
-	"cmaki_identifier": "https://github.com/makiolo/cmaki_identifier.git",
-	"cmaki_scripts": "https://github.com/makiolo/cmaki_scripts.git"
+    "cmaki": "git+https://github.com/makiolo/cmaki.git",
+    "cmaki_generator": "git+https://github.com/makiolo/cmaki_generator.git",
+    "cmaki_identifier": "https://github.com/makiolo/cmaki_identifier.git",
+    "cmaki_scripts": "git+https://github.com/makiolo/cmaki_scripts.git"
   },
   "dependencies": {
-	"fast-event-system": "https://github.com/makiolo/fast-event-system.git",
-	"asyncply": "https://github.com/makiolo/asyncply.git",
-	"teelogging": "https://github.com/makiolo/teelogging.git",
-	"metacommon": "https://github.com/makiolo/metacommon.git",
-	"coroutine": "https://github.com/makiolo/coroutine.git"
+    "asyncply": "git+https://github.com/makiolo/asyncply.git",
+    "coroutine": "git+https://github.com/makiolo/coroutine.git",
+    "fast-event-system": "git+https://github.com/makiolo/fast-event-system.git",
+    "metacommon": "git+https://github.com/makiolo/metacommon.git",
+    "teelogging": "git+https://github.com/makiolo/teelogging.git"
   }
 }
