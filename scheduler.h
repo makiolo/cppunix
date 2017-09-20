@@ -4,6 +4,8 @@
 #include <map>
 #include <teelogging/teelogging.h>
 #include "cpproutine.h"
+#include <asyncply/run.h>
+#include <asyncply/algorithm.h>
 
 namespace cu {
 
@@ -47,7 +49,10 @@ public:
 					_move_to_blocked = false;
 					_last_id = -1;
 					LOGV("<%s> begin run()", get_name().c_str());
-					c->run();
+					auto task = asyncply::async([&](){
+						c->run();
+					});
+					task->get();
 					LOGV("<%s> end run()", get_name().c_str());
 
 					if (_move_to_blocked)
