@@ -8,6 +8,7 @@ cmaki_find_package(boost-regex)
 cmaki_find_package(paho-mqtt3)
 cmaki_find_package(paho-mqttpp3)
 cmaki_find_package(teelogging)
+cmaki_find_package(design-patterns-cpp14)
 cmaki_find_package(fast-event-system)
 cmaki_find_package(asyncply)
 

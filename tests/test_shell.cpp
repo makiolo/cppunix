@@ -12,6 +12,7 @@
 #include <mqtt/client.h>
 #include <fast-event-system/async_fast.h>
 #include <fast-event-system/sync.h>
+#include <design-patterns-cpp14/memoize.h>
 
 class CoroTest : testing::Test { };
 
@@ -650,11 +651,60 @@ TEST(CoroTest, TestMultiConsumer)
 	std::cout << "task is complete ..." << std::endl;
 }
 
+///////////////////////////////////////////////////////////////// MQTT C++ ////////////////////////////////////////////////////////////////////////////////////////////
+
+namespace std {
+	template <>
+	struct hash<cu::scheduler&>
+	{
+		size_t operator()(cu::scheduler&) const
+		{
+			return std::hash<std::string>()("scheduler");
+		}
+	};
+}
+
+namespace std {
+	template <>
+	struct hash<mqtt::client&>
+	{
+		size_t operator()(mqtt::client&) const
+		{
+			return std::hash<std::string>()("mqtt_client");
+		}
+	};
+}
+
+namespace std {
+	template <>
+	struct hash<const std::string&>
+	{
+		size_t operator()(const std::string& value) const
+		{
+			return std::hash<std::string>()(value);
+		}
+	};
+}
+
 const int  QOS = 1;
 
-class interruptor
+class component
 {
 public:
+	using memoize = dp14::memoize<component, cu::scheduler&, mqtt::client&, const std::string&, const std::string&>;
+	virtual ~component() { ; }
+
+	virtual fes::async_fast<fes::marktime, bool>& on_change() = 0;
+	virtual const fes::async_fast<fes::marktime, bool>& on_change() const = 0;
+	virtual cu::channel<std::string>& channel() = 0;
+	virtual const cu::channel<std::string>& channel() const = 0;
+};
+
+class interruptor : public component
+{
+public:
+	DEFINE_KEY(interruptor)
+	
 	explicit interruptor(cu::scheduler& scheduler, mqtt::client& client, std::string topic_sub, std::string topic_pub)
 		: _scheduler(scheduler)
 		, _client(client)
@@ -665,9 +715,27 @@ public:
 		, _off_value("false")
 	{
 		_client.subscribe(_topic_sub, QOS);
+		_scheduler.spawn([&](auto& yield)
+		{
+			for(auto& payload : cu::range(yield, this->channel()))
+			{
+				this->on_change()(fes::high_resolution_clock(), this->payload_to_state(payload));
+			}
+		});
+		_scheduler.spawn([&](auto& yield)
+		{
+			while(true)
+			{
+				this->on_change().update();
+				yield();
+			}
+		});
+		_event.connect([&](auto marktime, auto state) {
+			this->_state = state;
+		});
 	}
 
-	~interruptor()
+	virtual ~interruptor()
 	{
 		_client.unsubscribe(_topic_sub);
 	}
@@ -699,28 +767,41 @@ public:
 		_client.publish(pubmsg);
 	}
 
-	fes::async_fast<fes::marktime, bool>& get()
+	void toggle()
+	{
+		if(is_on())
+			off();
+		else
+			on();
+	}
+
+	bool is_on() const
+	{
+		return _state;
+	}
+
+	fes::async_fast<fes::marktime, bool>& on_change() override final
 	{
 		return _event;
 	}
 
-	const fes::async_fast<fes::marktime, bool>& get() const
+	const fes::async_fast<fes::marktime, bool>& on_change() const override final
 	{
 		return _event;
 	}
 
-	cu::channel<std::string>& channel()
+	cu::channel<std::string>& channel() override final
 	{
 		return _channel;
 	}
 
-	const cu::channel<std::string>& channel() const
+	const cu::channel<std::string>& channel() const override final
 	{
 		return _channel;
 	}
 
 protected:
-	cu::scheduler _scheduler;
+	cu::scheduler& _scheduler;
 	mqtt::client& _client;
 	std::string _topic_sub;
 	std::string _topic_pub;
@@ -728,61 +809,32 @@ protected:
 	std::string _off_value;
 	cu::channel<std::string> _channel;
 	fes::async_fast<fes::marktime, bool> _event;
+	bool _state;
 };
+
+namespace reg
+{
+	component::memoize::registrator<interruptor> reg;
+}
+
+std::string dirname(const std::string& str)
+{
+	std::size_t found = str.find_last_of("/");
+	return str.substr(0, found);
+}
 
 TEST(CoroTest, TestMQTTCPP)
 {
-	const std::string SERVER_ADDRESS	{ "tcp://192.168.1.4:1883" };
-	const std::string CLIENT_ID		{ "consumer" };
 	mqtt::connect_options connOpts;
 	connOpts.set_keep_alive_interval(60);
 	connOpts.set_clean_session(false);
 	connOpts.set_automatic_reconnect(true);
-	mqtt::client cli(SERVER_ADDRESS, CLIENT_ID);
-
+	mqtt::client cli("tcp://192.168.1.4:1883", "cppclient");
 	try
 	{
 		cli.connect(connOpts);
-		std::cout << "OK" << std::endl;
 		{
 			cu::scheduler sch;
-			interruptor habita(sch, cli, "/comando/habita/light/changed", "/comando/habita/light");
-			interruptor armario(sch, cli, "/comando/armario/light/changed", "/comando/armario/light");
-			interruptor salon(sch, cli, "/comando/salon/light/changed", "/comando/salon/light");
-
-			sch.spawn([&](auto& yield)
-			{
-				for(auto& payload : cu::range(yield, habita.channel()))
-				{
-					habita.get()(fes::high_resolution_clock(), habita.payload_to_state(payload));
-				}
-			});
-			sch.spawn([&](auto& yield)
-			{
-				for(auto& payload : cu::range(yield, armario.channel()))
-				{
-					armario.get()(fes::high_resolution_clock(), armario.payload_to_state(payload));
-				}
-			});
-			sch.spawn([&](auto& yield)
-			{
-				for(auto& payload : cu::range(yield, salon.channel()))
-				{
-					salon.get()(fes::high_resolution_clock(), salon.payload_to_state(payload));
-				}
-			});
-
-			sch.spawn([&](auto& yield)
-			{
-				while(true)
-				{
-					habita.get().update();
-					armario.get().update();
-					salon.get().update();
-					yield();
-				}
-			});
-
 			sch.spawn([&](auto& yield)
 			{
 				while (true)
@@ -792,42 +844,46 @@ TEST(CoroTest, TestMQTTCPP)
 					{
 						yield();
 					}
-					else if(msg->get_topic() == "/comando/habita/light/changed")
+					else
 					{
-						habita.channel()(yield, msg->to_string());
-					}
-					else if(msg->get_topic() == "/comando/armario/light/changed")
-					{
-						armario.channel()(yield, msg->to_string());
-					}
-					else if(msg->get_topic() == "/comando/salon/light/changed")
-					{
-						salon.channel()(yield, msg->to_string());
+						std::string topic = msg->get_topic();
+						std::string short_topic = dirname(topic);
+						auto interrup = component::memoize::instance().get(interruptor::KEY(), sch, cli, topic, short_topic);
+						interrup->channel()(yield, msg->to_string());
 					}
 				}
 			});
 
-			habita.get().connect([](auto marktime, auto state) {
+			//
+			// from_topic_subscribe("/comando/habita/light/changed")
+			// from_topic_publisher("/comando/habita/light")
+			// from_name("habita")
+			//
+
+			auto habita = component::memoize::instance().get(interruptor::KEY(), sch, cli, "/comando/habita/light/changed", "/comando/habita/light");
+			auto armario = component::memoize::instance().get(interruptor::KEY(), sch, cli, "/comando/armario/light/changed", "/comando/armario/light");
+			auto salon = component::memoize::instance().get(interruptor::KEY(), sch, cli, "/comando/salon/light/changed", "/comando/salon/light");
+
+			habita->on_change().connect([](auto marktime, auto state) {
 				if(!state)
 					std::cout << " <habita OFF> " << std::endl;
 				else
 					std::cout << " <habita ON> " << std::endl;
 			});
 
-			armario.get().connect([](auto marktime, auto state) {
+			armario->on_change().connect([](auto marktime, auto state) {
 				if(!state)
 					std::cout << " <armario OFF> " << std::endl;
 				else
 					std::cout << " <armario ON> " << std::endl;
 			});
 
-			salon.get().connect([](auto marktime, auto state) {
+			salon->on_change().connect([](auto marktime, auto state) {
 				if(!state)
 					std::cout << " <salon OFF> " << std::endl;
 				else
 					std::cout << " <salon ON> " << std::endl;
 			});
-
 			sch.run_until_complete();
 		}
 		cli.disconnect();
