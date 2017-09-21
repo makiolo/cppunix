@@ -1,5 +1,6 @@
 #include <atomic>
 #include <string>
+#include <unordered_map>
 #include <gtest/gtest.h>
 #include <teelogging/teelogging.h>
 #include <coroutine/coroutine.h>
@@ -10,6 +11,7 @@
 #include <asyncply/run.h>
 #include <mqtt/client.h>
 #include <fast-event-system/async_fast.h>
+#include <fast-event-system/sync.h>
 
 class CoroTest : testing::Test { };
 
@@ -648,94 +650,186 @@ TEST(CoroTest, TestMultiConsumer)
 	std::cout << "task is complete ..." << std::endl;
 }
 
-/*
+const int  QOS = 1;
+
+class interruptor
+{
+public:
+	explicit interruptor(cu::scheduler& scheduler, mqtt::client& client, std::string topic_sub, std::string topic_pub)
+		: _scheduler(scheduler)
+		, _client(client)
+		, _topic_sub(std::move(topic_sub))
+		, _topic_pub(std::move(topic_pub))
+		, _channel(scheduler)
+		, _on_value("true")
+		, _off_value("false")
+	{
+		_client.subscribe(_topic_sub, QOS);
+	}
+
+	~interruptor()
+	{
+		_client.unsubscribe(_topic_sub);
+	}
+
+	bool payload_to_state(const std::string& value) const
+	{
+		return value == _on_value;
+	}
+
+	std::string state_to_payload(bool value) const
+	{
+		if(value)
+			return _on_value;
+		else
+			return _off_value;
+	}
+
+	void on()
+	{
+		auto pubmsg = mqtt::make_message(_topic_pub, state_to_payload(true));
+		pubmsg->set_qos(QOS);
+		_client.publish(pubmsg);
+	}
+
+	void off()
+	{
+		auto pubmsg = mqtt::make_message(_topic_pub, state_to_payload(false));
+		pubmsg->set_qos(QOS);
+		_client.publish(pubmsg);
+	}
+
+	fes::async_fast<fes::marktime, bool>& get()
+	{
+		return _event;
+	}
+
+	const fes::async_fast<fes::marktime, bool>& get() const
+	{
+		return _event;
+	}
+
+	cu::channel<std::string>& channel()
+	{
+		return _channel;
+	}
+
+	const cu::channel<std::string>& channel() const
+	{
+		return _channel;
+	}
+
+protected:
+	cu::scheduler _scheduler;
+	mqtt::client& _client;
+	std::string _topic_sub;
+	std::string _topic_pub;
+	std::string _on_value;
+	std::string _off_value;
+	cu::channel<std::string> _channel;
+	fes::async_fast<fes::marktime, bool> _event;
+};
+
 TEST(CoroTest, TestMQTTCPP)
 {
-	cu::scheduler sch;
-	//
-	cu::channel<std::string> habita_light_changed_channel(sch);
-	fes::async_fast<fes::marktime, bool> habita_light_changed_event;
-	const std::string HABITA_TOPIC_SUB 			{ "/comando/habita/light/changed" };
-	const std::string HABITA_TOPIC_PUB 			{ "/comando/habita/light" };
-	//
-	fes::async_fast<fes::marktime, bool> armario_light_changed_event;
-	cu::channel<std::string> armario_light_changed_channel(sch);
-	const std::string ARMARIO_TOPIC_SUB 			{ "/comando/armario/light/changed" };
-	const std::string ARMARIO_TOPIC_PUB 			{ "/comando/armario/light" };
-	//
 	const std::string SERVER_ADDRESS	{ "tcp://192.168.1.4:1883" };
 	const std::string CLIENT_ID		{ "consumer" };
-	const int  QOS = 1;
-
 	mqtt::connect_options connOpts;
 	connOpts.set_keep_alive_interval(60);
 	connOpts.set_clean_session(false);
 	connOpts.set_automatic_reconnect(true);
 	mqtt::client cli(SERVER_ADDRESS, CLIENT_ID);
 
-	// CONTROLLERS
-	habita_light_changed_event.connect([&](auto marktime, auto state) {
-		if(!state)
-		{
-			auto pubmsg = mqtt::make_message(HABITA_TOPIC_PUB, "true");
-			pubmsg->set_qos(QOS);
-			cli.publish(pubmsg);
-		}
-		if(state)
-		{
-			auto pubmsg = mqtt::make_message(HABITA_TOPIC_PUB, "false");
-			pubmsg->set_qos(QOS);
-			cli.publish(pubmsg);
-		}
-	});
-	// VIEW
-	habita_light_changed_event.connect([](auto marktime, auto state) {
-		if(!state)
-			std::cout << " <OFF> " << std::endl;
-		else
-			std::cout << " <ON> " << std::endl;
-	});
-
 	try
 	{
 		cli.connect(connOpts);
-		cli.subscribe(HABITA_TOPIC_SUB, QOS);
 		std::cout << "OK" << std::endl;
-
-		sch.spawn([&](auto& yield)
 		{
-			while (true)
+			cu::scheduler sch;
+			interruptor habita(sch, cli, "/comando/habita/light/changed", "/comando/habita/light");
+			interruptor armario(sch, cli, "/comando/armario/light/changed", "/comando/armario/light");
+			interruptor salon(sch, cli, "/comando/salon/light/changed", "/comando/salon/light");
+
+			sch.spawn([&](auto& yield)
 			{
-				// mqtt -> channel
-				auto msg = cli.consume_message();
-				if (!msg)
+				for(auto& payload : cu::range(yield, habita.channel()))
 				{
+					habita.get()(fes::high_resolution_clock(), habita.payload_to_state(payload));
+				}
+			});
+			sch.spawn([&](auto& yield)
+			{
+				for(auto& payload : cu::range(yield, armario.channel()))
+				{
+					armario.get()(fes::high_resolution_clock(), armario.payload_to_state(payload));
+				}
+			});
+			sch.spawn([&](auto& yield)
+			{
+				for(auto& payload : cu::range(yield, salon.channel()))
+				{
+					salon.get()(fes::high_resolution_clock(), salon.payload_to_state(payload));
+				}
+			});
+
+			sch.spawn([&](auto& yield)
+			{
+				while(true)
+				{
+					habita.get().update();
+					armario.get().update();
+					salon.get().update();
 					yield();
 				}
-				else if(msg->get_topic() == HABITA_TOPIC_SUB)
+			});
+
+			sch.spawn([&](auto& yield)
+			{
+				while (true)
 				{
-					habita_light_changed_channel(yield, msg->to_string());
+					auto msg = cli.consume_message();
+					if (!msg)
+					{
+						yield();
+					}
+					else if(msg->get_topic() == "/comando/habita/light/changed")
+					{
+						habita.channel()(yield, msg->to_string());
+					}
+					else if(msg->get_topic() == "/comando/armario/light/changed")
+					{
+						armario.channel()(yield, msg->to_string());
+					}
+					else if(msg->get_topic() == "/comando/salon/light/changed")
+					{
+						salon.channel()(yield, msg->to_string());
+					}
 				}
-			}
-		});
-		sch.spawn([&](auto& yield)
-		{
-			// channel -> event (se le asigna tiempo)
-			for(auto& payload : cu::range(yield, habita_light_changed_channel))
-			{
-				habita_light_changed_event(fes::high_resolution_clock(), payload == "true");
-			}
-		});
-		sch.spawn([&](auto& yield)
-		{
-			// actualizar eventos
-			while(true)
-			{
-				habita_light_changed_event.update();
-				yield();
-			}
-		});
-		sch.run_until_complete();
+			});
+
+			habita.get().connect([](auto marktime, auto state) {
+				if(!state)
+					std::cout << " <habita OFF> " << std::endl;
+				else
+					std::cout << " <habita ON> " << std::endl;
+			});
+
+			armario.get().connect([](auto marktime, auto state) {
+				if(!state)
+					std::cout << " <armario OFF> " << std::endl;
+				else
+					std::cout << " <armario ON> " << std::endl;
+			});
+
+			salon.get().connect([](auto marktime, auto state) {
+				if(!state)
+					std::cout << " <salon OFF> " << std::endl;
+				else
+					std::cout << " <salon ON> " << std::endl;
+			});
+
+			sch.run_until_complete();
+		}
 		cli.disconnect();
 	}
 	catch (const mqtt::exception& exc)
@@ -743,4 +837,4 @@ TEST(CoroTest, TestMQTTCPP)
 		std::cerr << exc.what() << std::endl;
 	}
 }
-*/
+
