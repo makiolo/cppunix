@@ -9,7 +9,7 @@
 #include "../semaphore.h"
 #include "../channel.h"
 #include <asyncply/run.h>
-#include <mqtt/client.h>
+#include <mqtt/async_client.h>
 #include <fast-event-system/async_fast.h>
 #include <fast-event-system/sync.h>
 #include <design-patterns-cpp14/memoize.h>
@@ -666,9 +666,9 @@ namespace std {
 
 namespace std {
 	template <>
-	struct hash<mqtt::client&>
+	struct hash<mqtt::async_client&>
 	{
-		size_t operator()(mqtt::client&) const
+		size_t operator()(mqtt::async_client&) const
 		{
 			return std::hash<std::string>()("mqtt_client");
 		}
@@ -691,13 +691,15 @@ const int  QOS = 1;
 class component
 {
 public:
-	using memoize = dp14::memoize<component, cu::scheduler&, mqtt::client&, const std::string&, const std::string&>;
+	using memoize = dp14::memoize<component, cu::scheduler&, mqtt::async_client&, const std::string&, const std::string&>;
 	virtual ~component() { ; }
 
 	virtual fes::async_fast<fes::marktime, bool>& on_change() = 0;
 	virtual const fes::async_fast<fes::marktime, bool>& on_change() const = 0;
 	virtual cu::channel<std::string>& channel() = 0;
 	virtual const cu::channel<std::string>& channel() const = 0;
+	virtual bool payload_to_state(const std::string& value) const = 0;
+	virtual std::string state_to_payload(bool value) const = 0;
 };
 
 /*
@@ -714,7 +716,7 @@ class interruptor : public component
 public:
 	DEFINE_KEY(interruptor)
 	
-	explicit interruptor(cu::scheduler& scheduler, mqtt::client& client, std::string topic_sub, std::string topic_pub)
+	explicit interruptor(cu::scheduler& scheduler, mqtt::async_client& client, std::string topic_sub, std::string topic_pub)
 		: _scheduler(scheduler)
 		, _client(client)
 		, _topic_sub(std::move(topic_sub))
@@ -722,13 +724,22 @@ public:
 		, _channel(scheduler)
 		, _on_value("true")
 		, _off_value("false")
+		, _state(false)
 	{
-		_client.subscribe(_topic_sub, QOS);
+		// propagate initial state
+		this->on_change()(fes::high_resolution_clock(), _state);
+		_client.subscribe(_topic_pub, QOS)->wait();
+		_client.subscribe(_topic_sub, QOS)->wait();
 		_scheduler.spawn([&](auto& yield)
 		{
 			for(auto& payload : cu::range(yield, this->channel()))
 			{
-				this->on_change()(fes::high_resolution_clock(), this->payload_to_state(payload));
+				bool new_state = this->payload_to_state(payload);
+				if(new_state != this->_state)
+				{
+					this->_state = new_state;
+					this->on_change()(fes::high_resolution_clock(), this->payload_to_state(payload));
+				}
 			}
 		});
 		_scheduler.spawn([&](auto& yield)
@@ -739,22 +750,20 @@ public:
 				yield();
 			}
 		});
-		_event.connect([&](auto marktime, auto state) {
-			this->_state = state;
-		});
 	}
 
 	virtual ~interruptor()
 	{
-		_client.unsubscribe(_topic_sub);
+		_client.unsubscribe(_topic_sub)->wait();
+		_client.unsubscribe(_topic_pub)->wait();
 	}
 
-	bool payload_to_state(const std::string& value) const
+	bool payload_to_state(const std::string& value) const override final
 	{
 		return value == _on_value;
 	}
 
-	std::string state_to_payload(bool value) const
+	std::string state_to_payload(bool value) const override final
 	{
 		if(value)
 			return _on_value;
@@ -811,7 +820,7 @@ public:
 
 protected:
 	cu::scheduler& _scheduler;
-	mqtt::client& _client;
+	mqtt::async_client& _client;
 	std::string _topic_sub;
 	std::string _topic_pub;
 	std::string _on_value;
@@ -832,6 +841,18 @@ std::string dirname(const std::string& str)
 	return str.substr(0, found);
 }
 
+bool endswith(std::string const &fullString, std::string const &ending)
+{
+	if (fullString.length() >= ending.length())
+	{
+		return (0 == fullString.compare (fullString.length() - ending.length(), ending.length(), ending));
+	}
+	else
+	{
+		return false;
+	}
+}
+
 //
 // from_topic_subscribe("/comando/habita/light/changed")
 // from_topic_publisher("/comando/habita/light")
@@ -839,39 +860,87 @@ std::string dirname(const std::string& str)
 //
 TEST(CoroTest, TestMQTTCPP)
 {
-	mqtt::connect_options connOpts;
-	connOpts.set_keep_alive_interval(60);
-	connOpts.set_clean_session(false);
-	connOpts.set_automatic_reconnect(true);
-	mqtt::client cli("tcp://192.168.1.4:1883", "cppclient");
+	mqtt::async_client cli("tcp://192.168.1.4:1883", "cppclient");
 	try
 	{
-		cli.connect(connOpts);
+		mqtt::connect_options connOpts;
+		connOpts.set_keep_alive_interval(60);
+		connOpts.set_clean_session(false);
+		// connOpts.set_automatic_reconnect(true);
+		cli.connect(connOpts)->wait();
+		cli.start_consuming();
+		cli.subscribe("/comando/+/light", QOS)->wait();
+		cli.subscribe("/comando/+/light/changed", QOS)->wait();
 		{
 			cu::scheduler sch;
 			sch.spawn([&](auto& yield)
 			{
 				while (true)
 				{
-					auto msg = cli.consume_message();
-					if (!msg)
+					// sync version
+					//auto msg = cli.consume_message();
+
+					// begin async version
+					auto task = asyncply::async(
+						[&]()
+						{
+							return cli.consume_message();
+						}
+					);
+					while(!task->is_ready())
 					{
 						yield();
+					}
+					auto msg = task->get();
+					// end async version
+
+					if(!msg)
+					{
+						yield();
+					}
+					else if(endswith(msg->get_topic(), "/light/changed"))
+					{
+						std::string topic = msg->get_topic();
+						std::string short_topic = dirname(topic);
+						auto interrup = component::memoize::instance().get(interruptor::KEY(), sch, cli, topic, short_topic);
+						interrup->channel()(yield, msg->to_string());
+					}
+					else if(endswith(msg->get_topic(), "/light"))
+					{
+						std::string topic = msg->get_topic() + "/changed";
+						std::string short_topic = msg->get_topic();
+						auto interrup = component::memoize::instance().get(interruptor::KEY(), sch, cli, topic, short_topic);
+						interrup->on_change()(fes::high_resolution_clock(), interrup->payload_to_state(msg->to_string()));
 					}
 					else
 					{
 						std::string topic = msg->get_topic();
-						std::string short_topic = dirname(topic);
-						// create new interruptors when new topic is coming
-						auto interrup = component::memoize::instance().get(interruptor::KEY(), sch, cli, topic, short_topic);
-						interrup->channel()(yield, msg->to_string());
+						std::cout << "discarded topic: " << topic << std::endl;
+						std::cout << "discarded value: " << msg->to_string() << std::endl;
 					}
 				}
 			});
 
-			auto habita = component::memoize::instance().get(interruptor::KEY(), sch, cli, "/comando/habita/light/changed", "/comando/habita/light");
-			auto armario = component::memoize::instance().get(interruptor::KEY(), sch, cli, "/comando/armario/light/changed", "/comando/armario/light");
-			auto salon = component::memoize::instance().get(interruptor::KEY(), sch, cli, "/comando/salon/light/changed", "/comando/salon/light");
+			auto habita = component::memoize::instance().get<interruptor>(sch, cli, "/comando/habita/light/changed", "/comando/habita/light");
+			auto armario = component::memoize::instance().get<interruptor>(sch, cli, "/comando/armario/light/changed", "/comando/armario/light");
+			auto salon = component::memoize::instance().get<interruptor>(sch, cli, "/comando/salon/light/changed", "/comando/salon/light");
+
+			sch.spawn([&](auto& yield)
+			{
+				while(true)
+				{
+					habita->toggle();
+					salon->toggle();
+					armario->toggle();
+
+					// sleep using yield
+					auto timeout = fes::high_resolution_clock() + fes::deltatime(4000);
+					while(fes::high_resolution_clock() <= timeout)
+					{
+						yield();
+					}
+				}
+			});
 
 			habita->on_change().connect([](auto marktime, auto state) {
 				if(!state)
@@ -879,14 +948,12 @@ TEST(CoroTest, TestMQTTCPP)
 				else
 					std::cout << " <habita ON> " << std::endl;
 			});
-
 			armario->on_change().connect([](auto marktime, auto state) {
 				if(!state)
 					std::cout << " <armario OFF> " << std::endl;
 				else
 					std::cout << " <armario ON> " << std::endl;
 			});
-
 			salon->on_change().connect([](auto marktime, auto state) {
 				if(!state)
 					std::cout << " <salon OFF> " << std::endl;
@@ -895,7 +962,8 @@ TEST(CoroTest, TestMQTTCPP)
 			});
 			sch.run_until_complete();
 		}
-		cli.disconnect();
+		cli.stop_consuming();
+		cli.disconnect()->wait();
 	}
 	catch (const mqtt::exception& exc)
 	{
