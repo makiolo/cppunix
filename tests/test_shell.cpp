@@ -700,6 +700,15 @@ public:
 	virtual const cu::channel<std::string>& channel() const = 0;
 };
 
+/*
+interruptor/switch/button -> bool (subscribe mandatory and publish optional)
+text -> string (subscribe mandatory and publish optional)
+range/progress -> float (proteger rango con mínimo y máximo) (subscribe mandatory and publish optional)
+list/slider discreto -> int (seleccionar un elemento por posicion) (subscribe mandatory and publish optional)
+color -> rgb (subscribe mandatory and publish optional)
+image -> http://...png (subscribirse y enviar imagenes desde C++ parece más complicado, pero sería necesario para camaras de seguridad)
+*/
+
 class interruptor : public component
 {
 public:
@@ -893,4 +902,3 @@ TEST(CoroTest, TestMQTTCPP)
 		std::cerr << exc.what() << std::endl;
 	}
 }
-
