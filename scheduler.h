@@ -49,10 +49,7 @@ public:
 					_move_to_blocked = false;
 					_last_id = -1;
 					LOGV("<%s> begin run()", get_name().c_str());
-					// auto task = asyncply::async([&](){
-						c->run();
-					// });
-					// task->get();
+					c->run();
 					LOGV("<%s> end run()", get_name().c_str());
 
 					if (_move_to_blocked)
