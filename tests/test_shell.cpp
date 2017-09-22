@@ -823,6 +823,11 @@ std::string dirname(const std::string& str)
 	return str.substr(0, found);
 }
 
+//
+// from_topic_subscribe("/comando/habita/light/changed")
+// from_topic_publisher("/comando/habita/light")
+// from_name("habita")
+//
 TEST(CoroTest, TestMQTTCPP)
 {
 	mqtt::connect_options connOpts;
@@ -848,17 +853,12 @@ TEST(CoroTest, TestMQTTCPP)
 					{
 						std::string topic = msg->get_topic();
 						std::string short_topic = dirname(topic);
+						// create new interruptors when new topic is coming
 						auto interrup = component::memoize::instance().get(interruptor::KEY(), sch, cli, topic, short_topic);
 						interrup->channel()(yield, msg->to_string());
 					}
 				}
 			});
-
-			//
-			// from_topic_subscribe("/comando/habita/light/changed")
-			// from_topic_publisher("/comando/habita/light")
-			// from_name("habita")
-			//
 
 			auto habita = component::memoize::instance().get(interruptor::KEY(), sch, cli, "/comando/habita/light/changed", "/comando/habita/light");
 			auto armario = component::memoize::instance().get(interruptor::KEY(), sch, cli, "/comando/armario/light/changed", "/comando/armario/light");
