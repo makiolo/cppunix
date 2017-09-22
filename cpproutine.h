@@ -9,7 +9,7 @@ class cpproutine
 {
 public:
 	template <typename Function>
-	cpproutine(const std::string& name, pid_type pid, Function&& func)
+	explicit cpproutine(const std::string& name, pid_type pid, Function&& func)
 		: _name(name)
 		, _pid(pid)
 		, _coroutine(cu::make_generator<control_type>(
@@ -22,7 +22,10 @@ public:
 		
 	}
 
-	std::string get_name() const {return _name;}
+	std::string get_name() const
+	{
+		return _name;
+	}
 
 	bool ready() const
 	{
