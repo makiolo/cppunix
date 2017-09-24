@@ -21,24 +21,58 @@ namespace asyncply
 	};
 
 	template <>
+	struct is_complete<mqtt::token_ptr>
+	{
+		bool operator()(mqtt::token_ptr token) const
+		{
+			return token->is_complete();
+		}
+	};
+
+	template <>
 	struct is_complete<mqtt::delivery_token_ptr>
 	{
-		bool operator()(mqtt::delivery_token_ptr deliver) const
+		bool operator()(mqtt::delivery_token_ptr token) const
 		{
-			return deliver->is_complete();
+			return token->is_complete();
 		}
 	};
 }
 
 namespace cu {
 
-class scheduler {
+static void sleep(cu::yield_type& yield, fes::deltatime time)
+{
+	auto timeout = fes::high_resolution_clock() + time;
+	while(fes::high_resolution_clock() <= timeout)
+	{
+		yield();
+	}
+}
+
+template <typename TOKEN>
+static void await(cu::yield_type& yield, TOKEN token)
+{
+	while(!asyncply::is_complete<TOKEN>{}(token))
+	{
+		yield();
+	}
+}
+
+// implementar ejecutar corutina "atexit" al salir
+class scheduler : public scheduler_basic
+{
 public:
 	explicit scheduler()
 		: _pid_counter(0)
 		, _active(nullptr)
 	{
 		
+	}
+
+	virtual ~scheduler()
+	{
+		;
 	}
 
 	template <typename Function>
@@ -54,82 +88,19 @@ public:
 		_running.emplace_back(std::make_unique<cpproutine>(name, _pid_counter, std::forward<Function>(func)));
 		++_pid_counter;
 	}
-
-	void sleep(cu::yield_type& yield, fes::deltatime time)
-	{
-		auto timeout = fes::high_resolution_clock() + time;
-		while(fes::high_resolution_clock() <= timeout)
-		{
-			yield();
-		}
-	}
-
-	template <typename TOKEN>
-	void await(cu::yield_type& yield, TOKEN token)
-	{
-		while(!asyncply::is_complete<TOKEN>{}(token))
-		{
-			yield();
-		}
-	}
-
-	/*
-	return true if any is updated
-	*/
-	bool run()
-	{
-		auto i = _running.begin();
-		LOGV("begin scheduler");
-		while (i != _running.end())
-		{
-			// if((*i) == nullptr)
-			// 	break;
-			auto& c = *i;
-			if(c->ready())
-			{
-				_active = c.get();
-				{
-					_move_to_blocked = false;
-					_last_id = -1;
-					LOGV("<%s> begin run()", get_name().c_str());
-					c->run();
-					LOGV("<%s> end run()", get_name().c_str());
-
-					if (_move_to_blocked)
-					{
-						LOGV("<%s> begin blocking", get_name().c_str());
-						LOGV("%s: se bloquea, para esperar a la señal: %d", get_name().c_str(), _last_id);
-						auto& blocked = _blocked[_last_id];
-						blocked.emplace_back(std::move(c));
-						i = _running.erase(i);
-						LOGV("<%s> end blocking", get_name().c_str());
-					}
-					else
-					{
-						++i;
-					}
-				}
-				_active = nullptr;
-			}
-			else
-			{
-				LOGV("cpproutine ha terminado");
-				i = _running.erase(i);
-			}
-			// if((*i) == nullptr)
-			// 	break;
-		}
-		LOGV("end scheduler");
-		return _running.size() > 0;
-	}
 	
 	void run_until_complete()
 	{
-		bool pending_work;
-		do
+		while(ready())
 		{
-			pending_work = run();
-		} while(pending_work);
+			run();
+		}
+
+		// bool pending_work;
+		// do
+		// {
+		// 	pending_work = run();
+		// } while(pending_work);
 		
 		if(_blocked.size() > 0)
 		{
@@ -147,12 +118,12 @@ public:
 		}
 	}
 
-	std::string get_name() const
+	std::string get_name() const override final
 	{
 		return _active->get_name();
 	}
 	
-	pid_type getpid() const
+	pid_type getpid() const override final
 	{
 		return _active->getpid();
 	}
@@ -203,12 +174,11 @@ public:
 	}
 	
 protected:
-	cpproutine* _active;
+	scheduler_basic* _active;
 	// normal running
-	std::vector<std::unique_ptr<cpproutine> > _running;
+	std::vector<std::unique_ptr<scheduler_basic> > _running;
 	// cpproutines waiting for pid
-	std::map<int, std::vector<std::unique_ptr<cpproutine> > > _blocked;
-private:
+	std::map<int, std::vector<std::unique_ptr<scheduler_basic> > > _blocked;
 	pid_type _pid_counter;
 	bool _move_to_blocked;
 	int _last_id;

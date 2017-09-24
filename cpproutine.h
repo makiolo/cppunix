@@ -5,7 +5,18 @@
 
 namespace cu {
 
-class cpproutine
+class scheduler_basic
+{
+public:
+	virtual ~scheduler_basic() { ; }
+	virtual bool run() = 0;
+	virtual bool ready() const = 0;
+	virtual std::string get_name() const = 0;
+	virtual pid_type getpid() const = 0;
+
+};
+
+class cpproutine : public scheduler_basic
 {
 public:
 	template <typename Function>
@@ -18,26 +29,27 @@ public:
 				f(yield);
 			}
 		))
-	{
-		
-	}
+	{ ; }
 
-	std::string get_name() const
+	virtual ~cpproutine() { ; }
+
+	std::string get_name() const override final
 	{
 		return _name;
 	}
 
-	bool ready() const
+	bool ready() const override final
 	{
 		return bool(*_coroutine);
 	}
 
-	void run()
+	bool run() override final
 	{
 		(*_coroutine)();
+		return true;
 	}
 	
-	int getpid() const
+	int getpid() const override final
 	{
 		return _pid;
 	}

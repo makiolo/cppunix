@@ -5,7 +5,7 @@
 #include <teelogging/teelogging.h>
 #include <coroutine/coroutine.h>
 #include "../shell.h"
-#include "../scheduler.h"
+#include "../parallel_scheduler.h"
 #include "../semaphore.h"
 #include "../channel.h"
 #include <asyncply/run.h>
@@ -22,7 +22,7 @@ using namespace cu;
 
 TEST(CoroTest, Test_find)
 {
-	cu::scheduler sch;
+	cu::parallel_scheduler sch;
 	cu::channel<std::string> c1(sch, 10);
 	c1.pipeline(
 			find(),
@@ -49,7 +49,7 @@ TEST(CoroTest, Test_find)
 
 TEST(CoroTest, Test_run_ls_strip_quote_grep)
 {
-	cu::scheduler sch;
+	cu::parallel_scheduler sch;
 
 	cu::channel<std::string> c1(sch, 100);
 	c1.pipeline(
@@ -81,7 +81,7 @@ TEST(CoroTest, Test_run_ls_strip_quote_grep)
 
 TEST(CoroTest, Test_run_ls_sort_grep_uniq_join)
 {
-	cu::scheduler sch;
+	cu::parallel_scheduler sch;
 
 	cu::channel<std::string> c1(sch, 100);
 	std::string out_subproces;
@@ -98,7 +98,7 @@ TEST(CoroTest, Test_run_ls_sort_grep_uniq_join)
 
 TEST(CoroTest, TestCut)
 {
-	cu::scheduler sch;
+	cu::parallel_scheduler sch;
 
 	cu::channel<std::string> c1(sch, 100);
 	c1.pipeline(
@@ -145,7 +145,7 @@ TEST(CoroTest, TestCut)
 
 TEST(CoroTest, TestGrep)
 {
-	cu::scheduler sch;
+	cu::parallel_scheduler sch;
 
 	cu::channel<std::string> c1(sch, 100);
 	c1.pipeline(
@@ -161,7 +161,7 @@ TEST(CoroTest, TestGrep)
 
 TEST(CoroTest, TestGrep2)
 {
-	cu::scheduler sch;
+	cu::parallel_scheduler sch;
 
 	cu::channel<std::string> c1(sch, 100);
 	c1.pipeline(
@@ -174,7 +174,7 @@ TEST(CoroTest, TestGrep2)
 
 TEST(CoroTest, TestCount)
 {
-	cu::scheduler sch;
+	cu::parallel_scheduler sch;
 	cu::channel<std::string> c1(sch, 100);
 	int result;
 	c1.pipeline(
@@ -188,7 +188,7 @@ TEST(CoroTest, TestCount)
 
 TEST(CoroTest, TestUpper)
 {
-	cu::scheduler sch;
+	cu::parallel_scheduler sch;
 	cu::channel<std::string> c1(sch, 10);
 	c1.pipeline( replace("mundo", "gente"), toupper() );
 	sch.spawn([&](auto& yield) {
@@ -211,7 +211,7 @@ TEST(CoroTest, TestUpper)
 
 TEST(CoroTest, TestScheduler2)
 {
-	cu::scheduler sch;
+	cu::parallel_scheduler sch;
 
 	cu::channel<int> c1(sch, 20);
 	cu::channel<int> c2(sch, 20);
@@ -307,7 +307,7 @@ TEST(CoroTest, TestScheduler2)
 //
 // TEST(CoroTest, Test_Finite_Machine_States)
 // {
-// 	cu::scheduler sch;
+// 	cu::parallel_scheduler sch;
 //
 // 	cu::channel<float> sensor_cerca(sch, 10);
 // 	cu::channel<float> sensor_lejos(sch, 10);
@@ -390,7 +390,7 @@ TEST(CoroTest, TestScheduler2)
 // 		{
 // 			if(near)
 // 			{
-// 				cu::scheduler subsch;
+// 				cu::parallel_scheduler subsch;
 // 				subsch.spawn([&](auto& subyield) {
 // 					// thread 1
 // 					if(near)
@@ -597,7 +597,7 @@ TEST(CoroTest, TestScheduler2)
 
 TEST(CoroTest, TestMultiConsumer)
 {
-	cu::scheduler sch;
+	cu::parallel_scheduler sch;
 
 	cu::channel<int> c1(sch, 10);
 	cu::channel<int> c2(sch, 10);
@@ -656,11 +656,11 @@ TEST(CoroTest, TestMultiConsumer)
 
 namespace std {
 	template <>
-	struct hash<cu::scheduler&>
+	struct hash<cu::parallel_scheduler&>
 	{
-		size_t operator()(cu::scheduler&) const
+		size_t operator()(cu::parallel_scheduler&) const
 		{
-			return std::hash<std::string>()("scheduler");
+			return std::hash<std::string>()("parallel_scheduler");
 		}
 	};
 }
@@ -693,14 +693,15 @@ const auto TIMEOUT = std::chrono::seconds(10);
 class component
 {
 public:
-	// mover memoize a cada clase
-	using memoize = dp14::memoize<component, cu::scheduler&, mqtt::async_client&, const std::string&, const std::string&>;
+	using memoize = dp14::memoize<component, cu::parallel_scheduler&, mqtt::async_client&, const std::string&, const std::string&>;
 	virtual ~component() { ; }
 
 	virtual fes::sync<fes::marktime, bool>& on_change() = 0;
 	virtual const fes::sync<fes::marktime, bool>& on_change() const = 0;
+
 	virtual cu::channel<std::string>& channel() = 0;
 	virtual const cu::channel<std::string>& channel() const = 0;
+
 	virtual bool payload_to_state(const std::string& value) const = 0;
 	virtual std::string state_to_payload(bool value) const = 0;
 };
@@ -709,15 +710,15 @@ public:
 class sensor : public component
 {
 public:
-	DEFINE_KEY(sensor)
+	// DEFINE_KEY(sensor)
 	
-	explicit sensor(cu::scheduler& scheduler, mqtt::async_client& client, std::string topic_sub, std::string topic_pub_unsed)
-		: _scheduler(scheduler)
+	explicit sensor(cu::parallel_scheduler& parallel_scheduler, mqtt::async_client& client, std::string topic_sub, std::string topic_pub_unsed)
+		: _scheduler(parallel_scheduler)
 		, _client(client)
 		, _topic_sub(std::move(topic_sub))
 		, _on_value("true")
 		, _off_value("false")
-		, _channel(scheduler)
+		, _channel(parallel_scheduler)
 		, _state(false)
 	{
 		std::cout << "create component with sub: " << _topic_sub << std::endl;
@@ -743,8 +744,6 @@ public:
 	{
 		_client.unsubscribe(_topic_sub)->wait();
 	}
-
-	/////////////////////////////////////////////////////////////////////
 
 	bool payload_to_state(const std::string& value) const override final
 	{
@@ -785,7 +784,7 @@ public:
 	}
 
 protected:
-	cu::scheduler& _scheduler;
+	cu::parallel_scheduler& _scheduler;
 	mqtt::async_client& _client;
 	std::string _topic_sub;
 	std::string _on_value;
@@ -794,6 +793,7 @@ protected:
 	fes::sync<fes::marktime, bool> _event;
 	bool _state;
 };
+DEFINE_HASH(sensor)
 
 namespace
 {
@@ -814,10 +814,10 @@ image -> http://...png (subscribirse y enviar imagenes desde C++ parece más com
 class interruptor : public sensor
 {
 public:
-	DEFINE_KEY(interruptor)
+	// DEFINE_KEY(interruptor)
 	
-	explicit interruptor(cu::scheduler& scheduler, mqtt::async_client& client, std::string topic_sub, std::string topic_pub)
-		: sensor(scheduler, client, topic_sub, "")
+	explicit interruptor(cu::parallel_scheduler& parallel_scheduler, mqtt::async_client& client, std::string topic_sub, std::string topic_pub)
+		: sensor(parallel_scheduler, client, topic_sub, "")
 		, _topic_pub(std::move(topic_pub))
 	{
 		_client.subscribe(_topic_pub, QOS)->wait();
@@ -853,6 +853,7 @@ public:
 protected:
 	std::string _topic_pub;
 };
+DEFINE_HASH(interruptor)
 
 namespace
 {
@@ -865,11 +866,11 @@ std::string dirname(const std::string& str)
 	return str.substr(0, found);
 }
 
-bool endswith(std::string const &fullString, std::string const &ending)
+bool endswith(const std::string& text, const std::string& ending)
 {
-	if (fullString.length() >= ending.length())
+	if (text.length() >= ending.length())
 	{
-		return (0 == fullString.compare (fullString.length() - ending.length(), ending.length(), ending));
+		return (0 == text.compare (text.length() - ending.length(), ending.length(), ending));
 	}
 	else
 	{
@@ -877,26 +878,42 @@ bool endswith(std::string const &fullString, std::string const &ending)
 	}
 }
 
-auto from_topic_subscribe(cu::scheduler& sch, mqtt::async_client& cli, const std::string& topic_)
+bool startswith(const std::string& text,const std::string& token)
+{
+	if(text.length() < token.length())
+		return false;
+	return (text.compare(0, token.length(), token) == 0);
+}
+
+auto interruptor_from_topic_subscribe(cu::parallel_scheduler& sch, mqtt::async_client& cli, const std::string& topic_)
 {
 	std::string short_topic = dirname(topic_);
 	return component::memoize::instance().get<interruptor>(sch, cli, topic_, short_topic);
 }
 
-auto from_topic_publisher(cu::scheduler& sch, mqtt::async_client& cli, const std::string& topic_)
+auto interruptor_from_topic_publisher(cu::parallel_scheduler& sch, mqtt::async_client& cli, const std::string& topic_)
 {
 	std::string topic = topic_ + "/changed";
 	std::string short_topic = topic;
 	return component::memoize::instance().get<interruptor>(sch, cli, topic, short_topic);
 }
 
-auto from_name(cu::scheduler& sch, mqtt::async_client& cli, const std::string& room)
+auto interruptor_from_name(cu::parallel_scheduler& sch, mqtt::async_client& cli, const std::string& room)
 {
 	std::stringstream ss;
 	ss << "/comando/" << room << "/light/changed";
 	std::string topic = ss.str();
 	std::string short_topic = dirname(topic);
 	return component::memoize::instance().get<interruptor>(sch, cli, topic, short_topic);
+}
+
+auto sensor_from_name(cu::parallel_scheduler& sch, mqtt::async_client& cli, const std::string& room, const std::string& sensor)
+{
+	std::stringstream ss;
+	ss << "homie/" << room << "/" << sensor << "/presence";
+	std::string topic = ss.str();
+	// return component::memoize::instance().get<sensor>(sch, cli, topic, "");
+	return component::memoize::instance().get("sensor", sch, cli, topic, "");
 }
 
 TEST(CoroTest, TestMQTTCPP)
@@ -910,13 +927,14 @@ TEST(CoroTest, TestMQTTCPP)
 		connOpts.set_automatic_reconnect(true);
 		cli.connect(connOpts)->wait();
 		cli.start_consuming();
-		cli.subscribe("/comando/+/light", QOS)->wait();
-		cli.subscribe("/comando/+/light/changed", QOS)->wait();
-		cli.subscribe("homie/salon/+/presence", QOS)->wait();
-		cli.subscribe("homie/habita/+/presence", QOS)->wait();
-		cli.subscribe("homie/#", QOS)->wait();
 		{
-			cu::scheduler sch;
+			cu::parallel_scheduler sch;
+			sch.spawn([&](auto& yield)
+			{
+				cu::await(yield, cli.subscribe("/comando/+/light", QOS) );
+				cu::await(yield, cli.subscribe("/comando/+/light/changed", QOS) );
+				cu::await(yield, cli.subscribe("homie/+/+/presence", QOS) );
+			});
 			sch.spawn([&](auto& yield)
 			{
 				while (true)
@@ -928,19 +946,26 @@ TEST(CoroTest, TestMQTTCPP)
 					}
 					else if(endswith(msg->get_topic(), "/light/changed"))
 					{
-						auto interrup = from_topic_subscribe(sch, cli, msg->get_topic());
-						interrup->channel()(yield, msg->to_string());
+						std::cout << "light changed topic: " << msg->get_topic() << std::endl;
+						std::cout << "light changed value: " << msg->to_string() << std::endl;
+						std::string topic = msg->get_topic();
+						if(topic == "true" || topic == "false")
+						{
+							auto interrup = interruptor_from_topic_subscribe(sch, cli, topic);
+							interrup->channel()(yield, msg->to_string());
+						}
 					}
 					else if(endswith(msg->get_topic(), "/light"))
 					{
-						auto interrup = from_topic_publisher(sch, cli, msg->get_topic());
+						auto interrup = interruptor_from_topic_publisher(sch, cli, msg->get_topic());
 						interrup->on_change()(fes::high_resolution_clock(), interrup->payload_to_state(msg->to_string()));
 					}
 					else if(endswith(msg->get_topic(), "/presence"))
 					{
-						std::string topic = msg->get_topic();
-						auto interrup = component::memoize::instance().get<sensor>(sch, cli, topic, "");
-						interrup->on_change()(fes::high_resolution_clock(), interrup->payload_to_state(msg->to_string()));
+						std::cout << "sensor topic: " << msg->get_topic() << std::endl;
+						std::cout << "sensor value: " << msg->to_string() << std::endl;
+						auto sensor = component::memoize::instance().get("sensor", sch, cli, msg->get_topic(), "");
+						sensor->on_change()(fes::high_resolution_clock(), sensor->payload_to_state(msg->to_string()));
 					}
 					else
 					{
@@ -951,23 +976,101 @@ TEST(CoroTest, TestMQTTCPP)
 				}
 			});
 		
-			auto habita = from_name(sch, cli, "habita");
-			auto armario = from_name(sch, cli, "armario");
-			auto salon = from_name(sch, cli, "salon");
+			auto habita = interruptor_from_name(sch, cli, "habita");
+			auto armario = interruptor_from_name(sch, cli, "armario");
+			auto salon = interruptor_from_name(sch, cli, "salon");
+
+			auto salon_presence_1 = sensor_from_name(sch, cli, "salon", "presence_1");
+			auto salon_presence_2 = sensor_from_name(sch, cli, "salon", "presence_2");
+			auto salon_presence_3 = sensor_from_name(sch, cli, "salon", "presence_3");
+
+			auto habita_presence_1 = sensor_from_name(sch, cli, "habita", "presence_1");
+			auto habita_presence_2 = sensor_from_name(sch, cli, "habita", "presence_2");
+			auto habita_presence_3 = sensor_from_name(sch, cli, "habita", "presence_3");
+
+			int salon_count = 0;
+			int habita_count = 0;
+			salon_presence_1->on_change().connect([&](auto marktime, auto state) {
+				if(state)
+					++salon_count;
+				else
+					--salon_count;
+				if(salon_count > 0)
+					salon->on();
+				else
+					salon->off();
+				std::cout << "salon: presence_1: " << habita_count << std::endl;
+			});
+			salon_presence_2->on_change().connect([&](auto marktime, auto state) {
+				if(state)
+					++salon_count;
+				else
+					--salon_count;
+				if(salon_count > 0)
+					salon->on();
+				else
+					salon->off();
+				std::cout << "salon: presence_2: " << habita_count << std::endl;
+			});
+			salon_presence_3->on_change().connect([&](auto marktime, auto state) {
+				if(state)
+					++salon_count;
+				else
+					--salon_count;
+				if(salon_count > 0)
+					salon->on();
+				else
+					salon->off();
+				std::cout << "salon: presence_3: " << habita_count << std::endl;
+			});
+
+			habita_presence_1->on_change().connect([&](auto marktime, auto state) {
+				if(state)
+					++habita_count;
+				else
+					--habita_count;
+				if(habita_count > 0)
+					habita->on();
+				else
+					habita->off();
+				std::cout << "habita: presence_1: " << habita_count << std::endl;
+			});
+			habita_presence_2->on_change().connect([&](auto marktime, auto state) {
+				if(state)
+					++habita_count;
+				else
+					--habita_count;
+				if(habita_count > 0)
+					habita->on();
+				else
+					habita->off();
+				std::cout << "habita: presence_2: " << habita_count << std::endl;
+			});
+			habita_presence_3->on_change().connect([&](auto marktime, auto state) {
+				if(state)
+					++habita_count;
+				else
+					--habita_count;
+				if(habita_count > 0)
+					habita->on();
+				else
+					habita->off();
+				std::cout << "habita: presence_3: " << habita_count << std::endl;
+			});
 
 			// sch.spawn([&](auto& yield)
 			// {
-			// 	sch.await(yield, habita->off() );
-			// 	sch.await(yield, armario->off() );
-			// 	sch.await(yield, salon->off() );
-			// 	sch.sleep(yield, fes::deltatime(5000) );
-			// 	sch.await(yield, habita->on() );
-			// 	sch.await(yield, armario->on() );
-			// 	sch.await(yield, salon->on() );
-			// 	sch.sleep(yield, fes::deltatime(2000) );
-			// 	sch.await(yield, habita->off() );
-			// 	sch.await(yield, armario->off() );
-			// 	sch.await(yield, salon->on() );
+			// 	while(true)
+			// 	{
+			// 		cu::await(yield, habita->off() );
+			// 		cu::await(yield, armario->off() );
+			// 		cu::await(yield, salon->off() );
+			// 		cu::sleep(yield, fes::deltatime(2000) );
+			// 		cu::await(yield, habita->on() );
+			// 		cu::await(yield, armario->on() );
+			// 		cu::await(yield, salon->on() );
+			// 		cu::sleep(yield, fes::deltatime(2000) );
+			// 	}
 			// });
 
 			habita->on_change().connect([](auto marktime, auto state) {
@@ -1001,7 +1104,7 @@ TEST(CoroTest, TestMQTTCPP)
 
 TEST(CoroTest, Asyncply1)
 {
-	cu::scheduler sch;
+	cu::parallel_scheduler sch;
 	sch.spawn([&](auto& yield)
 	{
 		int n = asyncply::await(yield, asyncply::aparallel(
@@ -1028,8 +1131,7 @@ TEST(CoroTest, Asyncply1)
 
 TEST(CoroTest, Asyncply2)
 {
-	cu::scheduler sch;
-	// 2 trabajos concurrentes -> cada uno con 2 hilos paralelos
+	cu::parallel_scheduler sch;
 	sch.spawn([&](auto& yield)
 	{
 		int n = asyncply::await(yield, asyncply::aparallel(

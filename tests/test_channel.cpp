@@ -1,7 +1,7 @@
 #include <iostream>
 #include <gtest/gtest.h>
 #include "../channel.h"
-#include "../scheduler.h"
+#include "../parallel_scheduler.h"
 #include "../shell.h"
 #include <thread>
 #include <asyncply/run.h>
@@ -10,7 +10,7 @@ class ChannelTest : testing::Test { };
 
 TEST(ChannelTest, goroutines_consumer)
 {
-	cu::scheduler sch;
+	cu::parallel_scheduler sch;
 	cu::channel<std::string> go(sch);
 	go.pipeline(cu::quote("<html>"), cu::quote("<head>"));
 	
@@ -33,7 +33,7 @@ TEST(ChannelTest, goroutines_consumer)
 
 TEST(ChannelTest, goroutines_consumer_unbuffered)
 {
-	cu::scheduler sch;
+	cu::parallel_scheduler sch;
 	cu::channel<std::string> go(sch);
 	go.pipeline(cu::quote("<html>"), cu::quote("<head>"));
 	sch.spawn([&](auto& yield) {
@@ -55,7 +55,7 @@ TEST(ChannelTest, goroutines_consumer_unbuffered)
 
 TEST(CoroTest, TestScheduler)
 {
-	cu::scheduler sch;
+	cu::parallel_scheduler sch;
 	cu::semaphore person1(sch);
 	cu::semaphore person2(sch);
 	cu::semaphore other(sch);

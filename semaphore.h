@@ -2,7 +2,7 @@
 #define _CU_SEMAPHORE_H_
 
 #include <teelogging/teelogging.h>
-#include "scheduler.h"
+#include "parallel_scheduler.h"
 
 namespace cu {
 
@@ -11,7 +11,7 @@ static int last_id = 0;
 class semaphore
 {
 public:
-	explicit semaphore(cu::scheduler& sche, int count_initial = 0)
+	explicit semaphore(cu::parallel_scheduler& sche, int count_initial = 0)
 		: _sche(sche)
 		, _count(count_initial)
 		, _id(last_id++)
@@ -78,7 +78,7 @@ public:
 		return _count;
 	}
 	
-	cu::scheduler& _sche;
+	cu::parallel_scheduler& _sche;
 	int _count;
 	int _id;
 };
