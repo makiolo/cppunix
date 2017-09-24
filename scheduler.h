@@ -6,6 +6,29 @@
 #include "cpproutine.h"
 #include <asyncply/run.h>
 #include <asyncply/algorithm.h>
+#include <fast-event-system/sync.h>
+#include <mqtt/async_client.h>
+
+namespace asyncply
+{
+	template <typename TOKEN>
+	struct is_complete
+	{
+		bool operator()(TOKEN token) const
+		{
+			return token->is_ready();
+		}
+	};
+
+	template <>
+	struct is_complete<mqtt::delivery_token_ptr>
+	{
+		bool operator()(mqtt::delivery_token_ptr deliver) const
+		{
+			return deliver->is_complete();
+		}
+	};
+}
 
 namespace cu {
 
@@ -31,7 +54,25 @@ public:
 		_running.emplace_back(std::make_unique<cpproutine>(name, _pid_counter, std::forward<Function>(func)));
 		++_pid_counter;
 	}
-		
+
+	void sleep(cu::yield_type& yield, fes::deltatime time)
+	{
+		auto timeout = fes::high_resolution_clock() + time;
+		while(fes::high_resolution_clock() <= timeout)
+		{
+			yield();
+		}
+	}
+
+	template <typename TOKEN>
+	void await(cu::yield_type& yield, TOKEN token)
+	{
+		while(!asyncply::is_complete<TOKEN>{}(token))
+		{
+			yield();
+		}
+	}
+
 	/*
 	return true if any is updated
 	*/
@@ -41,6 +82,8 @@ public:
 		LOGV("begin scheduler");
 		while (i != _running.end())
 		{
+			// if((*i) == nullptr)
+			// 	break;
 			auto& c = *i;
 			if(c->ready())
 			{
@@ -73,6 +116,8 @@ public:
 				LOGV("cpproutine ha terminado");
 				i = _running.erase(i);
 			}
+			// if((*i) == nullptr)
+			// 	break;
 		}
 		LOGV("end scheduler");
 		return _running.size() > 0;

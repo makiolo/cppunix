@@ -9,8 +9,9 @@
 #include "../semaphore.h"
 #include "../channel.h"
 #include <asyncply/run.h>
+#include <asyncply/parallel.h>
 #include <mqtt/async_client.h>
-#include <fast-event-system/async_fast.h>
+#include <fast-event-system/sync.h>
 #include <fast-event-system/sync.h>
 #include <design-patterns-cpp14/memoize.h>
 
@@ -687,48 +688,42 @@ namespace std {
 }
 
 const int  QOS = 1;
+const auto TIMEOUT = std::chrono::seconds(10);
 
 class component
 {
 public:
+	// mover memoize a cada clase
 	using memoize = dp14::memoize<component, cu::scheduler&, mqtt::async_client&, const std::string&, const std::string&>;
 	virtual ~component() { ; }
 
-	virtual fes::async_fast<fes::marktime, bool>& on_change() = 0;
-	virtual const fes::async_fast<fes::marktime, bool>& on_change() const = 0;
+	virtual fes::sync<fes::marktime, bool>& on_change() = 0;
+	virtual const fes::sync<fes::marktime, bool>& on_change() const = 0;
 	virtual cu::channel<std::string>& channel() = 0;
 	virtual const cu::channel<std::string>& channel() const = 0;
 	virtual bool payload_to_state(const std::string& value) const = 0;
 	virtual std::string state_to_payload(bool value) const = 0;
 };
 
-/*
-interruptor/switch/button -> bool (subscribe mandatory and publish optional)
-text -> string (subscribe mandatory and publish optional)
-range/progress -> float (proteger rango con mínimo y máximo) (subscribe mandatory and publish optional)
-list/slider discreto -> int (seleccionar un elemento por posicion) (subscribe mandatory and publish optional)
-color -> rgb (subscribe mandatory and publish optional)
-image -> http://...png (subscribirse y enviar imagenes desde C++ parece más complicado, pero sería necesario para camaras de seguridad)
-*/
-
-class interruptor : public component
+// only subscribe
+class sensor : public component
 {
 public:
-	DEFINE_KEY(interruptor)
+	DEFINE_KEY(sensor)
 	
-	explicit interruptor(cu::scheduler& scheduler, mqtt::async_client& client, std::string topic_sub, std::string topic_pub)
+	explicit sensor(cu::scheduler& scheduler, mqtt::async_client& client, std::string topic_sub, std::string topic_pub_unsed)
 		: _scheduler(scheduler)
 		, _client(client)
 		, _topic_sub(std::move(topic_sub))
-		, _topic_pub(std::move(topic_pub))
-		, _channel(scheduler)
 		, _on_value("true")
 		, _off_value("false")
+		, _channel(scheduler)
 		, _state(false)
 	{
+		std::cout << "create component with sub: " << _topic_sub << std::endl;
+
 		// propagate initial state
 		this->on_change()(fes::high_resolution_clock(), _state);
-		_client.subscribe(_topic_pub, QOS)->wait();
 		_client.subscribe(_topic_sub, QOS)->wait();
 		_scheduler.spawn([&](auto& yield)
 		{
@@ -742,21 +737,14 @@ public:
 				}
 			}
 		});
-		_scheduler.spawn([&](auto& yield)
-		{
-			while(true)
-			{
-				this->on_change().update();
-				yield();
-			}
-		});
 	}
 
-	virtual ~interruptor()
+	virtual ~sensor()
 	{
 		_client.unsubscribe(_topic_sub)->wait();
-		_client.unsubscribe(_topic_pub)->wait();
 	}
+
+	/////////////////////////////////////////////////////////////////////
 
 	bool payload_to_state(const std::string& value) const override final
 	{
@@ -771,39 +759,17 @@ public:
 			return _off_value;
 	}
 
-	void on()
-	{
-		auto pubmsg = mqtt::make_message(_topic_pub, state_to_payload(true));
-		pubmsg->set_qos(QOS);
-		_client.publish(pubmsg);
-	}
-
-	void off()
-	{
-		auto pubmsg = mqtt::make_message(_topic_pub, state_to_payload(false));
-		pubmsg->set_qos(QOS);
-		_client.publish(pubmsg);
-	}
-
-	void toggle()
-	{
-		if(is_on())
-			off();
-		else
-			on();
-	}
-
 	bool is_on() const
 	{
 		return _state;
 	}
 
-	fes::async_fast<fes::marktime, bool>& on_change() override final
+	fes::sync<fes::marktime, bool>& on_change() override final
 	{
 		return _event;
 	}
 
-	const fes::async_fast<fes::marktime, bool>& on_change() const override final
+	const fes::sync<fes::marktime, bool>& on_change() const override final
 	{
 		return _event;
 	}
@@ -822,17 +788,75 @@ protected:
 	cu::scheduler& _scheduler;
 	mqtt::async_client& _client;
 	std::string _topic_sub;
-	std::string _topic_pub;
 	std::string _on_value;
 	std::string _off_value;
 	cu::channel<std::string> _channel;
-	fes::async_fast<fes::marktime, bool> _event;
+	fes::sync<fes::marktime, bool> _event;
 	bool _state;
 };
 
-namespace reg
+namespace
 {
-	component::memoize::registrator<interruptor> reg;
+	component::memoize::registrator<sensor> reg_sensor;
+}
+
+/*
+interruptor/switch/button -> bool (subscribe mandatory and publish optional)
+text -> string (subscribe mandatory and publish optional)
+range/progress -> float (proteger rango con mínimo y máximo) (subscribe mandatory and publish optional)
+list/slider discreto -> int (seleccionar un elemento por posicion) (subscribe mandatory and publish optional)
+color -> rgb (subscribe mandatory and publish optional)
+image -> http://...png (subscribirse y enviar imagenes desde C++ parece más complicado, pero sería necesario para camaras de seguridad)
+*/
+
+// subscribe + publisher
+// escucha y actua
+class interruptor : public sensor
+{
+public:
+	DEFINE_KEY(interruptor)
+	
+	explicit interruptor(cu::scheduler& scheduler, mqtt::async_client& client, std::string topic_sub, std::string topic_pub)
+		: sensor(scheduler, client, topic_sub, "")
+		, _topic_pub(std::move(topic_pub))
+	{
+		_client.subscribe(_topic_pub, QOS)->wait();
+	}
+
+	virtual ~interruptor()
+	{
+		_client.unsubscribe(_topic_pub)->wait();
+	}
+
+	mqtt::delivery_token_ptr on() const
+	{
+		auto pubmsg = mqtt::make_message(_topic_pub, state_to_payload(true));
+		pubmsg->set_qos(QOS);
+		return _client.publish(pubmsg);
+	}
+
+	mqtt::delivery_token_ptr off() const
+	{
+		auto pubmsg = mqtt::make_message(_topic_pub, state_to_payload(false));
+		pubmsg->set_qos(QOS);
+		return _client.publish(pubmsg);
+	}
+
+	mqtt::delivery_token_ptr toggle() const
+	{
+		if(is_on())
+			return off();
+		else
+			return on();
+	}
+
+protected:
+	std::string _topic_pub;
+};
+
+namespace
+{
+	component::memoize::registrator<interruptor> reg_interruptor;
 }
 
 std::string dirname(const std::string& str)
@@ -853,11 +877,28 @@ bool endswith(std::string const &fullString, std::string const &ending)
 	}
 }
 
-//
-// from_topic_subscribe("/comando/habita/light/changed")
-// from_topic_publisher("/comando/habita/light")
-// from_name("habita")
-//
+auto from_topic_subscribe(cu::scheduler& sch, mqtt::async_client& cli, const std::string& topic_)
+{
+	std::string short_topic = dirname(topic_);
+	return component::memoize::instance().get<interruptor>(sch, cli, topic_, short_topic);
+}
+
+auto from_topic_publisher(cu::scheduler& sch, mqtt::async_client& cli, const std::string& topic_)
+{
+	std::string topic = topic_ + "/changed";
+	std::string short_topic = topic;
+	return component::memoize::instance().get<interruptor>(sch, cli, topic, short_topic);
+}
+
+auto from_name(cu::scheduler& sch, mqtt::async_client& cli, const std::string& room)
+{
+	std::stringstream ss;
+	ss << "/comando/" << room << "/light/changed";
+	std::string topic = ss.str();
+	std::string short_topic = dirname(topic);
+	return component::memoize::instance().get<interruptor>(sch, cli, topic, short_topic);
+}
+
 TEST(CoroTest, TestMQTTCPP)
 {
 	mqtt::async_client cli("tcp://192.168.1.4:1883", "cppclient");
@@ -866,50 +907,39 @@ TEST(CoroTest, TestMQTTCPP)
 		mqtt::connect_options connOpts;
 		connOpts.set_keep_alive_interval(60);
 		connOpts.set_clean_session(false);
-		// connOpts.set_automatic_reconnect(true);
+		connOpts.set_automatic_reconnect(true);
 		cli.connect(connOpts)->wait();
 		cli.start_consuming();
 		cli.subscribe("/comando/+/light", QOS)->wait();
 		cli.subscribe("/comando/+/light/changed", QOS)->wait();
+		cli.subscribe("homie/salon/+/presence", QOS)->wait();
+		cli.subscribe("homie/habita/+/presence", QOS)->wait();
+		cli.subscribe("homie/#", QOS)->wait();
 		{
 			cu::scheduler sch;
 			sch.spawn([&](auto& yield)
 			{
 				while (true)
 				{
-					// sync version
-					//auto msg = cli.consume_message();
-
-					// begin async version
-					auto task = asyncply::async(
-						[&]()
-						{
-							return cli.consume_message();
-						}
-					);
-					while(!task->is_ready())
-					{
-						yield();
-					}
-					auto msg = task->get();
-					// end async version
-
+					auto msg = asyncply::await(yield, [&](){ return cli.consume_message(); });
 					if(!msg)
 					{
 						yield();
 					}
 					else if(endswith(msg->get_topic(), "/light/changed"))
 					{
-						std::string topic = msg->get_topic();
-						std::string short_topic = dirname(topic);
-						auto interrup = component::memoize::instance().get(interruptor::KEY(), sch, cli, topic, short_topic);
+						auto interrup = from_topic_subscribe(sch, cli, msg->get_topic());
 						interrup->channel()(yield, msg->to_string());
 					}
 					else if(endswith(msg->get_topic(), "/light"))
 					{
-						std::string topic = msg->get_topic() + "/changed";
-						std::string short_topic = msg->get_topic();
-						auto interrup = component::memoize::instance().get(interruptor::KEY(), sch, cli, topic, short_topic);
+						auto interrup = from_topic_publisher(sch, cli, msg->get_topic());
+						interrup->on_change()(fes::high_resolution_clock(), interrup->payload_to_state(msg->to_string()));
+					}
+					else if(endswith(msg->get_topic(), "/presence"))
+					{
+						std::string topic = msg->get_topic();
+						auto interrup = component::memoize::instance().get<sensor>(sch, cli, topic, "");
 						interrup->on_change()(fes::high_resolution_clock(), interrup->payload_to_state(msg->to_string()));
 					}
 					else
@@ -920,27 +950,25 @@ TEST(CoroTest, TestMQTTCPP)
 					}
 				}
 			});
+		
+			auto habita = from_name(sch, cli, "habita");
+			auto armario = from_name(sch, cli, "armario");
+			auto salon = from_name(sch, cli, "salon");
 
-			auto habita = component::memoize::instance().get<interruptor>(sch, cli, "/comando/habita/light/changed", "/comando/habita/light");
-			auto armario = component::memoize::instance().get<interruptor>(sch, cli, "/comando/armario/light/changed", "/comando/armario/light");
-			auto salon = component::memoize::instance().get<interruptor>(sch, cli, "/comando/salon/light/changed", "/comando/salon/light");
-
-			sch.spawn([&](auto& yield)
-			{
-				while(true)
-				{
-					habita->toggle();
-					salon->toggle();
-					armario->toggle();
-
-					// sleep using yield
-					auto timeout = fes::high_resolution_clock() + fes::deltatime(4000);
-					while(fes::high_resolution_clock() <= timeout)
-					{
-						yield();
-					}
-				}
-			});
+			// sch.spawn([&](auto& yield)
+			// {
+			// 	sch.await(yield, habita->off() );
+			// 	sch.await(yield, armario->off() );
+			// 	sch.await(yield, salon->off() );
+			// 	sch.sleep(yield, fes::deltatime(5000) );
+			// 	sch.await(yield, habita->on() );
+			// 	sch.await(yield, armario->on() );
+			// 	sch.await(yield, salon->on() );
+			// 	sch.sleep(yield, fes::deltatime(2000) );
+			// 	sch.await(yield, habita->off() );
+			// 	sch.await(yield, armario->off() );
+			// 	sch.await(yield, salon->on() );
+			// });
 
 			habita->on_change().connect([](auto marktime, auto state) {
 				if(!state)
@@ -970,3 +998,68 @@ TEST(CoroTest, TestMQTTCPP)
 		std::cerr << exc.what() << std::endl;
 	}
 }
+
+TEST(CoroTest, Asyncply1)
+{
+	cu::scheduler sch;
+	sch.spawn([&](auto& yield)
+	{
+		int n = asyncply::await(yield, asyncply::aparallel(
+			[]()
+			{
+				return 3;
+			}, 
+
+			[]()
+			{
+				return 8;
+			}, 
+
+			[]()
+			{
+				return 10;
+			})
+		);
+		EXPECT_EQ(n, 21);
+	});
+	sch.run_until_complete();
+}
+
+
+TEST(CoroTest, Asyncply2)
+{
+	cu::scheduler sch;
+	// 2 trabajos concurrentes -> cada uno con 2 hilos paralelos
+	sch.spawn([&](auto& yield)
+	{
+		int n = asyncply::await(yield, asyncply::aparallel(
+			[]()
+			{
+				return 4;
+			}, 
+
+			[]()
+			{
+				return 10;
+			})
+		);
+		EXPECT_EQ(n, 14);
+	});
+	sch.spawn([&](auto& yield)
+	{
+		int n = asyncply::await(yield, asyncply::aparallel(
+			[]()
+			{
+				return 56;
+			}, 
+
+			[]()
+			{
+				return 10;
+			})
+		);
+		EXPECT_EQ(n, 66);
+	});
+	sch.run_until_complete();
+}
+

@@ -205,10 +205,6 @@ public:
 		_elements.wait(yield);
 		optional<T> data = std::get<0>(_buf.get(yield));
 		_slots.notify(yield);
-		// if(empty())
-		// {
-		// 	yield();
-		// }
 		return std::move(data);
 	}
 

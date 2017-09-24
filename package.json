@@ -36,6 +36,7 @@
     "asyncply": "https://github.com/makiolo/asyncply.git",
     "teelogging": "https://github.com/makiolo/teelogging.git",
     "metacommon": "https://github.com/makiolo/metacommon.git",
+    "design-patterns-cpp14": "https://github.com/makiolo/design-patterns-cpp14.git",
     "coroutine": "https://github.com/makiolo/coroutine.git"
   }
 }
