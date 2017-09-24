@@ -710,7 +710,7 @@ public:
 class sensor : public component
 {
 public:
-	// DEFINE_KEY(sensor)
+	DEFINE_KEY(sensor)
 	
 	explicit sensor(cu::parallel_scheduler& parallel_scheduler, mqtt::async_client& client, std::string topic_sub, std::string topic_pub_unsed)
 		: _scheduler(parallel_scheduler)
@@ -721,8 +721,6 @@ public:
 		, _channel(parallel_scheduler)
 		, _state(false)
 	{
-		std::cout << "create component with sub: " << _topic_sub << std::endl;
-
 		// propagate initial state
 		this->on_change()(fes::high_resolution_clock(), _state);
 		_client.subscribe(_topic_sub, QOS)->wait();
@@ -793,7 +791,7 @@ protected:
 	fes::sync<fes::marktime, bool> _event;
 	bool _state;
 };
-DEFINE_HASH(sensor)
+// DEFINE_HASH(sensor)
 
 namespace
 {
@@ -814,7 +812,7 @@ image -> http://...png (subscribirse y enviar imagenes desde C++ parece más com
 class interruptor : public sensor
 {
 public:
-	// DEFINE_KEY(interruptor)
+	DEFINE_KEY(interruptor)
 	
 	explicit interruptor(cu::parallel_scheduler& parallel_scheduler, mqtt::async_client& client, std::string topic_sub, std::string topic_pub)
 		: sensor(parallel_scheduler, client, topic_sub, "")
@@ -853,7 +851,6 @@ public:
 protected:
 	std::string _topic_pub;
 };
-DEFINE_HASH(interruptor)
 
 namespace
 {
@@ -912,7 +909,6 @@ auto sensor_from_name(cu::parallel_scheduler& sch, mqtt::async_client& cli, cons
 	std::stringstream ss;
 	ss << "homie/" << room << "/" << sensor << "/presence";
 	std::string topic = ss.str();
-	// return component::memoize::instance().get<sensor>(sch, cli, topic, "");
 	return component::memoize::instance().get("sensor", sch, cli, topic, "");
 }
 
@@ -946,33 +942,41 @@ TEST(CoroTest, TestMQTTCPP)
 					}
 					else if(endswith(msg->get_topic(), "/light/changed"))
 					{
-						std::cout << "light changed topic: " << msg->get_topic() << std::endl;
-						std::cout << "light changed value: " << msg->to_string() << std::endl;
-						std::string topic = msg->get_topic();
-						if(topic == "true" || topic == "false")
+						std::string value = msg->to_string();
+						if(value == "true" || value == "false")
 						{
-							auto interrup = interruptor_from_topic_subscribe(sch, cli, topic);
-							interrup->channel()(yield, msg->to_string());
+							// std::cout << "light changed topic: " << msg->get_topic() << std::endl;
+							// std::cout << "light changed value: " << msg->to_string() << std::endl;
+							auto interrup = interruptor_from_topic_subscribe(sch, cli, msg->get_topic());
+							interrup->channel()(yield, value);
 						}
 					}
 					else if(endswith(msg->get_topic(), "/light"))
 					{
-						auto interrup = interruptor_from_topic_publisher(sch, cli, msg->get_topic());
-						interrup->on_change()(fes::high_resolution_clock(), interrup->payload_to_state(msg->to_string()));
+						std::string value = msg->to_string();
+						if(value == "true" || value == "false")
+						{
+							auto interrup = interruptor_from_topic_publisher(sch, cli, msg->get_topic());
+							interrup->on_change()(fes::high_resolution_clock(), interrup->payload_to_state(value));
+						}
 					}
 					else if(endswith(msg->get_topic(), "/presence"))
 					{
-						std::cout << "sensor topic: " << msg->get_topic() << std::endl;
-						std::cout << "sensor value: " << msg->to_string() << std::endl;
-						auto sensor = component::memoize::instance().get("sensor", sch, cli, msg->get_topic(), "");
-						sensor->on_change()(fes::high_resolution_clock(), sensor->payload_to_state(msg->to_string()));
+						std::string value = msg->to_string();
+						if(value == "true" || value == "false")
+						{
+							// std::cout << "sensor topic: " << msg->get_topic() << std::endl;
+							// std::cout << "sensor value: " << msg->to_string() << std::endl;
+							auto sensor = component::memoize::instance().get("sensor", sch, cli, msg->get_topic(), "");
+							sensor->on_change()(fes::high_resolution_clock(), sensor->payload_to_state(value));
+						}
 					}
-					else
-					{
-						std::string topic = msg->get_topic();
-						std::cout << "discarded topic: " << topic << std::endl;
-						std::cout << "discarded value: " << msg->to_string() << std::endl;
-					}
+					// else
+					// {
+					// 	std::string topic = msg->get_topic();
+					// 	std::cout << "discarded topic: " << topic << std::endl;
+					// 	std::cout << "discarded value: " << msg->to_string() << std::endl;
+					// }
 				}
 			});
 		
@@ -992,70 +996,22 @@ TEST(CoroTest, TestMQTTCPP)
 			int habita_count = 0;
 			salon_presence_1->on_change().connect([&](auto marktime, auto state) {
 				if(state)
-					++salon_count;
+					salon->on()->wait();
 				else
-					--salon_count;
-				if(salon_count > 0)
-					salon->on();
-				else
-					salon->off();
-				std::cout << "salon: presence_1: " << habita_count << std::endl;
-			});
-			salon_presence_2->on_change().connect([&](auto marktime, auto state) {
-				if(state)
-					++salon_count;
-				else
-					--salon_count;
-				if(salon_count > 0)
-					salon->on();
-				else
-					salon->off();
-				std::cout << "salon: presence_2: " << habita_count << std::endl;
-			});
-			salon_presence_3->on_change().connect([&](auto marktime, auto state) {
-				if(state)
-					++salon_count;
-				else
-					--salon_count;
-				if(salon_count > 0)
-					salon->on();
-				else
-					salon->off();
-				std::cout << "salon: presence_3: " << habita_count << std::endl;
+					salon->off()->wait();
 			});
 
 			habita_presence_1->on_change().connect([&](auto marktime, auto state) {
 				if(state)
-					++habita_count;
+					habita->on()->wait();
 				else
-					--habita_count;
-				if(habita_count > 0)
-					habita->on();
-				else
-					habita->off();
-				std::cout << "habita: presence_1: " << habita_count << std::endl;
-			});
-			habita_presence_2->on_change().connect([&](auto marktime, auto state) {
-				if(state)
-					++habita_count;
-				else
-					--habita_count;
-				if(habita_count > 0)
-					habita->on();
-				else
-					habita->off();
-				std::cout << "habita: presence_2: " << habita_count << std::endl;
+					habita->off()->wait();
 			});
 			habita_presence_3->on_change().connect([&](auto marktime, auto state) {
 				if(state)
-					++habita_count;
+					armario->on()->wait();
 				else
-					--habita_count;
-				if(habita_count > 0)
-					habita->on();
-				else
-					habita->off();
-				std::cout << "habita: presence_3: " << habita_count << std::endl;
+					armario->off()->wait();
 			});
 
 			// sch.spawn([&](auto& yield)
