@@ -103,9 +103,8 @@ public:
 	using coroutine = push_type_ptr< optional<T> >;
 	using generator = pull_type_ptr< optional<T> >;
 
-	explicit channel(cu::parallel_scheduler& sch, size_t buffer = 0)
-		: _sch(sch)
-		, _buffer(buffer)
+	explicit channel(size_t buffer = 0)
+		: _buffer(buffer)
 		, _elements(sch, 0)
 		, _slots(sch, buffer + 1)
 	{
@@ -113,9 +112,8 @@ public:
 	}
 
 	template <typename Function>
-	explicit channel(cu::parallel_scheduler& sch, size_t buffer, Function&& f)
-		: _sch(sch)
-		, _buffer(buffer)
+	explicit channel(size_t buffer, Function&& f)
+		: _buffer(buffer)
 		, _elements(sch, 0)
 		, _slots(sch, buffer + 1)
 	{
@@ -124,9 +122,8 @@ public:
 	}
 
 	template <typename Function, typename ... Functions>
-	explicit channel(cu::parallel_scheduler& sch, size_t buffer, Function&& f, Functions&& ... fs)
-		: _sch(sch)
-		, _buffer(buffer)
+	explicit channel(size_t buffer, Function&& f, Functions&& ... fs)
+		: _buffer(buffer)
 		, _elements(sch, 0)
 		, _slots(sch, buffer + 1)
 	{
@@ -249,7 +246,6 @@ protected:
 				{
 					this->_buf(0, fes::deltatime(0), s);
 				}
-				
 			}
 		);
 		_coros.push( cu::make_iterator< optional<T> >( term_receiver<T>(r) ) );
@@ -269,7 +265,6 @@ protected:
 	}
 
 protected:
-	cu::parallel_scheduler& _sch;
 	size_t _buffer;
 	std::stack< coroutine > _coros;
 	fes::async_delay< optional<T> > _buf;
