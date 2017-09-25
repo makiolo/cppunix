@@ -945,8 +945,6 @@ TEST(CoroTest, TestMQTTCPP)
 						std::string value = msg->to_string();
 						if(value == "true" || value == "false")
 						{
-							// std::cout << "light changed topic: " << msg->get_topic() << std::endl;
-							// std::cout << "light changed value: " << msg->to_string() << std::endl;
 							auto interrup = interruptor_from_topic_subscribe(sch, cli, msg->get_topic());
 							interrup->channel()(yield, value);
 						}
@@ -965,21 +963,13 @@ TEST(CoroTest, TestMQTTCPP)
 						std::string value = msg->to_string();
 						if(value == "true" || value == "false")
 						{
-							// std::cout << "sensor topic: " << msg->get_topic() << std::endl;
-							// std::cout << "sensor value: " << msg->to_string() << std::endl;
 							auto sensor = component::memoize::instance().get("sensor", sch, cli, msg->get_topic(), "");
 							sensor->on_change()(fes::high_resolution_clock(), sensor->payload_to_state(value));
 						}
 					}
-					// else
-					// {
-					// 	std::string topic = msg->get_topic();
-					// 	std::cout << "discarded topic: " << topic << std::endl;
-					// 	std::cout << "discarded value: " << msg->to_string() << std::endl;
-					// }
 				}
 			});
-		
+
 			auto habita = interruptor_from_name(sch, cli, "habita");
 			auto armario = interruptor_from_name(sch, cli, "armario");
 			auto salon = interruptor_from_name(sch, cli, "salon");
@@ -1000,7 +990,6 @@ TEST(CoroTest, TestMQTTCPP)
 				else
 					salon->off()->wait();
 			});
-
 			habita_presence_1->on_change().connect([&](auto marktime, auto state) {
 				if(state)
 					habita->on()->wait();
