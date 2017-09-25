@@ -103,29 +103,32 @@ public:
 	using coroutine = push_type_ptr< optional<T> >;
 	using generator = pull_type_ptr< optional<T> >;
 
-	explicit channel(size_t buffer = 0)
-		: _buffer(buffer)
-		, _elements(sch, 0)
-		, _slots(sch, buffer + 1)
+	explicit channel(cu::parallel_scheduler& sche, size_t buffer = 0)
+		: _sche(sche)
+		, _buffer(buffer)
+		, _elements(sche, 0)
+		, _slots(sche, buffer + 1)
 	{
 		_set_tail();
 	}
 
 	template <typename Function>
-	explicit channel(size_t buffer, Function&& f)
-		: _buffer(buffer)
-		, _elements(sch, 0)
-		, _slots(sch, buffer + 1)
+	explicit channel(cu::parallel_scheduler& sche, size_t buffer, Function&& f)
+		: _sche(sche)
+		, _buffer(buffer)
+		, _elements(sche, 0)
+		, _slots(sche, buffer + 1)
 	{
 		_set_tail();
 		_add(std::forward<Function>(f));
 	}
 
 	template <typename Function, typename ... Functions>
-	explicit channel(size_t buffer, Function&& f, Functions&& ... fs)
-		: _buffer(buffer)
-		, _elements(sch, 0)
-		, _slots(sch, buffer + 1)
+	explicit channel(cu::parallel_scheduler& sche, size_t buffer, Function&& f, Functions&& ... fs)
+		: _sche(sche)
+		, _buffer(buffer)
+		, _elements(sche, 0)
+		, _slots(sche, buffer + 1)
 	{
 		_set_tail();
 		_add(std::forward<Function>(f), std::forward<Functions>(fs)...);
@@ -265,6 +268,7 @@ protected:
 	}
 
 protected:
+	cu::parallel_scheduler& _sche;
 	size_t _buffer;
 	std::stack< coroutine > _coros;
 	fes::async_delay< optional<T> > _buf;
