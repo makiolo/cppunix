@@ -25,7 +25,7 @@ public:
 		, _pid(pid)
 		, _coroutine(cu::make_generator<control_type>(
 			[f = std::move(func)](auto& yield) {
-				yield();
+				yield( cu::control_type{} );
 				f(yield);
 			}
 		))

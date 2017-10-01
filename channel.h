@@ -167,7 +167,7 @@ public:
 			_elements.notify(yield);
 			if(full())
 			{
-				yield();
+				yield( cu::control_type{} );
 			}
 		}
 	}
@@ -200,7 +200,7 @@ public:
 	{
 		if(_buf.empty())
 		{
-			yield();
+			yield( cu::control_type{} );
 		}
 		_elements.wait(yield);
 		optional<T> data = std::get<0>(_buf.get(yield));
@@ -230,7 +230,7 @@ public:
 		_slots.wait(yield);
 		(*_coros.top())( optional<T>(true) );
 		_elements.notify(yield);
-		yield();
+		yield( cu::control_type{} );
 	}
 
 protected:
@@ -310,7 +310,7 @@ inline int select(cu::yield_type& yield, const cu::channel<Args>&... chans)
 		n = select_nonblock(yield, chans...);
 		if(n == -1)
 		{
-			yield();
+			yield( cu::control_type{} );
 		}
 	} while(n == -1);
 	return n;

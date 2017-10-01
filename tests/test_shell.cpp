@@ -58,7 +58,7 @@ TEST(CoroTest, Test_run_ls_strip_quote_grep)
 			, quote()
 			, grep("shell_*")
 			, assert_count(1)
-			, assert_string("\"shell_exe\"")
+			, assert_string("\"shell_unittest\"")
 			, log()
 	);
 	c1("ls .");
@@ -73,7 +73,7 @@ TEST(CoroTest, Test_run_ls_strip_quote_grep)
 			, grep("shell_*")
 			, assert_count(1)
 			, replace("./", "")
-			, assert_string("\"shell_exe\"")
+			, assert_string("\"shell_unittest\"")
 			, log()
 	);
 	c2(".");
@@ -706,11 +706,11 @@ public:
 	virtual std::string state_to_payload(bool value) const = 0;
 };
 
-// only subscribe
+// template <typename T>
 class sensor : public component
 {
 public:
-	DEFINE_KEY(sensor)
+	// DEFINE_KEY(sensor<T>)
 	
 	explicit sensor(cu::parallel_scheduler& parallel_scheduler, mqtt::async_client& client, std::string topic_sub, std::string topic_pub_unsed)
 		: _scheduler(parallel_scheduler)
@@ -721,7 +721,6 @@ public:
 		, _channel(parallel_scheduler)
 		, _state(false)
 	{
-		// propagate initial state
 		this->on_change()(fes::high_resolution_clock(), _state);
 		_client.subscribe(_topic_sub, QOS)->wait();
 		_scheduler.spawn([&](auto& yield)
@@ -732,7 +731,7 @@ public:
 				if(new_state != this->_state)
 				{
 					this->_state = new_state;
-					this->on_change()(fes::high_resolution_clock(), this->payload_to_state(payload));
+					this->on_change()(fes::high_resolution_clock(), new_state);
 				}
 			}
 		});
@@ -791,11 +790,15 @@ protected:
 	fes::sync<fes::marktime, bool> _event;
 	bool _state;
 };
-// DEFINE_HASH(sensor)
+DEFINE_HASH(sensor)
+// DEFINE_HASH(sensor<bool>)
+// DEFINE_HASH(sensor<float>)
 
 namespace
 {
 	component::memoize::registrator<sensor> reg_sensor;
+	// component::memoize::registrator<sensor<bool> > reg_sensor_bool;
+	// component::memoize::registrator<sensor<float> > reg_sensor_float;
 }
 
 /*
@@ -813,7 +816,7 @@ class interruptor : public sensor
 {
 public:
 	DEFINE_KEY(interruptor)
-	
+
 	explicit interruptor(cu::parallel_scheduler& parallel_scheduler, mqtt::async_client& client, std::string topic_sub, std::string topic_pub)
 		: sensor(parallel_scheduler, client, topic_sub, "")
 		, _topic_pub(std::move(topic_pub))
@@ -904,16 +907,63 @@ auto interruptor_from_name(cu::parallel_scheduler& sch, mqtt::async_client& cli,
 	return component::memoize::instance().get<interruptor>(sch, cli, topic, short_topic);
 }
 
-auto sensor_from_name(cu::parallel_scheduler& sch, mqtt::async_client& cli, const std::string& room, const std::string& sensor)
+auto sensor_from_name(cu::parallel_scheduler& sch, mqtt::async_client& cli, const std::string& room, const std::string& sensor, const std::string& kind = "presence")
 {
 	std::stringstream ss;
-	ss << "homie/" << room << "/" << sensor << "/presence";
+	ss << "homie/" << room << "/" << sensor << "/" << kind;
 	std::string topic = ss.str();
 	return component::memoize::instance().get("sensor", sch, cli, topic, "");
 }
 
+std::map<std::string, std::vector<std::tuple<fes::marktime, std::string> > > marktimes;
+std::map<std::string, std::map<std::string, bool> > presences;
+
+fes::deltatime get_shutdown_time(std::string location)
+{
+	// return fes::deltatime(35000);
+	return fes::deltatime(10000);
+}
+
+bool _has_presence(std::string location, std::vector<std::string> sensors)
+{
+	auto marktime = fes::high_resolution_clock() - get_shutdown_time(location);
+	for(auto& tpl : marktimes[location])
+	{
+		fes::marktime timestamp;
+		std::string sensor;
+		std::tie(timestamp, sensor) = tpl;
+		if(std::find(sensors.begin(), sensors.end(), sensor) != sensors.end())
+		{
+			if(timestamp >= marktime)
+			{
+				return true;
+			}
+			else
+			{
+				break;
+			}
+		}
+	}
+	return false;
+}
+
+bool has_presence(std::string location)
+{
+	if(location == "armario")
+		return _has_presence("habita", {"presence_3"});
+	else
+		return _has_presence(location, {"presence_1", "presence_2", "presence_3"});
+}
+
 TEST(CoroTest, TestMQTTCPP)
 {
+	presences["salon"]["presence_1"] = false;
+	presences["salon"]["presence_2"] = false;
+	presences["salon"]["presence_3"] = false;
+	presences["habita"]["presence_1"] = false;
+	presences["habita"]["presence_2"] = false;
+	presences["habita"]["presence_3"] = false;
+
 	mqtt::async_client cli("tcp://192.168.1.4:1883", "cppclient");
 	try
 	{
@@ -938,33 +988,31 @@ TEST(CoroTest, TestMQTTCPP)
 					auto msg = asyncply::await(yield, [&](){ return cli.consume_message(); });
 					if(!msg)
 					{
-						yield();
+						yield( cu::control_type{} );
 					}
-					else if(endswith(msg->get_topic(), "/light/changed"))
+					else
 					{
 						std::string value = msg->to_string();
 						if(value == "true" || value == "false")
 						{
-							auto interrup = interruptor_from_topic_subscribe(sch, cli, msg->get_topic());
-							interrup->channel()(yield, value);
-						}
-					}
-					else if(endswith(msg->get_topic(), "/light"))
-					{
-						std::string value = msg->to_string();
-						if(value == "true" || value == "false")
-						{
-							auto interrup = interruptor_from_topic_publisher(sch, cli, msg->get_topic());
-							interrup->on_change()(fes::high_resolution_clock(), interrup->payload_to_state(value));
-						}
-					}
-					else if(endswith(msg->get_topic(), "/presence"))
-					{
-						std::string value = msg->to_string();
-						if(value == "true" || value == "false")
-						{
-							auto sensor = component::memoize::instance().get("sensor", sch, cli, msg->get_topic(), "");
-							sensor->on_change()(fes::high_resolution_clock(), sensor->payload_to_state(value));
+							if(endswith(msg->get_topic(), "/light/changed"))
+							{
+								std::string value = msg->to_string();
+								auto interrup = interruptor_from_topic_subscribe(sch, cli, msg->get_topic());
+								interrup->channel()(yield, value);
+							}
+							else if(endswith(msg->get_topic(), "/light"))
+							{
+								std::string value = msg->to_string();
+								auto interrup = interruptor_from_topic_publisher(sch, cli, msg->get_topic());
+								interrup->on_change()(fes::high_resolution_clock(), interrup->payload_to_state(value));
+							}
+							else if(endswith(msg->get_topic(), "/presence"))
+							{
+								std::string value = msg->to_string();
+								auto sensor = component::memoize::instance().get("sensor", sch, cli, msg->get_topic(), "");
+								sensor->on_change()(fes::high_resolution_clock(), sensor->payload_to_state(value));
+							}
 						}
 					}
 				}
@@ -982,42 +1030,80 @@ TEST(CoroTest, TestMQTTCPP)
 			auto habita_presence_2 = sensor_from_name(sch, cli, "habita", "presence_2");
 			auto habita_presence_3 = sensor_from_name(sch, cli, "habita", "presence_3");
 
-			int salon_count = 0;
-			int habita_count = 0;
-			salon_presence_1->on_change().connect([&](auto marktime, auto state) {
-				if(state)
-					salon->on()->wait();
-				else
-					salon->off()->wait();
-			});
-			habita_presence_1->on_change().connect([&](auto marktime, auto state) {
-				if(state)
-					habita->on()->wait();
-				else
-					habita->off()->wait();
-			});
-			habita_presence_3->on_change().connect([&](auto marktime, auto state) {
-				if(state)
-					armario->on()->wait();
-				else
-					armario->off()->wait();
-			});
-
-			// sch.spawn([&](auto& yield)
-			// {
-			// 	while(true)
-			// 	{
-			// 		cu::await(yield, habita->off() );
-			// 		cu::await(yield, armario->off() );
-			// 		cu::await(yield, salon->off() );
-			// 		cu::sleep(yield, fes::deltatime(2000) );
-			// 		cu::await(yield, habita->on() );
-			// 		cu::await(yield, armario->on() );
-			// 		cu::await(yield, salon->on() );
-			// 		cu::sleep(yield, fes::deltatime(2000) );
-			// 	}
+			// auto salon_lux = sensor_from_name(sch, cli, "salon", "lux", "lux");
+			// auto habita_lux = sensor_from_name(sch, cli, "habita", "lux", "lux");
+			// salon_lux->on_change().connect([&](auto marktime, auto state){
+			// 	;
 			// });
 
+			auto controller = [&](auto marktime, auto state, auto location, auto node_id)
+			{
+				// presences
+				presences[location][node_id] = state;
+
+				// marktimes
+				bool location_presence_1 = presences[location]["presence_1"];
+				bool location_presence_2 = presences[location]["presence_2"];
+				bool location_presence_3 = presences[location]["presence_3"];
+				if(location_presence_1 || location_presence_2 || location_presence_3)
+				{
+					if(location_presence_3)
+					{
+						marktimes[location].push_back(std::make_tuple(marktime, "presence_3"));
+					}
+					else
+					{
+						marktimes[location].push_back(std::make_tuple(marktime, "presence_1"));
+					}
+				}
+
+				//////////////////////////////
+				if(has_presence("salon"))
+				{
+					// std::cout << "salon on" << std::endl;
+					salon->on()->wait();
+				}
+				else
+				{
+					// std::cout << "salon off" << std::endl;
+					salon->off()->wait();
+				}
+				//////////////////////////////
+				if(has_presence("habita"))
+				{
+					// std::cout << "habita on" << std::endl;
+					habita->on()->wait();
+				}
+				else
+				{
+					// std::cout << "habita off" << std::endl;
+					habita->off()->wait();
+				}
+				//////////////////////////////
+				if(has_presence("armario"))
+				{
+					// std::cout << "armario on" << std::endl;
+					armario->on()->wait();
+				}
+				else
+				{
+					// std::cout << "armario off" << std::endl;
+					armario->off()->wait();
+				}
+				//////////////////////////////
+			};
+
+			// salon
+			salon_presence_1->on_change().connect(std::bind(controller, std::placeholders::_1, std::placeholders::_2, "salon", "presence_1"));
+			salon_presence_2->on_change().connect(std::bind(controller, std::placeholders::_1, std::placeholders::_2, "salon", "presence_2"));
+			salon_presence_3->on_change().connect(std::bind(controller, std::placeholders::_1, std::placeholders::_2, "salon", "presence_3"));
+
+			// habita
+			habita_presence_1->on_change().connect(std::bind(controller, std::placeholders::_1, std::placeholders::_2, "habita", "presence_1"));
+			habita_presence_2->on_change().connect(std::bind(controller, std::placeholders::_1, std::placeholders::_2, "habita", "presence_2"));
+			habita_presence_3->on_change().connect(std::bind(controller, std::placeholders::_1, std::placeholders::_2, "habita", "presence_3"));
+
+			// view
 			habita->on_change().connect([](auto marktime, auto state) {
 				if(!state)
 					std::cout << " <habita OFF> " << std::endl;
@@ -1108,5 +1194,23 @@ TEST(CoroTest, Asyncply2)
 		EXPECT_EQ(n, 66);
 	});
 	sch.run_until_complete();
+}
+
+TEST(CoroTest, Test4)
+{
+	auto coro = cu::pull_type<int>(
+		[&](cu::push_type<int>& yield) {
+			yield(5);
+			yield(6);
+			yield(7);
+		}
+	);
+
+	while(coro)
+	{
+		auto n = coro.get();
+		LOGI("----- push element = %d", n);
+		coro();
+	}
 }
 

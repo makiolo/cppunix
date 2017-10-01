@@ -46,7 +46,7 @@ static void sleep(cu::yield_type& yield, fes::deltatime time)
 	auto timeout = fes::high_resolution_clock() + time;
 	while(fes::high_resolution_clock() <= timeout)
 	{
-		yield();
+		yield( cu::control_type{} );
 	}
 }
 
@@ -55,7 +55,7 @@ static void await(cu::yield_type& yield, TOKEN token)
 {
 	while(!asyncply::is_complete<TOKEN>{}(token))
 	{
-		yield();
+		yield( cu::control_type{} );
 	}
 }
 
@@ -67,7 +67,7 @@ public:
 		: _pid_counter(0)
 		, _active(nullptr)
 	{
-		
+		;
 	}
 
 	virtual ~scheduler()
@@ -83,24 +83,18 @@ public:
 	}
 
 	template <typename Function>
-	void spawn(const std::string& name, Function&& func)
+	void spawn(std::string name, Function&& func)
 	{
-		_running.emplace_back(std::make_unique<cpproutine>(name, _pid_counter, std::forward<Function>(func)));
+		_running.emplace_back(std::make_unique<cpproutine>(std::move(name), _pid_counter, std::forward<Function>(func)));
 		++_pid_counter;
 	}
-	
+
 	void run_until_complete()
 	{
 		while(ready())
 		{
 			run();
 		}
-
-		// bool pending_work;
-		// do
-		// {
-		// 	pending_work = run();
-		// } while(pending_work);
 		
 		if(_blocked.size() > 0)
 		{
@@ -109,7 +103,7 @@ public:
 			throw std::runtime_error(ss.str());
 		}
 	}
-	
+
 	void run_forever()
 	{
 		while(true)
@@ -122,12 +116,12 @@ public:
 	{
 		return _active->get_name();
 	}
-	
+
 	pid_type getpid() const override final
 	{
 		return _active->getpid();
 	}
-	
+
 	void wait(int id)
 	{
 		_move_to_blocked = true;
@@ -152,7 +146,7 @@ public:
 		}
 		return  false;
 	}
-	
+
 	bool notify_all(int id)
 	{
 		auto& blocked = _blocked[id];
@@ -172,7 +166,7 @@ public:
 		}
 		return notified_any;
 	}
-	
+
 protected:
 	scheduler_basic* _active;
 	// normal running
@@ -187,3 +181,4 @@ protected:
 }
 
 #endif
+

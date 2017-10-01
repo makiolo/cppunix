@@ -39,7 +39,7 @@ public:
 			if(_sche.notify_one(_id))
 			{
 				LOGV("notify yield in semaphore %d", _id);
-				yield();
+				yield( cu::control_type{} );
 			}
 		}
 	}
@@ -64,7 +64,7 @@ public:
 		{
 			_sche.wait(_id);
 			LOGV("wait yield in semaphore %d", _id);
-			yield();
+			yield( cu::control_type{} );
 		}
 	}
 
