@@ -710,7 +710,8 @@ public:
 class sensor : public component
 {
 public:
-	// DEFINE_KEY(sensor<T>)
+	// constexpr static char const* KEY() { return "sensor<bool>"; }
+	// virtual const std::string& getKEY() const { static std::string key = "sensor<bool>"; return key; }
 	
 	explicit sensor(cu::parallel_scheduler& parallel_scheduler, mqtt::async_client& client, std::string topic_sub, std::string topic_pub_unsed)
 		: _scheduler(parallel_scheduler)
@@ -790,15 +791,12 @@ protected:
 	fes::sync<fes::marktime, bool> _event;
 	bool _state;
 };
-DEFINE_HASH(sensor)
-// DEFINE_HASH(sensor<bool>)
-// DEFINE_HASH(sensor<float>)
+
+DEFINE_HASH_CUSTOM(sensor, std::string, "sensor")
 
 namespace
 {
 	component::memoize::registrator<sensor> reg_sensor;
-	// component::memoize::registrator<sensor<bool> > reg_sensor_bool;
-	// component::memoize::registrator<sensor<float> > reg_sensor_float;
 }
 
 /*
@@ -860,6 +858,268 @@ namespace
 	component::memoize::registrator<interruptor> reg_interruptor;
 }
 
+#include <OIS/OIS.h>
+#ifdef _WIN32
+
+#elif defined(__APPLE__)
+
+#elif defined(__linux__)
+#include <X11/Xlib.h>
+#endif
+
+class InputManager : public OIS::KeyListener, public OIS::MouseListener, public OIS::JoyStickListener
+{
+public:
+	explicit InputManager();
+	virtual ~InputManager();
+	InputManager(const InputManager&) = delete;
+	InputManager& operator=(const InputManager&) = delete;
+
+	void update(cu::yield_type& yield);
+
+	bool keyPressed(const OIS::KeyEvent &arg) override;
+	bool keyReleased(const OIS::KeyEvent &arg) override;
+	bool mouseMoved(const OIS::MouseEvent &arg) override;
+	bool mousePressed(const OIS::MouseEvent &arg, OIS::MouseButtonID id) override;
+	bool mouseReleased(const OIS::MouseEvent &arg, OIS::MouseButtonID id) override;
+	bool buttonPressed(const OIS::JoyStickEvent &arg, int button) override;
+	bool buttonReleased(const OIS::JoyStickEvent &arg, int button) override;
+	bool axisMoved(const OIS::JoyStickEvent &arg, int axis) override;
+	bool povMoved(const OIS::JoyStickEvent &arg, int pov) override;
+	bool vector3Moved(const OIS::JoyStickEvent &arg, int index) override;
+
+	int get_modifier_state();
+
+public:
+	fes::sync<OIS::KeyEvent> _keyPressed;
+	fes::sync<OIS::KeyEvent> _keyReleased;
+	fes::sync<OIS::MouseEvent> _mouseMoved;
+	fes::sync<OIS::MouseEvent, OIS::MouseButtonID> _mousePressed;
+	fes::sync<OIS::MouseEvent, OIS::MouseButtonID> _mouseReleased;
+	fes::sync<OIS::JoyStickEvent, int> _buttonPressed;
+	fes::sync<OIS::JoyStickEvent, int> _buttonReleased;
+	fes::sync<OIS::JoyStickEvent, int> _axisMoved;
+	fes::sync<OIS::JoyStickEvent, int> _povMoved;
+	fes::sync<OIS::JoyStickEvent, int> _vector3Moved;
+protected:
+	OIS::InputManager* _input_manager = 0;
+	OIS::Keyboard* _keyboard  = 0;
+	OIS::Mouse* _mouse   = 0;
+	OIS::JoyStick* _joystick = 0;
+
+	int _width;
+	int _height;
+};
+
+const char* g_DeviceType[] = {"OISUnknown", "OISKeyboard", "OISMouse", "OISJoyStick", "OISTablet", "OISOther"};
+
+InputManager::InputManager()
+	: _keyboard(nullptr)
+	, _mouse(nullptr)
+	, _joystick(nullptr)
+{
+	// SDL_GetWindowWMInfo(_window, &system_info);
+
+	std::ostringstream wnd;
+#ifdef _WIN32
+	// wnd << system_info.info.win.window;
+#else
+	// wnd << system_info.info.x11.window;
+#endif
+
+	OIS::ParamList pl;
+	pl.insert(std::make_pair( std::string("WINDOW"), wnd.str() ));
+#ifdef _WIN32
+	pl.insert(std::make_pair(std::string("w32_mouse"), std::string("DISCL_FOREGROUND" )));
+	pl.insert(std::make_pair(std::string("w32_mouse"), std::string("DISCL_NONEXCLUSIVE")));
+	pl.insert(std::make_pair(std::string("w32_keyboard"), std::string("DISCL_FOREGROUND")));
+	pl.insert(std::make_pair(std::string("w32_keyboard"), std::string("DISCL_NONEXCLUSIVE")))
+#else
+	pl.insert(std::make_pair(std::string("x11_mouse_grab"), std::string("false")));
+	pl.insert(std::make_pair(std::string("x11_mouse_hide"), std::string("false")));
+	pl.insert(std::make_pair(std::string("x11_keyboard_grab"), std::string("false")));
+	pl.insert(std::make_pair(std::string("XAutoRepeatOn"), std::string("true")));
+#endif
+
+	// This never returns null.. it will raise an exception on errors
+	_input_manager = OIS::InputManager::createInputSystem(pl);
+
+	// Lets enable all addons that were compiled in:
+	_input_manager->enableAddOnFactory(OIS::InputManager::AddOn_All);
+
+	unsigned int v = _input_manager->getVersionNumber();
+	std::stringstream ss;
+	ss << "OIS Version: " << (v>>16) << "." << ((v>>8) & 0x000000FF) << "." << (v & 0x000000FF)
+		<< "\nRelease Name: " << _input_manager->getVersionName()
+		<< "\nManager: " << _input_manager->inputSystemName()
+		<< "\nTotal Keyboards: " << _input_manager->getNumberOfDevices(OIS::OISKeyboard)
+		<< "\nTotal Mice: " << _input_manager->getNumberOfDevices(OIS::OISMouse)
+		<< "\nTotal JoySticks: " << _input_manager->getNumberOfDevices(OIS::OISJoyStick);
+	LOGI(ss.str().c_str());
+
+	OIS::DeviceList list = _input_manager->listFreeDevices();
+	for( OIS::DeviceList::iterator i = list.begin(); i != list.end(); ++i )
+	{
+		std::cout << "\n\tDevice: " << g_DeviceType[i->first] << " Vendor: " << i->second;
+	}
+	std::cout << std::endl;
+
+	_keyboard = (OIS::Keyboard*)_input_manager->createInputObject(OIS::OISKeyboard, true);
+	_keyboard->setTextTranslation(OIS::Keyboard::Unicode);
+	_keyboard->setEventCallback(this);
+
+	// linux SDL2 ya coge el raton de X11
+	// http://www.wreckedgames.com/forum/index.php?topic=1233.0
+	_mouse = (OIS::Mouse*)_input_manager->createInputObject(OIS::OISMouse, true);
+	_mouse->setEventCallback(this);
+	const OIS::MouseState &ms = _mouse->getMouseState();
+	// ms.width = _width;
+	// ms.height = _height;
+
+	try
+	{
+		// int numSticks = std::min<int>(_input_manager->getNumberOfDevices(OIS::OISJoyStick), 1);
+		// if (numSticks > 0)
+		// {
+			_joystick = (OIS::JoyStick*)_input_manager->createInputObject(OIS::OISJoyStick, true);
+			_joystick->setEventCallback(this);
+			std::stringstream ss2;
+			ss2 << "\n\nCreating Joystick "
+				<< "\n\tAxes: " << _joystick->getNumberOfComponents(OIS::OIS_Axis)
+				<< "\n\tSliders: " << _joystick->getNumberOfComponents(OIS::OIS_Slider)
+				<< "\n\tPOV/HATs: " << _joystick->getNumberOfComponents(OIS::OIS_POV)
+				<< "\n\tButtons: " << _joystick->getNumberOfComponents(OIS::OIS_Button)
+				<< "\n\tVector3: " << _joystick->getNumberOfComponents(OIS::OIS_Vector3)
+				<< std::endl;
+			LOGI(ss2.str().c_str());
+		// }
+	}
+	catch(OIS::Exception &ex)
+	{
+		LOGE("Exception raised on joystick creation: %s", ex.eText);
+	}
+}
+
+InputManager::~InputManager()
+{
+	OIS::InputManager::destroyInputSystem(_input_manager);
+}
+
+void InputManager::update(cu::yield_type& yield)
+{
+	_keyboard->capture();
+	_mouse->capture();
+	if( _joystick )
+	{
+		_joystick->capture();
+	}
+	yield( cu::control_type{} );
+}
+
+bool InputManager::keyPressed(const OIS::KeyEvent &arg)
+{
+	_keyPressed(arg);
+	return true;
+}
+
+bool InputManager::keyReleased(const OIS::KeyEvent &arg)
+{
+	_keyReleased(arg);
+	return true;
+}
+
+bool InputManager::mouseMoved(const OIS::MouseEvent &arg)
+{
+	_mouseMoved(arg);
+	return true;
+}
+
+bool InputManager::mousePressed(const OIS::MouseEvent &arg, OIS::MouseButtonID id)
+{
+	_mousePressed(arg, id);
+	return true;
+}
+
+bool InputManager::mouseReleased(const OIS::MouseEvent &arg, OIS::MouseButtonID id)
+{
+	_mouseReleased(arg, id);
+	return true;
+}
+
+bool InputManager::buttonReleased(const OIS::JoyStickEvent &arg, int button)
+{
+	_buttonReleased(arg, button);
+	return true;
+}
+
+bool InputManager::buttonPressed(const OIS::JoyStickEvent &arg, int button)
+{
+	_buttonPressed(arg, button);
+	return true;
+}
+
+bool InputManager::axisMoved(const OIS::JoyStickEvent &arg, int axis)
+{
+	_axisMoved(arg, axis);
+	return true;
+}
+
+bool InputManager::povMoved(const OIS::JoyStickEvent &arg, int pov)
+{
+	_povMoved(arg, pov);
+	return true;
+}
+
+bool InputManager::vector3Moved(const OIS::JoyStickEvent &arg, int index)
+{
+	_vector3Moved(arg, index);
+	return true;
+}
+
+int InputManager::get_modifier_state()
+{
+	int modifier_state = 0;
+
+	// if (_keyboard->isModifierDown(OIS::Keyboard::Ctrl))
+	// 	modifier_state |= Rocket::Core::Input::KM_CTRL;
+	// if (_keyboard->isModifierDown(OIS::Keyboard::Shift))
+	// 	modifier_state |= Rocket::Core::Input::KM_SHIFT;
+	// if (_keyboard->isModifierDown(OIS::Keyboard::Alt))
+	// 	modifier_state |= Rocket::Core::Input::KM_ALT;
+
+#ifdef _WIN32
+
+	// if (GetKeyState(VK_CAPITAL) > 0)
+	// 	modifier_state |= Rocket::Core::Input::KM_CAPSLOCK;
+	// if (GetKeyState(VK_NUMLOCK) > 0)
+	// 	modifier_state |= Rocket::Core::Input::KM_NUMLOCK;
+	// if (GetKeyState(VK_SCROLL) > 0)
+	// 	modifier_state |= Rocket::Core::Input::KM_SCROLLLOCK;
+
+#elif defined(__APPLE__)
+
+	// UInt32 key_modifiers = GetCurrentEventKeyModifiers();
+	// if (key_modifiers & (1 << alphaLockBit))
+	// 	modifier_state |= Rocket::Core::Input::KM_CAPSLOCK;
+
+#elif defined(__linux__)
+
+	// TODO:
+	// XKeyboardState keyboard_state;
+	// XGetKeyboardControl(DISPLAY!, &keyboard_state);
+	//
+	// if (keyboard_state.led_mask & (1 << 0))
+	//	modifier_state |= Rocket::Core::Input::KM_CAPSLOCK;
+	// if (keyboard_state.led_mask & (1 << 1))
+	//	modifier_state |= Rocket::Core::Input::KM_NUMLOCK;
+	// if (keyboard_state.led_mask & (1 << 2))
+	//	modifier_state |= Rocket::Core::Input::KM_SCROLLLOCK;
+
+#endif
+
+	return modifier_state;
+}
+
 std::string dirname(const std::string& str)
 {
 	std::size_t found = str.find_last_of("/");
@@ -915,8 +1175,8 @@ auto sensor_from_name(cu::parallel_scheduler& sch, mqtt::async_client& cli, cons
 	return component::memoize::instance().get("sensor", sch, cli, topic, "");
 }
 
-std::map<std::string, std::vector<std::tuple<fes::marktime, std::string> > > marktimes;
-std::map<std::string, std::map<std::string, bool> > presences;
+static std::map<std::string, std::vector<std::tuple<fes::marktime, std::string> > > marktimes;
+static std::map<std::string, std::map<std::string, bool> > presences;
 
 fes::deltatime get_shutdown_time(std::string location)
 {
@@ -957,6 +1217,8 @@ bool has_presence(std::string location)
 
 TEST(CoroTest, TestMQTTCPP)
 {
+	// InputManager input;
+
 	presences["salon"]["presence_1"] = false;
 	presences["salon"]["presence_2"] = false;
 	presences["salon"]["presence_3"] = false;
@@ -975,6 +1237,10 @@ TEST(CoroTest, TestMQTTCPP)
 		cli.start_consuming();
 		{
 			cu::parallel_scheduler sch;
+			// sch.spawn([&](auto& yield)
+			// {
+			// 	input.update(yield);
+			// });
 			sch.spawn([&](auto& yield)
 			{
 				cu::await(yield, cli.subscribe("/comando/+/light", QOS) );
@@ -1030,12 +1296,6 @@ TEST(CoroTest, TestMQTTCPP)
 			auto habita_presence_2 = sensor_from_name(sch, cli, "habita", "presence_2");
 			auto habita_presence_3 = sensor_from_name(sch, cli, "habita", "presence_3");
 
-			// auto salon_lux = sensor_from_name(sch, cli, "salon", "lux", "lux");
-			// auto habita_lux = sensor_from_name(sch, cli, "habita", "lux", "lux");
-			// salon_lux->on_change().connect([&](auto marktime, auto state){
-			// 	;
-			// });
-
 			auto controller = [&](auto marktime, auto state, auto location, auto node_id)
 			{
 				// presences
@@ -1061,34 +1321,34 @@ TEST(CoroTest, TestMQTTCPP)
 				if(has_presence("salon"))
 				{
 					// std::cout << "salon on" << std::endl;
-					salon->on()->wait();
+					salon->on();
 				}
 				else
 				{
 					// std::cout << "salon off" << std::endl;
-					salon->off()->wait();
+					salon->off();
 				}
 				//////////////////////////////
 				if(has_presence("habita"))
 				{
 					// std::cout << "habita on" << std::endl;
-					habita->on()->wait();
+					habita->on();
 				}
 				else
 				{
 					// std::cout << "habita off" << std::endl;
-					habita->off()->wait();
+					habita->off();
 				}
 				//////////////////////////////
 				if(has_presence("armario"))
 				{
 					// std::cout << "armario on" << std::endl;
-					armario->on()->wait();
+					armario->on();
 				}
 				else
 				{
 					// std::cout << "armario off" << std::endl;
-					armario->off()->wait();
+					armario->off();
 				}
 				//////////////////////////////
 			};
@@ -1104,24 +1364,25 @@ TEST(CoroTest, TestMQTTCPP)
 			habita_presence_3->on_change().connect(std::bind(controller, std::placeholders::_1, std::placeholders::_2, "habita", "presence_3"));
 
 			// view
-			habita->on_change().connect([](auto marktime, auto state) {
-				if(!state)
-					std::cout << " <habita OFF> " << std::endl;
-				else
-					std::cout << " <habita ON> " << std::endl;
-			});
-			armario->on_change().connect([](auto marktime, auto state) {
-				if(!state)
-					std::cout << " <armario OFF> " << std::endl;
-				else
-					std::cout << " <armario ON> " << std::endl;
-			});
-			salon->on_change().connect([](auto marktime, auto state) {
-				if(!state)
-					std::cout << " <salon OFF> " << std::endl;
-				else
-					std::cout << " <salon ON> " << std::endl;
-			});
+			// habita->on_change().connect([](auto marktime, auto state) {
+			// 	if(!state)
+			// 		std::cout << " <habita OFF> " << std::endl;
+			// 	else
+			// 		std::cout << " <habita ON> " << std::endl;
+			// });
+			// armario->on_change().connect([](auto marktime, auto state) {
+			// 	if(!state)
+			// 		std::cout << " <armario OFF> " << std::endl;
+			// 	else
+			// 		std::cout << " <armario ON> " << std::endl;
+			// });
+			// salon->on_change().connect([](auto marktime, auto state) {
+			// 	if(!state)
+			// 		std::cout << " <salon OFF> " << std::endl;
+			// 	else
+			// 		std::cout << " <salon ON> " << std::endl;
+			// });
+
 			sch.run_until_complete();
 		}
 		cli.stop_consuming();

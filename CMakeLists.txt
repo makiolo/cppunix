@@ -12,6 +12,8 @@ cmaki_find_package(teelogging)
 cmaki_find_package(design-patterns-cpp14)
 cmaki_find_package(fast-event-system)
 cmaki_find_package(asyncply)
+cmaki_find_package(ois)
 cmaki_google_test(coroutine tests/test_coroutine.cpp PTHREADS)
 cmaki_google_test(channel tests/test_channel.cpp PTHREADS)
 cmaki_google_test(shell tests/test_shell.cpp PTHREADS)
+
