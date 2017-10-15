@@ -1602,9 +1602,16 @@ TEST(CoroTest, Test4)
 
 TEST(CoroTest, Rest1)
 {
-	RestClient::Response r = RestClient::get("http://google.com");
-	std::cout << "code: " << r.code << std::endl;
-	std::cout << "headers: " << r.headers << std::endl;
-	std::cout << "body: " << r.body << std::endl;
+	RestClient::Response res = RestClient::get("http://api.openweathermap.org/data/2.5/weather?q=Madrid");
+
+	json root;
+	std::istringstream str(res.body);
+	str >> root;
+
+	std::cout << std::setw(4) << root << std::endl;
+
+	// std::cout << "code: " << code << std::endl;
+	// std::cout << "headers: " << headers << std::endl;
+	// std::cout << "body: " << body << std::endl;
 }
 
