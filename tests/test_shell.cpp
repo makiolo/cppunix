@@ -15,6 +15,7 @@
 #include <fast-event-system/sync.h>
 #include <design-patterns-cpp14/memoize.h>
 #include <json.hpp>
+#include <restclient-cpp/restclient.h>
 
 class CoroTest : testing::Test { };
 
@@ -1597,5 +1598,13 @@ TEST(CoroTest, Test4)
 		LOGI("----- push element = %d", n);
 		coro();
 	}
+}
+
+TEST(CoroTest, Rest1)
+{
+	RestClient::Response r = RestClient::get("http://google.com");
+	std::cout << "code: " << r.code << std::endl;
+	std::cout << "headers: " << r.headers << std::endl;
+	std::cout << "body: " << r.body << std::endl;
 }
 
