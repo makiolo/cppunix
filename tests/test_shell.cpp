@@ -14,6 +14,7 @@
 #include <fast-event-system/sync.h>
 #include <fast-event-system/sync.h>
 #include <design-patterns-cpp14/memoize.h>
+#include <json.hpp>
 
 class CoroTest : testing::Test { };
 
@@ -687,6 +688,24 @@ namespace std {
 	};
 }
 
+std::string dirname(const std::string& str)
+{
+	std::size_t found = str.find_last_of("/");
+	return str.substr(0, found);
+}
+
+bool endswith(const std::string& text, const std::string& ending)
+{
+	if (text.length() >= ending.length())
+	{
+		return (0 == text.compare (text.length() - ending.length(), ending.length(), ending));
+	}
+	else
+	{
+		return false;
+	}
+}
+
 const int  QOS = 1;
 const auto TIMEOUT = std::chrono::seconds(10);
 
@@ -706,13 +725,9 @@ public:
 	virtual std::string state_to_payload(bool value) const = 0;
 };
 
-// template <typename T>
 class sensor : public component
 {
 public:
-	// constexpr static char const* KEY() { return "sensor<bool>"; }
-	// virtual const std::string& getKEY() const { static std::string key = "sensor<bool>"; return key; }
-	
 	explicit sensor(cu::parallel_scheduler& parallel_scheduler, mqtt::async_client& client, std::string topic_sub, std::string topic_pub_unsed)
 		: _scheduler(parallel_scheduler)
 		, _client(client)
@@ -799,6 +814,9 @@ namespace
 	component::memoize::registrator<sensor> reg_sensor;
 }
 
+
+using json = nlohmann::json;
+
 /*
 interruptor/switch/button -> bool (subscribe mandatory and publish optional)
 text -> string (subscribe mandatory and publish optional)
@@ -813,18 +831,77 @@ image -> http://...png (subscribirse y enviar imagenes desde C++ parece más com
 class interruptor : public sensor
 {
 public:
-	DEFINE_KEY(interruptor)
+	// DEFINE_KEY(interruptor)
 
 	explicit interruptor(cu::parallel_scheduler& parallel_scheduler, mqtt::async_client& client, std::string topic_sub, std::string topic_pub)
 		: sensor(parallel_scheduler, client, topic_sub, "")
 		, _topic_pub(std::move(topic_pub))
 	{
 		_client.subscribe(_topic_pub, QOS)->wait();
+
+		if(false)
+		{
+			// sets desde el ipad
+			std::stringstream ss;
+			ss << "homebridge/from/set/" << get_name();
+			_client.subscribe(ss.str(), QOS)->wait();
+
+			if(endswith(_topic_pub, "/light"))
+			{
+				std::string name = get_name();
+				std::cout << "making interruptor "<<name<<" with sub: " << _topic_sub << " and pub: " << _topic_pub << std::endl;
+				// register in homebridge-mqtt
+				std::string homebridge_topic = "homebridge/to/add";
+				json homebridge_payload = {
+					  {"name", name},
+					  {"service_name", "light"},
+					  {"service", "Switch"}
+				};
+				auto pubmsg = mqtt::make_message(homebridge_topic, homebridge_payload.dump());
+				pubmsg->set_qos(QOS);
+				_client.publish(pubmsg)->wait();
+			}
+		}
 	}
 
 	virtual ~interruptor()
 	{
+		if(false)
+		{
+			if(endswith(_topic_pub, "/light"))
+			{
+				std::string name = get_name();
+
+				std::cout << "removing interruptor "<<name<<" with sub: " << _topic_sub << " and pub: " << _topic_pub << std::endl;
+
+				// unregister in homebridge-mqtt
+				std::string homebridge_topic = "homebridge/to/remove";
+				json homebridge_payload = {
+					  {"name", name}
+				};
+				auto pubmsg = mqtt::make_message(homebridge_topic, homebridge_payload.dump());
+				pubmsg->set_qos(QOS);
+				_client.publish(pubmsg)->wait();
+			}
+			// sets desde el ipad
+			std::stringstream ss;
+			ss << "homebridge/from/set/" << get_name();
+			_client.subscribe(ss.str(), QOS)->wait();
+		}
+
 		_client.unsubscribe(_topic_pub)->wait();
+	}
+
+	std::string get_name() const
+	{
+		std::string name = "Default";
+		if(_topic_pub == "/comando/habita/light")
+			name = "habita";
+		else if(_topic_pub == "/comando/salon/light")
+			name = "salon";
+		else if(_topic_pub == "/comando/armario/light")
+			name = "armario";
+		return name;
 	}
 
 	mqtt::delivery_token_ptr on() const
@@ -852,6 +929,8 @@ public:
 protected:
 	std::string _topic_pub;
 };
+
+DEFINE_HASH_CUSTOM(interruptor, std::string, "interruptor")
 
 namespace
 {
@@ -1120,29 +1199,35 @@ int InputManager::get_modifier_state()
 	return modifier_state;
 }
 
-std::string dirname(const std::string& str)
-{
-	std::size_t found = str.find_last_of("/");
-	return str.substr(0, found);
-}
-
-bool endswith(const std::string& text, const std::string& ending)
-{
-	if (text.length() >= ending.length())
-	{
-		return (0 == text.compare (text.length() - ending.length(), ending.length(), ending));
-	}
-	else
-	{
-		return false;
-	}
-}
-
 bool startswith(const std::string& text,const std::string& token)
 {
 	if(text.length() < token.length())
 		return false;
 	return (text.compare(0, token.length(), token) == 0);
+}
+
+auto interruptor_homie_from_topic_subscribe(cu::parallel_scheduler& sch, mqtt::async_client& cli, const std::string& topic_)
+{
+	std::stringstream ss;
+	ss << topic_ << "/set";
+	std::string publisher = ss.str();
+	std::string subscribe = topic_;
+	return component::memoize::instance().get<interruptor>(sch, cli, subscribe, publisher);
+}
+
+auto interruptor_homie_from_topic_publisher(cu::parallel_scheduler& sch, mqtt::async_client& cli, const std::string& topic_)
+{
+	std::string publisher = topic_;
+	std::string subscribe = dirname(publisher);
+	return component::memoize::instance().get<interruptor>(sch, cli, subscribe, publisher);
+}
+
+auto interruptor_homie_from_name(cu::parallel_scheduler& sch, mqtt::async_client& cli, const std::string& room)
+{
+	std::stringstream ss;
+	ss << "homie/" << room << "/button/on";
+	std::string subscribe = ss.str();
+	return interruptor_homie_from_topic_subscribe(sch, cli, subscribe);
 }
 
 auto interruptor_from_topic_subscribe(cu::parallel_scheduler& sch, mqtt::async_client& cli, const std::string& topic_)
@@ -1153,8 +1238,8 @@ auto interruptor_from_topic_subscribe(cu::parallel_scheduler& sch, mqtt::async_c
 
 auto interruptor_from_topic_publisher(cu::parallel_scheduler& sch, mqtt::async_client& cli, const std::string& topic_)
 {
+	std::string short_topic = topic_;
 	std::string topic = topic_ + "/changed";
-	std::string short_topic = topic;
 	return component::memoize::instance().get<interruptor>(sch, cli, topic, short_topic);
 }
 
@@ -1215,7 +1300,7 @@ bool has_presence(std::string location)
 		return _has_presence(location, {"presence_1", "presence_2", "presence_3"});
 }
 
-TEST(CoroTest, TestMQTTCPP)
+TEST(CoroTest, DISABLED_TestMQTTCPP)
 {
 	// InputManager input;
 
@@ -1246,9 +1331,11 @@ TEST(CoroTest, TestMQTTCPP)
 				cu::await(yield, cli.subscribe("/comando/+/light", QOS) );
 				cu::await(yield, cli.subscribe("/comando/+/light/changed", QOS) );
 				cu::await(yield, cli.subscribe("homie/+/+/presence", QOS) );
+				cu::await(yield, cli.subscribe("homie/+/button/on", QOS) );
 			});
 			sch.spawn([&](auto& yield)
 			{
+				std::vector<std::shared_ptr<component> > cached;
 				while (true)
 				{
 					auto msg = asyncply::await(yield, [&](){ return cli.consume_message(); });
@@ -1258,26 +1345,53 @@ TEST(CoroTest, TestMQTTCPP)
 					}
 					else
 					{
+						std::string topic = msg->get_topic();
 						std::string value = msg->to_string();
-						if(value == "true" || value == "false")
+						std::cout << "topic = " << topic << std::endl;
+						std::cout << "payload = " << value << std::endl;
+
+						if(startswith(topic, "homebridge/from/set"))
 						{
-							if(endswith(msg->get_topic(), "/light/changed"))
+							// un cambio de estado que viene del ipad
+							json j = json::parse(value);
+							auto interrup = interruptor_from_name(sch, cli, j["name"].get<std::string>());
+							if(j["value"].get<bool>())
 							{
-								std::string value = msg->to_string();
-								auto interrup = interruptor_from_topic_subscribe(sch, cli, msg->get_topic());
-								interrup->channel()(yield, value);
+								std::cout << "sending true" << std::endl;
+								interrup->channel()(yield, "true");
 							}
-							else if(endswith(msg->get_topic(), "/light"))
+							else
 							{
-								std::string value = msg->to_string();
-								auto interrup = interruptor_from_topic_publisher(sch, cli, msg->get_topic());
-								interrup->on_change()(fes::high_resolution_clock(), interrup->payload_to_state(value));
+								std::cout << "sending false" << std::endl;
+								interrup->channel()(yield, "false");
 							}
-							else if(endswith(msg->get_topic(), "/presence"))
+						}
+						else
+						{
+							if(value == "true" || value == "false")
 							{
-								std::string value = msg->to_string();
-								auto sensor = component::memoize::instance().get("sensor", sch, cli, msg->get_topic(), "");
-								sensor->on_change()(fes::high_resolution_clock(), sensor->payload_to_state(value));
+								if(endswith(msg->get_topic(), "/light/changed"))
+								{
+									std::string value = msg->to_string();
+									auto interrup = interruptor_from_topic_subscribe(sch, cli, msg->get_topic());
+									interrup->channel()(yield, value);
+									cached.push_back(interrup);
+								}
+
+								else if(endswith(msg->get_topic(), "/light"))
+								{
+									std::string value = msg->to_string();
+									auto interrup = interruptor_from_topic_publisher(sch, cli, msg->get_topic());
+									interrup->on_change()(fes::high_resolution_clock(), interrup->payload_to_state(value));
+									cached.push_back(interrup);
+								}
+								else if(endswith(msg->get_topic(), "/presence"))
+								{
+									std::string value = msg->to_string();
+									auto sensor = component::memoize::instance().get("sensor", sch, cli, msg->get_topic(), "");
+									sensor->on_change()(fes::high_resolution_clock(), sensor->payload_to_state(value));
+									cached.push_back(sensor);
+								}
 							}
 						}
 					}
@@ -1288,6 +1402,8 @@ TEST(CoroTest, TestMQTTCPP)
 			auto armario = interruptor_from_name(sch, cli, "armario");
 			auto salon = interruptor_from_name(sch, cli, "salon");
 
+			auto mesilla = interruptor_homie_from_name(sch, cli, "mesilla");
+
 			auto salon_presence_1 = sensor_from_name(sch, cli, "salon", "presence_1");
 			auto salon_presence_2 = sensor_from_name(sch, cli, "salon", "presence_2");
 			auto salon_presence_3 = sensor_from_name(sch, cli, "salon", "presence_3");
@@ -1295,6 +1411,17 @@ TEST(CoroTest, TestMQTTCPP)
 			auto habita_presence_1 = sensor_from_name(sch, cli, "habita", "presence_1");
 			auto habita_presence_2 = sensor_from_name(sch, cli, "habita", "presence_2");
 			auto habita_presence_3 = sensor_from_name(sch, cli, "habita", "presence_3");
+
+			sch.spawn([&](auto& yield)
+			{
+				while(true)
+				{
+					mesilla->on();
+					cu::sleep(yield, fes::deltatime(1000));
+					mesilla->off();
+					cu::sleep(yield, fes::deltatime(1000));
+				}
+			});
 
 			auto controller = [&](auto marktime, auto state, auto location, auto node_id)
 			{
@@ -1319,35 +1446,32 @@ TEST(CoroTest, TestMQTTCPP)
 
 				//////////////////////////////
 				if(has_presence("salon"))
+				// if(salon->is_on())
 				{
-					// std::cout << "salon on" << std::endl;
 					salon->on();
 				}
 				else
 				{
-					// std::cout << "salon off" << std::endl;
 					salon->off();
 				}
 				//////////////////////////////
 				if(has_presence("habita"))
+				// if(habita->is_on())
 				{
-					// std::cout << "habita on" << std::endl;
 					habita->on();
 				}
 				else
 				{
-					// std::cout << "habita off" << std::endl;
 					habita->off();
 				}
 				//////////////////////////////
 				if(has_presence("armario"))
+				// if(armario->is_on())
 				{
-					// std::cout << "armario on" << std::endl;
 					armario->on();
 				}
 				else
 				{
-					// std::cout << "armario off" << std::endl;
 					armario->off();
 				}
 				//////////////////////////////
