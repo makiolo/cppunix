@@ -4,10 +4,6 @@
 #include <gtest/gtest.h>
 #include <teelogging/teelogging.h>
 #include <coroutine/coroutine.h>
-#include "../shell.h"
-#include "../parallel_scheduler.h"
-#include "../semaphore.h"
-#include "../channel.h"
 #include <asyncply/run.h>
 #include <asyncply/parallel.h>
 #include <mqtt/async_client.h>
@@ -16,6 +12,11 @@
 #include <design-patterns-cpp14/memoize.h>
 #include <json.hpp>
 #include <restclient-cpp/restclient.h>
+#include "../shell.h"
+#include "../parallel_scheduler.h"
+#include "../semaphore.h"
+#include "../channel.h"
+#include "../rest.h"
 
 class CoroTest : testing::Test { };
 
@@ -656,6 +657,8 @@ TEST(CoroTest, TestMultiConsumer)
 
 ///////////////////////////////////////////////////////////////// MQTT C++ ////////////////////////////////////////////////////////////////////////////////////////////
 
+/*
+
 namespace std {
 	template <>
 	struct hash<cu::parallel_scheduler&>
@@ -818,14 +821,12 @@ namespace
 
 using json = nlohmann::json;
 
-/*
-interruptor/switch/button -> bool (subscribe mandatory and publish optional)
-text -> string (subscribe mandatory and publish optional)
-range/progress -> float (proteger rango con mínimo y máximo) (subscribe mandatory and publish optional)
-list/slider discreto -> int (seleccionar un elemento por posicion) (subscribe mandatory and publish optional)
-color -> rgb (subscribe mandatory and publish optional)
-image -> http://...png (subscribirse y enviar imagenes desde C++ parece más complicado, pero sería necesario para camaras de seguridad)
-*/
+// interruptor/switch/button -> bool (subscribe mandatory and publish optional)
+// text -> string (subscribe mandatory and publish optional)
+// range/progress -> float (proteger rango con mínimo y máximo) (subscribe mandatory and publish optional)
+// list/slider discreto -> int (seleccionar un elemento por posicion) (subscribe mandatory and publish optional)
+// color -> rgb (subscribe mandatory and publish optional)
+// image -> http://...png (subscribirse y enviar imagenes desde C++ parece más complicado, pero sería necesario para camaras de seguridad)
 
 // subscribe + publisher
 // escucha y actua
@@ -1519,6 +1520,8 @@ TEST(CoroTest, DISABLED_TestMQTTCPP)
 	}
 }
 
+*/
+
 TEST(CoroTest, Asyncply1)
 {
 	cu::parallel_scheduler sch;
@@ -1613,5 +1616,26 @@ TEST(CoroTest, Rest1)
 	// std::cout << "code: " << code << std::endl;
 	// std::cout << "headers: " << headers << std::endl;
 	// std::cout << "body: " << body << std::endl;
+}
+
+TEST(CoroTest, Rest2)
+{
+	cu::parallel_scheduler sch;
+	cu::channel<json> c1(sch);
+	c1.pipeline( cu::get() );
+
+	sch.spawn([&](auto& yield) {
+		c1("http://samples.openweathermap.org/data/2.5/weather?q=London,uk&appid=b6907d289e10d714a6e88b30761fae22");
+		c1.close(yield);
+	});
+	sch.spawn([&](auto& yield) {
+		for(auto& j : cu::range(yield, c1))
+		{
+			std::cout << "---------------------" << std::endl;
+			std::cout << std::setw(4) << j << std::endl;
+			std::cout << "---------------------" << std::endl;
+		}
+	});
+	sch.run_until_complete();
 }
 
