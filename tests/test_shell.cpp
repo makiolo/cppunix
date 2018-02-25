@@ -11,6 +11,7 @@
 #include <fast-event-system/sync.h>
 #include <design-patterns-cpp14/memoize.h>
 #include <json.hpp>
+#include <restclient-cpp/connection.h>
 #include <restclient-cpp/restclient.h>
 #include "../shell.h"
 #include "../parallel_scheduler.h"
@@ -1620,12 +1621,15 @@ TEST(CoroTest, Rest1)
 
 TEST(CoroTest, Rest2)
 {
+	RestClient::init();
+
 	cu::parallel_scheduler sch;
 	cu::channel<json> c1(sch);
 	c1.pipeline( cu::get() );
 
 	sch.spawn([&](auto& yield) {
-		c1("http://samples.openweathermap.org/data/2.5/weather?q=London,uk&appid=b6907d289e10d714a6e88b30761fae22");
+		// c1("http://samples.openweathermap.org/data/2.5/weather?q=London,uk&appid=b6907d289e10d714a6e88b30761fae22");
+		c1( json{} );
 		c1.close(yield);
 	});
 	sch.spawn([&](auto& yield) {
@@ -1637,5 +1641,7 @@ TEST(CoroTest, Rest2)
 		}
 	});
 	sch.run_until_complete();
+
+	RestClient::disable();
 }
 

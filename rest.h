@@ -29,11 +29,28 @@ using json = nlohmann::json;
 
 using ch_json = cu::channel<json>;
 
-ch_json::link get(const std::string& url)
+ch_json::link get(std::string url, std::string params)
 {
+	RestClient::Connection* conn = new RestClient::Connection(url);
+	conn->SetTimeout(5);
+	conn->SetUserAgent("restclient/cpp");
+	conn->FollowRedirects(true);
+
+	RestClient::HeaderFields headers;
+	headers["Accept"] = "application/json";
+	conn->SetHeaders(headers);
+	conn->AppendHeader("Content-Type", "text/json");
+
+	// // set CURLOPT_SSLCERT
+	// conn->SetCertPath(certPath);
+	// // set CURLOPT_SSLCERTTYPE
+	// conn->SetCertType(type);
+	// // set CURLOPT_SSLKEY
+	// conn->SetKeyPath(keyPath);
+
 	return [&](ch_json::in&, ch_json::out& yield)
 	{
-		RestClient::Response res = RestClient::get(url);
+		RestClient::Response res = conn->get(params);
 		// std::cout << "url = " << url << std::endl;
 		// std::cout << res.body << std::endl;
 		json root;
@@ -52,7 +69,13 @@ ch_json::link get()
 		{
 			if(s)
 			{
-				get(*s)(source, yield);
+				std::string url = "https://api.coinmarketcap.com/v1/ticker/";
+				std::string params = "?limit=5";
+
+				// std::string url = "http://samples.openweathermap.org/data/2.5/weather";
+				// std::string params = "?q=London,uk&appid=b6907d289e10d714a6e88b30761fae22";
+
+				get(url, params)(source, yield);
 			}
 			else
 			{
