@@ -30,7 +30,7 @@ public:
 		if (_curl)
 		{
 			curl_easy_setopt(_curl, CURLOPT_NOPROGRESS, 1L);
-			curl_easy_setopt(_curl, CURLOPT_USERAGENT, "curl/7.42.0");
+			curl_easy_setopt(_curl, CURLOPT_USERAGENT, "cppunix/1.0.0");
 			curl_easy_setopt(_curl, CURLOPT_MAXREDIRS, 50L);
 			curl_easy_setopt(_curl, CURLOPT_TCP_KEEPALIVE, 1L);
 			curl_easy_setopt(_curl, CURLOPT_WRITEFUNCTION, writeFunction);
@@ -50,6 +50,7 @@ public:
 	{
 		if(_curl)
 		{
+			std::cout << "get from " << url << std::endl;
 			curl_easy_setopt(_curl, CURLOPT_WRITEDATA, &response_string);
 			curl_easy_setopt(_curl, CURLOPT_HEADERDATA, &header_string);
 			curl_easy_setopt(_curl, CURLOPT_URL, url.c_str());
@@ -81,9 +82,12 @@ ch_json::link get(const std::string& url)
 	{
 		std::string response_string;
 		std::string header_string;
-		auto response = curl.get(url, response_string, header_string);
+		bool response = curl.get(url, response_string, header_string);
+		std::cout << "header = " << header_string << std::endl;
+		std::cout << "response = " << response_string << std::endl;
 		if(response)
 		{
+			std::cout << "response = ok" << std::endl;
 			json root;
 			std::istringstream str(response_string);
 			str >> root;
@@ -98,6 +102,10 @@ ch_json::link get(const std::string& url)
 			{
 				yield(root);
 			}
+		}
+		else
+		{
+			std::cout << "invalid response: " << response << std::endl;
 		}
 	};
 }
