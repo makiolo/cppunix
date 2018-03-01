@@ -11,8 +11,6 @@
 #include <fast-event-system/sync.h>
 #include <design-patterns-cpp14/memoize.h>
 #include <json.hpp>
-#include <restclient-cpp/connection.h>
-#include <restclient-cpp/restclient.h>
 #include "../shell.h"
 #include "../parallel_scheduler.h"
 #include "../semaphore.h"
@@ -1606,30 +1604,14 @@ TEST(CoroTest, Test4)
 
 TEST(CoroTest, Rest1)
 {
-	RestClient::Response res = RestClient::get("http://api.openweathermap.org/data/2.5/weather?q=Madrid");
-
-	json root;
-	std::istringstream str(res.body);
-	str >> root;
-
-	std::cout << std::setw(4) << root << std::endl;
-
-	// std::cout << "code: " << code << std::endl;
-	// std::cout << "headers: " << headers << std::endl;
-	// std::cout << "body: " << body << std::endl;
-}
-
-TEST(CoroTest, Rest2)
-{
-	RestClient::init();
-
 	cu::parallel_scheduler sch;
 	cu::channel<json> c1(sch);
 	c1.pipeline( cu::get() );
 
 	sch.spawn([&](auto& yield) {
-		// c1("http://samples.openweathermap.org/data/2.5/weather?q=London,uk&appid=b6907d289e10d714a6e88b30761fae22");
-		c1( json{} );
+		c1( json{
+				{"url", "https://api.coinmarketcap.com/v1/ticker/?limit=5"} 
+		});
 		c1.close(yield);
 	});
 	sch.spawn([&](auto& yield) {
@@ -1642,6 +1624,5 @@ TEST(CoroTest, Rest2)
 	});
 	sch.run_until_complete();
 
-	RestClient::disable();
 }
 

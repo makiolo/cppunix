@@ -11,53 +11,91 @@
 #include <algorithm>
 #include <locale>
 #include <json.hpp>
-#include <restclient-cpp/restclient.h>
+#include <curl/curl.h>
 //
 #include "channel.h"
 
+size_t writeFunction(void *ptr, size_t size, size_t nmemb, std::string* data)
+{
+	data->append((char*) ptr, size * nmemb);
+	return size * nmemb;
+}
+
+class curl_handler
+{
+public:
+	explicit curl_handler()
+	{
+		_curl = curl_easy_init();
+		if (_curl)
+		{
+			curl_easy_setopt(_curl, CURLOPT_NOPROGRESS, 1L);
+			curl_easy_setopt(_curl, CURLOPT_USERAGENT, "curl/7.42.0");
+			curl_easy_setopt(_curl, CURLOPT_MAXREDIRS, 50L);
+			curl_easy_setopt(_curl, CURLOPT_TCP_KEEPALIVE, 1L);
+			curl_easy_setopt(_curl, CURLOPT_WRITEFUNCTION, writeFunction);
+		}
+	}
+
+	~curl_handler()
+	{
+		if (_curl)
+		{
+			curl_easy_cleanup(_curl);
+			_curl = NULL;
+		}
+	}
+
+	bool get(const std::string& url, std::string& response_string, std::string& header_string)
+	{
+		if(_curl)
+		{
+			curl_easy_setopt(_curl, CURLOPT_WRITEDATA, &response_string);
+			curl_easy_setopt(_curl, CURLOPT_HEADERDATA, &header_string);
+			curl_easy_setopt(_curl, CURLOPT_URL, url.c_str());
+			// curl_easy_setopt(curl, CURLOPT_USERPWD, "user:pass");
+			// long response_code;
+			// curl_easy_getinfo(_curl, CURLINFO_RESPONSE_CODE, &response_code);
+			// double elapsed;
+			// curl_easy_getinfo(_curl, CURLINFO_TOTAL_TIME, &elapsed);
+			// char* url;
+			// curl_easy_getinfo(_curl, CURLINFO_EFFECTIVE_URL, &url);
+
+			return curl_easy_perform(_curl) == 0;
+		}
+		return false;
+	}
+protected:
+	CURL* _curl;
+};
+
 namespace cu {
 
+static curl_handler curl;
 using json = nlohmann::json;
-
-// vector<json>
-//
-// comandos SQL:
-//    select *
-//    select name, age, address
-//
-//    where name == 'pepe' and age == 16
-
 using ch_json = cu::channel<json>;
 
-ch_json::link get(std::string url, std::string params)
+ch_json::link get(const std::string& url)
 {
-	RestClient::Connection* conn = new RestClient::Connection(url);
-	conn->SetTimeout(5);
-	conn->SetUserAgent("restclient/cpp");
-	conn->FollowRedirects(true);
-
-	RestClient::HeaderFields headers;
-	headers["Accept"] = "application/json";
-	conn->SetHeaders(headers);
-	conn->AppendHeader("Content-Type", "text/json");
-
-	// // set CURLOPT_SSLCERT
-	// conn->SetCertPath(certPath);
-	// // set CURLOPT_SSLCERTTYPE
-	// conn->SetCertType(type);
-	// // set CURLOPT_SSLKEY
-	// conn->SetKeyPath(keyPath);
-
 	return [&](ch_json::in&, ch_json::out& yield)
 	{
-		RestClient::Response res = conn->get(params);
-		// std::cout << "url = " << url << std::endl;
-		// std::cout << res.body << std::endl;
-		json root;
-		std::istringstream str(res.body);
-		str >> root;
-		// std::cout << "json = " << root << std::endl;
-		yield(root);
+		std::string response_string;
+		std::string header_string;
+		auto response = curl.get(url, response_string, header_string);
+		// std::cout << "url " << url << std::endl;
+		// std::cout << "response " << response << std::endl;
+		// std::cout << "response_string " << response_string << std::endl;
+		// std::cout << "header_string " << header_string << std::endl;
+		if(response)
+		{
+			json root;
+			std::istringstream str(response_string);
+			str >> root;
+			for (auto& element : root)
+			{
+				yield(element);
+			}
+		}
 	};
 }
 
@@ -69,13 +107,7 @@ ch_json::link get()
 		{
 			if(s)
 			{
-				std::string url = "https://api.coinmarketcap.com/v1/ticker/";
-				std::string params = "?limit=5";
-
-				// std::string url = "http://samples.openweathermap.org/data/2.5/weather";
-				// std::string params = "?q=London,uk&appid=b6907d289e10d714a6e88b30761fae22";
-
-				get(url, params)(source, yield);
+				get( (*s)["url"].get<std::string>() )(source, yield);
 			}
 			else
 			{
