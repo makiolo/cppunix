@@ -41,9 +41,10 @@ namespace asyncply
 
 namespace cu {
 
-static void sleep(cu::yield_type& yield, fes::deltatime time)
+template <typename T>
+static void sleep(cu::yield_type& yield, T time)
 {
-	auto timeout = fes::high_resolution_clock() + time;
+	auto timeout = fes::high_resolution_clock() + fes::deltatime(time);
 	while(fes::high_resolution_clock() <= timeout)
 	{
 		yield( cu::control_type{} );

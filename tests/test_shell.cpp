@@ -1605,24 +1605,42 @@ TEST(CoroTest, Test4)
 TEST(CoroTest, Rest1)
 {
 	cu::parallel_scheduler sch;
-	cu::channel<json> c1(sch);
-	c1.pipeline( cu::get() );
+	cu::channel<json> c(sch);
+	c.pipeline( cu::get() );
 
 	sch.spawn([&](auto& yield) {
-		c1( json{
-				{"url", "https://api.coinmarketcap.com/v1/ticker/?limit=5"} 
-		});
-		c1.close(yield);
+		// while(true)
+		for(int i = 0; i<5; ++i)
+		{
+			c(yield, json{	{"url", "https://api.coinmarketcap.com/v1/ticker/?limit=0&convert=EUR"}	});
+			// cu::sleep(yield, 60 * 1000);
+		}
+		c.close(yield);
 	});
 	sch.spawn([&](auto& yield) {
-		for(auto& j : cu::range(yield, c1))
+		for(auto& jsn : cu::range(yield, c))
 		{
-			std::cout << "---------------------" << std::endl;
-			std::cout << std::setw(4) << j << std::endl;
-			std::cout << "---------------------" << std::endl;
+			auto idcoin = jsn["id"];
+			std::string idcoin_str = idcoin;
+			// if(idcoin_str == "bitcoin")
+			{
+				auto price_eur = jsn["price_eur"];
+				if(!price_eur.is_null())
+				{
+					float price = std::stof(price_eur.template get<std::string>());
+					std::cout << idcoin_str << " (" << price << ")" << std::endl;
+					// if(price < 9000.0)
+					// {
+					// 	std::cout << "bitcoin barato, comprar mas!" << std::endl;
+					// }
+					// else
+					// {
+					// 	std::cout << "bitcoin caro, To the moon!" << std::endl;
+					// }
+				}
+			}
 		}
 	});
 	sch.run_until_complete();
-
 }
 

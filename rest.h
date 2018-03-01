@@ -82,18 +82,21 @@ ch_json::link get(const std::string& url)
 		std::string response_string;
 		std::string header_string;
 		auto response = curl.get(url, response_string, header_string);
-		// std::cout << "url " << url << std::endl;
-		// std::cout << "response " << response << std::endl;
-		// std::cout << "response_string " << response_string << std::endl;
-		// std::cout << "header_string " << header_string << std::endl;
 		if(response)
 		{
 			json root;
 			std::istringstream str(response_string);
 			str >> root;
-			for (auto& element : root)
+			if(root.is_array())
 			{
-				yield(element);
+				for (auto& element : root)
+				{
+					yield(element);
+				}
+			}
+			else
+			{
+				yield(root);
 			}
 		}
 	};
@@ -107,11 +110,8 @@ ch_json::link get()
 		{
 			if(s)
 			{
-				get( (*s)["url"].get<std::string>() )(source, yield);
-			}
-			else
-			{
-				yield(s);
+				auto jsn = *s;
+				get( jsn["url"].get<std::string>() )(source, yield);
 			}
 		}
 	};
