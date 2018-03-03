@@ -11,13 +11,16 @@
 #include <fast-event-system/sync.h>
 #include <design-patterns-cpp14/memoize.h>
 #include <json.hpp>
+#include <spdlog/fmt/fmt.h>
 #include "../shell.h"
 #include "../parallel_scheduler.h"
 #include "../semaphore.h"
 #include "../channel.h"
 #include "../rest.h"
 
+
 class CoroTest : testing::Test { };
+
 
 using namespace cu;
 
@@ -1604,47 +1607,80 @@ TEST(CoroTest, Test4)
 
 TEST(CoroTest, Rest1)
 {
-	cu::parallel_scheduler sch;
-	cu::channel<json> c(sch);
-	c.pipeline( cu::get() );
+	using namespace fmt::literals;
 
-	sch.spawn([&](auto& yield) {
-		// while(true)
-		for(int i = 0; i<1; ++i)
-		{
-			c(yield, json{	{"url", "https://api.coinmarketcap.com/v1/ticker/?limit=0&convert=EUR"}	});
-			// c(yield, json{ {"url", "http://localhost:8086/query?q=select * from portfolio&db=domotica"} });
-			// cu::sleep(yield, 60 * 1000);
-		}
-		c.close(yield);
-	});
-	sch.spawn([&](auto& yield) {
-		for(auto& jsn : cu::range(yield, c))
-		{
-			std::cout << "-------------------------" << std::endl;
-			std::cout << jsn << std::endl;
-			std::cout << "-------------------------" << std::endl;
-			// auto idcoin = jsn["id"];
-			// std::string idcoin_str = idcoin;
-			// if(idcoin_str == "bitcoin")
-			// {
-			// 	auto price_eur = jsn["price_eur"];
-			// 	if(!price_eur.is_null())
-			// 	{
-			// 		float price = std::stof(price_eur.template get<std::string>());
-			// 		std::cout << idcoin_str << " (" << price << ")" << std::endl;
-			// 		if(price < 9000.0)
-			// 		{
-			// 			std::cout << "bitcoin barato, comprar mas!" << std::endl;
-			// 		}
-			// 		else
-			// 		{
-			// 			std::cout << "bitcoin caro, To the moon!" << std::endl;
-			// 		}
-			// 	}
-			// }
-		}
-	});
-	sch.run_until_complete();
+	while(true)
+	{
+		cu::parallel_scheduler sch;
+		cu::channel<json> read(sch);
+		read.pipeline( cu::get() );
+		// sch.spawn([&](auto& yield) {
+		// 	while(true)
+		// 	{
+		// 		read(yield, json{ {"url", "http://localhost:8086/query?q=select * from portfolio&db=domotica"} });
+		// 		cu::sleep(yield, 5 * 1000);
+		// 	}
+		// 	read.close(yield);
+		// });
+		sch.spawn([&](auto& yield) {
+			read(yield, json{	{"url", "https://api.coinmarketcap.com/v1/ticker/?limit=0&convert=EUR"}	});
+			read.close(yield);
+		});
+		sch.spawn([&](auto& yield) {
+			auto to_string = [](auto elem) -> std::string {
+				if(!elem.is_null())
+				{
+					// escape space, comma or equal
+					std::string data = elem.template get<std::string>();
+					data = cu::replace_all(data, " ", "\\ ");
+					data = cu::replace_all(data, ",", "\\,");
+					data = cu::replace_all(data, "=", "\\=");
+					return data;
+				}
+				else
+					return "";
+			};
+			auto to_float = [](auto elem) -> float {
+				if(!elem.is_null())
+					return std::stof(elem.template get<std::string>());
+				else
+					return 0.0f;
+			};
+			auto to_integer = [](auto elem) -> int {
+				if(!elem.is_null())
+					return std::stoi(elem.template get<std::string>());
+				else
+					return 0;
+			};
+			std::string hostname = "localhost";
+			int port = 8086;
+			std::string database = "domotica";
+			std::string measurement = "coinmarketcap2";
+			for(auto& jsn : cu::range(yield, read))
+			{
+				auto node = jsn["last_updated"];
+				if(!node.is_null())
+				{
+					auto id = to_string(jsn["id"]);
+					auto name = to_string(jsn["name"]);
+					auto symbol = to_string(jsn["symbol"]);
+					auto rank = to_integer(jsn["rank"]);
+					auto price_eur = to_float(jsn["price_eur"]);
+					auto last_updated = to_integer(jsn["last_updated"]);
+					std::cout << "---------------------" << std::endl;
+					std::cout << jsn << std::endl;
+					std::cout << "---------------------" << std::endl;
+					cu::curl_post(
+						"http://{}:{}/write?db={}"_format(hostname, port, database), 
+						"{},id={},name={},symbol={} rank={},price_eur={} {}"_format(
+							measurement, 
+							id, name, symbol, 
+							rank, price_eur,
+							last_updated));
+				}
+			}
+		});
+		sch.run_until_complete();
+	}
 }
 
