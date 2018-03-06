@@ -1609,21 +1609,13 @@ TEST(CoroTest, Rest1)
 {
 	using namespace fmt::literals;
 
-	while(true)
+	// while(true)
 	{
 		cu::parallel_scheduler sch;
 		cu::channel<json> read(sch);
 		read.pipeline( cu::get() );
-		// sch.spawn([&](auto& yield) {
-		// 	while(true)
-		// 	{
-		// 		read(yield, json{ {"url", "http://localhost:8086/query?q=select * from portfolio&db=domotica"} });
-		// 		cu::sleep(yield, 5 * 1000);
-		// 	}
-		// 	read.close(yield);
-		// });
 		sch.spawn([&](auto& yield) {
-			read(yield, json{	{"url", "https://api.coinmarketcap.com/v1/ticker/?limit=0&convert=EUR"}	});
+			read(yield, json{ {"url", "https://api.coinmarketcap.com/v1/ticker/?limit=0&convert=EUR"} });
 			read.close(yield);
 		});
 		sch.spawn([&](auto& yield) {
