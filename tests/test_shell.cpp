@@ -1605,7 +1605,7 @@ TEST(CoroTest, Test4)
 	}
 }
 
-TEST(CoroTest, Rest1)
+TEST(CoroTest, DISABLED_Rest1)
 {
 	using namespace fmt::literals;
 
