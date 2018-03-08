@@ -8,7 +8,6 @@
 #include <asyncply/parallel.h>
 #include <mqtt/async_client.h>
 #include <fast-event-system/sync.h>
-#include <fast-event-system/sync.h>
 #include <design-patterns-cpp14/memoize.h>
 #include <json.hpp>
 #include <spdlog/fmt/fmt.h>

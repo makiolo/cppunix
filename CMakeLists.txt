@@ -15,6 +15,8 @@ cmaki_find_package(asyncply)
 cmaki_find_package(ois)
 cmaki_find_package(json)
 cmaki_find_package(haxx-libcurl)
+cmaki_find_package(openssl)
+
 cmaki_google_test(coroutine tests/test_coroutine.cpp PTHREADS)
 cmaki_google_test(channel tests/test_channel.cpp PTHREADS)
 cmaki_google_test(shell tests/test_shell.cpp PTHREADS)
