@@ -27,12 +27,11 @@
     "url": "https://github.com/makiolo/cppunix/issues"
   },
   "homepage": "https://github.com/makiolo/cppunix#readme",
+  "devDependencies": {
+    "npm-mas-mas": "git+https://github.com/makiolo/npm-mas-mas.git"
+  },
   "dependencies": {
     "asyncply": "git+https://github.com/makiolo/asyncply.git",
-    "cmaki": "git+https://github.com/makiolo/cmaki.git",
-    "cmaki_generator": "git+https://github.com/makiolo/cmaki_generator.git",
-    "cmaki_identifier": "git+https://github.com/makiolo/cmaki_identifier.git",
-    "cmaki_scripts": "git+https://github.com/makiolo/cmaki_scripts.git",
     "coroutine": "git+https://github.com/makiolo/coroutine.git",
     "design-patterns-cpp14": "git+https://github.com/makiolo/design-patterns-cpp14.git",
     "fast-event-system": "git+https://github.com/makiolo/fast-event-system.git",
@@ -40,3 +39,4 @@
     "teelogging": "git+https://github.com/makiolo/teelogging.git"
   }
 }
+
