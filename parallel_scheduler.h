@@ -9,6 +9,13 @@ namespace cu {
 
 class parallel_scheduler : public scheduler {
 public:
+
+	explicit parallel_scheduler()
+		: _ite( _running.begin() )
+	{
+		;
+	}
+
 	virtual ~parallel_scheduler()
 	{
 		;
@@ -21,10 +28,10 @@ public:
 
 	bool run() override final
 	{
-		auto i = _running.begin();
-		while (i != _running.end())
+		_ite = _running.begin();
+		while (_ite != _running.end())
 		{
-			auto& c = *i;
+			auto& c = *_ite;
 			if(c->ready())
 			{
 				_active = c.get();
@@ -36,22 +43,25 @@ public:
 					{
 						auto& blocked = _blocked[_last_id];
 						blocked.emplace_back(std::move(c));
-						i = _running.erase(i);
+						_ite = _running.erase(_ite);
 					}
 					else
 					{
-						++i;
+						++_ite;
 					}
 				}
 				_active = nullptr;
 			}
 			else
 			{
-				i = _running.erase(i);
+				_ite = _running.erase(_ite);
 			}
 		}
 		return ready();
 	}
+
+protected:
+	std::vector<std::unique_ptr<scheduler_basic> >::iterator _ite;
 };
 
 }
