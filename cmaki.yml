@@ -9,6 +9,7 @@
         - coroutine
         - metacommon
         - teelogging
+        - asyncply
     post_install:
         - ./*.h include/cppunix/
     source: https://github.com/makiolo/cppunix
@@ -20,3 +21,4 @@
         - dummy:
             info:
                 <<: *library_dynamic
+
