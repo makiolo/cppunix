@@ -7,7 +7,7 @@
 #include <asyncply/run.h>
 #include <asyncply/algorithm.h>
 #include <fast-event-system/sync.h>
-#include <mqtt/async_client.h>
+// #include <mqtt/async_client.h>
 
 namespace asyncply
 {
@@ -20,23 +20,23 @@ namespace asyncply
 		}
 	};
 
-	template <>
-	struct is_complete<mqtt::token_ptr>
-	{
-		bool operator()(mqtt::token_ptr token) const
-		{
-			return token->is_complete();
-		}
-	};
-
-	template <>
-	struct is_complete<mqtt::delivery_token_ptr>
-	{
-		bool operator()(mqtt::delivery_token_ptr token) const
-		{
-			return token->is_complete();
-		}
-	};
+	// template <>
+	// struct is_complete<mqtt::token_ptr>
+	// {
+	// 	bool operator()(mqtt::token_ptr token) const
+	// 	{
+	// 		return token->is_complete();
+	// 	}
+	// };
+    //
+	// template <>
+	// struct is_complete<mqtt::delivery_token_ptr>
+	// {
+	// 	bool operator()(mqtt::delivery_token_ptr token) const
+	// 	{
+	// 		return token->is_complete();
+	// 	}
+	// };
 }
 
 namespace cu {

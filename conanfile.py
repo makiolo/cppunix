@@ -13,8 +13,9 @@ class NpmMasMas(ConanFile):
     generators = "cmake"
 
     def requirements(self):
-        self.requires('fast-event-system/1.0.18@npm-mas-mas/testing')
-        self.requires('spdlog/1.3.1@bincrafters/stable')
+        self.requires('teelogging/1.0.1@npm-mas-mas/testing')
+        self.requires('asyncply/1.0.3@npm-mas-mas/testing')
+        self.requires('design-patterns-cpp14/1.0.23@npm-mas-mas/testing')
 
     def source(self):
         self.run("git clone {}".format(self.url))
