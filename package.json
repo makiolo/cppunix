@@ -3,14 +3,11 @@
   "version": "1.0.0",
   "description": "gnu commands implemmented in cpp based in pipelines",
   "scripts": {
-    "ci": "curl -s https://raw.githubusercontent.com/makiolo/cmaki_scripts/master/ci.sh | bash",
-    "docker": "curl -s https://raw.githubusercontent.com/makiolo/cmaki_scripts/master/docker.sh | bash",
     "clean": "cmaki clean",
     "setup": "cmaki setup",
     "compile": "cmaki compile",
     "install": "cmaki setup && cmaki compile",
-    "test": "cmaki test",
-    "upload": "cmaki upload"
+    "test": "cmaki test"
   },
   "repository": {
     "type": "git",
@@ -27,13 +24,11 @@
     "url": "https://github.com/makiolo/cppunix/issues"
   },
   "homepage": "https://github.com/makiolo/cppunix#readme",
-  "devDependencies": {
-    "asyncply": "git+https://github.com/makiolo/asyncply.git",
+  "dependencies": {
     "coroutine": "git+https://github.com/makiolo/coroutine.git",
-    "design-patterns-cpp14": "git+https://github.com/makiolo/design-patterns-cpp14.git",
-    "fast-event-system": "git+https://github.com/makiolo/fast-event-system.git",
-    "metacommon": "git+https://github.com/makiolo/metacommon.git",
-    "npm-mas-mas": "git+https://github.com/makiolo/npm-mas-mas.git",
-    "teelogging": "git+https://github.com/makiolo/teelogging.git"
+    "metacommon": "git+https://github.com/makiolo/metacommon.git"
+  },
+  "devDependencies": {
+    "npm-mas-mas": "git+https://github.com/makiolo/npm-mas-mas.git"
   }
 }
